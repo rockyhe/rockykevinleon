@@ -2,7 +2,7 @@ package com.matei.eece411.A2;
 
 import java.rmi.*;                                     
 
-public interface HelloInterface extends Remote {       
+public interface ChatInterface extends Remote {       
   /*
    * Remotely invocable method,
    * returns a message from the remote object, 

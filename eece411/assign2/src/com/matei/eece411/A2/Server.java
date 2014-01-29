@@ -3,8 +3,6 @@ package com.matei.eece411.A2;
 import java.io.*;
 import java.rmi.*;
 
-import ChatImpl;
-
 public class Server
 {	
 	public static void main(String[] args)
