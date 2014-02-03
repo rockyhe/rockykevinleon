@@ -8,10 +8,11 @@ import java.rmi.RMISecurityManager;
 import java.rmi.Naming;
 import java.rmi.RemoteException;
 
-public class Main {
-    
+public class Client
+{    
     static GUI gui;
     static MessageQueue _queue;
+	static String hostname = "Rocky-PC";//"dhcp-128-189-216-231.ubcsecure.wireless.ubc.ca";
     
     public static void main(String[] args) {
         // create a shared buffer where the GUI add the messages thet need to 
@@ -54,36 +55,45 @@ public class Main {
         // I download server's stubs ==> must set a SecurityManager 
         System.setSecurityManager(new RMISecurityManager());
 
-        try
-        {
-           Chat obj = (Chat) Naming.lookup( "//" +
-                "dhcp-128-189-216-231.ubcsecure.wireless.ubc.ca" +
-                "/ChatServer");         //objectname in registry 
-           System.out.println(obj.sayHello());
-        }
-        catch (Exception e)
-        {
-           System.out.println("ChatClient exception: " + e.getMessage());
+		String clientName = (args.length > 0) ? args[0] : "Unknown Client";
+		Chat chatStub = null;
+		Callback callbackStub = null;
+		
+		//Lookup the chat server, create a callback obj and try registering the client to it
+        try {
+           chatStub = (Chat) Naming.lookup( "//" +
+                hostname +
+                "/ChatServer");         //objectname in registry
+			callbackStub = new CallbackImpl(clientName, gui);
+			System.out.println("Callback obj created!");					
+		    chatStub.register(callbackStub);
+        } catch (Exception e) {
+           System.out.println("Client exception: " + e.getMessage());
            e.printStackTrace();
         }
-
         
-        while (true) {
-	    String s;
-            try {
-                // wait until the user enters a new chat message
-                s = _queue.dequeue();
-            }
-            catch (InterruptedException ie) {
-                break;
-            } 
- 
-	    // update the GUI with the message entered by the user
-            gui.addToTextArea("Me:> " + s); 
+        while (true)
+		{
+			String s;
+			try {
+				// wait until the user enters a new chat message
+				s = _queue.dequeue();
+			} catch (InterruptedException ie) {
+				break;
+			}
             
             // print it to System.out (or send it to the RMI server)
             System.out.println ("User entered: " + s + " -- now sending it to chat server");
-        } // end while loop
+			
+			// broadcast the message entered by the user
+			try {
+				//prefix the message with client id
+				chatStub.broadcast(clientName + ":> " + s);
+			} catch (Exception e) {
+			   System.out.println("Client exception: " + e.getMessage());
+			   e.printStackTrace();
+			}
+        }
     }
    
 }

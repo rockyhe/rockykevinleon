@@ -1,0 +1,22 @@
+1. Make sure the hostname value in Client.java is set to your computer's hostname value 
+	(check using hostname in Mac or ipconfig /all in Windows)
+
+2. Go to directory
+	rockykevinleon/eece411/assign2/src
+
+2. Compile the code using
+	javac -cp . com/matei/eece411/A2/*.java
+
+3. Generate the stubs using
+	rmic -classpath . com.matei.eece411.A2.ChatImpl
+ 	rmic -classpath . com.matei.eece411.A2.CallbackImpl
+
+4. Start the rmiregistry process using
+	rmiregistry &
+
+5. Run the client/server with the policy file argument using
+	java -cp . -Djava.security.policy=<path to policy file> <client/server class name>
+	
+	For example:
+	java -cp . -Djava.security.policy=com/matei/eece411/A2/allAccess.policy com.matei.eece411.A2.ChatImpl
+	java -cp . -Djava.security.policy=com/matei/eece411/A2/allAccess.policy com.matei.eece411.A2.Client <client id>
