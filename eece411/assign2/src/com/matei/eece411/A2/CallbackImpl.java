@@ -11,19 +11,22 @@ public class CallbackImpl extends UnicastRemoteObject implements Callback
 	 
 	 public CallbackImpl(String id, GUI gui) throws RemoteException
 	 {
+		//Construct a new CallbackImpl object with client id and GUI references
 		clientId = id;
 		clientGUI = gui;
 	 }
 	 
 	 public String getClientId() throws RemoteException
 	 {
+		System.out.println ("Invoked getClientId method!");
 		return clientId;
 	 }
 	 
 	 public void receive(String txt) throws RemoteException
 	 {
-		System.out.println ("Client invoked receive method!");
-		// update the GUI with the message entered by the user
+		System.out.println ("Invoked receive method! Message: " + txt);
+		
+		// update the client's GUI with the message received
 		if (clientGUI != null)
 		{
 			clientGUI.addToTextArea(txt);

@@ -11,12 +11,12 @@
 	rmic -classpath . com.matei.eece411.A2.ChatImpl
  	rmic -classpath . com.matei.eece411.A2.CallbackImpl
 
-4. Start the rmiregistry process using
+4. (OPTIONAL: We do this in the code now, but in case it doesn't work you can do this) Start the rmiregistry process using
 	rmiregistry &
 
 5. Run the client/server with the policy file argument using
 	java -cp . -Djava.security.policy=<path to policy file> <client/server class name>
 	
 	For example:
-	java -cp . -Djava.security.policy=com/matei/eece411/A2/allAccess.policy com.matei.eece411.A2.ChatImpl
-	java -cp . -Djava.security.policy=com/matei/eece411/A2/allAccess.policy com.matei.eece411.A2.Client <client id>
+	java -cp . -Djava.security.policy=com/matei/eece411/A2/allAccess.policy com.matei.eece411.A2.ChatImpl <chatroomName>
+	java -cp . -Djava.security.policy=com/matei/eece411/A2/allAccess.policy com.matei.eece411.A2.Client <chatroomName> <clientName>

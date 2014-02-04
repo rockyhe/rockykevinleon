@@ -4,7 +4,6 @@ import java.rmi.*;
 public interface Chat extends Remote
 {       
     public void register(Callback clientCallback) throws RemoteException;
-	public void broadcast(String txt) throws RemoteException;          
-	public String sayHello() throws RemoteException;
+	public void broadcast(String txt) throws RemoteException;
 }
 

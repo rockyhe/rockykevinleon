@@ -8,16 +8,19 @@ import java.util.List;
 import java.util.ArrayList;
 
 public class ChatImpl extends UnicastRemoteObject implements Chat
-{   
+{
+	 //Maintain a list of clients based on references to their callback interfaces
 	 private List<Callback> clients = new ArrayList<Callback>();
-   
+	
+	 //Constructor for ChatImpl object
 	 public ChatImpl() throws RemoteException{}
 	 
+	 //Method to register a client to the server by passing a reference to the client's Callback stub
 	 public void register(Callback clientCallback) throws RemoteException
 	 {
 		if (clientCallback != null)
 		{
-			System.out.println ("Client invoked register method! Client name: " + clientCallback.getClientId());
+			System.out.println ("Invoked register method! Client name: " + clientCallback.getClientId());
 			//Send a message to existing clients that a new client has joined
 			//Easier to do this with the foreach loop before actually adding the reference to the list
 			for (Callback client : clients)
@@ -31,31 +34,44 @@ public class ChatImpl extends UnicastRemoteObject implements Chat
 			System.out.println ("ChatImpl err: client reference is null!");
 		}
 	}
-	 
-	 public String sayHello() throws RemoteException
-	 {
-		System.out.println ("Client invoked sayHello method!");
-		return "Hello world!";
-	 }
 
- 	 public void broadcast(String txt) throws RemoteException {
-		System.out.println ("Client invoked broadcast method! Message: " + txt);
+	 //Method to broadcast a message to all existing clients
+ 	 public void broadcast(String txt) throws RemoteException
+	 {
+		System.out.println ("Invoked broadcast method! Message: " + txt);
+		//Broadcast the message to all existing clients 
 		for (Callback client : clients)
 		{
-			client.receive(txt);
+			try {
+				client.receive(txt);
+			} catch (Exception e) {
+				System.out.println("CallbackImpl err: " + e.getMessage()); 
+				e.printStackTrace(); 
+			}
 		}
  	 }
-	 
+	
+	//Main method to instantiate and bind an ChatImpl object
 	public static void main(String args[]) 
-	{ 
-		try { 
-		    ChatImpl obj = new ChatImpl(); 
-		    // Bind this object instance to the name "ChatServer" in the rmiregistry
+	{
+		//Get the chatroom name command line argument
+		if (args.length != 1)
+		{
+			System.out.println("USAGE: ChatImpl " + "<chatroomName>");
+			System.exit(0);
+		}
+		String chatroomName = (args.length == 1) ? args[0] : "ChatServer";
+		
+		try {
+			//Instantiate a ChatImpl object
+			ChatImpl obj = new ChatImpl(); 
+			//Bind this object instance to the specified chatroom name in the rmiregistry
+			//Use createRegistry in case rmiregistry isn't running, using default port number
 			Registry registry = LocateRegistry.createRegistry(1099);
-			registry.rebind("ChatServer", obj);
+			registry.rebind(chatroomName, obj);
 		} catch (Exception e) { 
-		    System.out.println("Chat err: " + e.getMessage()); 
-		    e.printStackTrace(); 
+			System.out.println("ChatImpl err: " + e.getMessage()); 
+			e.printStackTrace();
 		}
 	}   
 }

@@ -54,6 +54,14 @@ public class GUI extends JPanel implements ActionListener {
         //was a selection in the text area.
         textArea.setCaretPosition(textArea.getDocument().getLength());
     }
+	
+	public void clearTextField () {
+        textField.setText (null);
+		textField.repaint();
+		//Make sure the new text is visible, even if there
+        //was a selection in the text field.
+        textField.setCaretPosition(textField.getDocument().getLength());
+    }
 
     /**
      * Create the GUI and show it.  For thread safety,
