@@ -1,5 +1,4 @@
 package com.matei.eece411.A2;
-//package com;
 import java.io.*;
 import java.rmi.*;
 import java.rmi.registry.LocateRegistry;
@@ -67,6 +66,7 @@ public class Client
 			
 			//If register returns false, then there was a client name conflict
 			//So exit the client and inform user to use a new client name
+			//Assume if register throws a ConnectException that server is down
 		    if (!chatStub.register(new CallbackImpl(clientName, gui)))
 			{
 				System.out.println("Error: A client already exists with the id " + clientName + "!\n");
@@ -88,17 +88,9 @@ public class Client
 				System.out.println ("User entered: " + s + " -- now sending it to chat server");
 				
 				//Broadcast the message entered by the user
-				//If the a ConnectException occurs, assume server is down and
-				try {
-					//Prefix the message with client id
-					chatStub.broadcast(clientName + ":> " + s);
-				} catch (ConnectException e) {
-					System.out.println("Can't connect to server!");
-					//TODO: Implement timeout/try 5 times here
-				} catch (Exception e) {
-					System.out.println("Client exception: " + e.getMessage());
-					e.printStackTrace();
-				}
+				//Prefix the message with client id and then broadcast
+				String message = clientName + ":> " + s;
+				sendMessage(chatStub, message);
 			}
         } catch (ConnectException e) {
 			System.out.println("Error: Can't connect to server.\n");
@@ -109,5 +101,31 @@ public class Client
 			e.printStackTrace();
         }
     }
-   
+	
+	private static void sendMessage(Chat chatStub, String message)
+	{
+		//Try up to 3 times. If the a ConnectException occurs, assume server is down and terminate the client
+		for (int i=0; i < 3; i++)
+		{
+			try {				
+				chatStub.broadcast(message);
+				//Quit trying if we succeed (i.e. no exception)
+				break;
+			} catch (ConnectException e) {
+				if (i < 2)
+				{
+					System.out.println("Attempt " + (i+1) + ": Failed to broadcast message to server. Trying again...");
+				}
+				else
+				{
+					System.out.println("Attempt " + (i+1) + ": Unable to connect to server. Terminating client!");
+					gui.addToTextArea("Unable to connect to server. Terminating client!");
+					System.exit(0);
+				}
+			} catch (Exception e) {
+				System.out.println("Client exception: " + e.getMessage());
+				e.printStackTrace();
+			}
+		}
+	}
 }

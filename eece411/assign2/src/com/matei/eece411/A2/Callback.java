@@ -5,5 +5,6 @@ public interface Callback extends Remote
 {
 	public String getClientId() throws RemoteException;
     public void receive(String txt) throws RemoteException;
+    public void ping() throws RemoteException;
 }
 

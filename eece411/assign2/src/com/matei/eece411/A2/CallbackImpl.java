@@ -6,35 +6,37 @@ import java.rmi.server.UnicastRemoteObject;
 
 public class CallbackImpl extends UnicastRemoteObject implements Callback
 {
-	 private String clientId;
-	 private GUI clientGUI;
-	 
-	 public CallbackImpl(String id, GUI gui) throws RemoteException
-	 {
-		//Construct a new CallbackImpl object with client id and GUI references
+	private String clientId;
+	private GUI clientGUI;
+	
+	//Constructor for CallbackImpl using client id and GUI references
+	public CallbackImpl(String id, GUI gui) throws RemoteException
+	{		
 		clientId = id;
 		clientGUI = gui;
-	 }
+	}
 	 
-	 public String getClientId() throws RemoteException
-	 {
-		//System.out.println ("Invoked getClientId method!");
+	//Getter method for client id
+	public String getClientId() throws RemoteException
+	{
+		//System.out.println("Invoked getClientId method!");
 		return clientId;
-	 }
-	 
-	 public void receive(String txt) throws RemoteException
-	 {
-		//System.out.println ("Invoked receive method! Message: " + txt);
-		
+	}
+
+	//Method to receive a message and display it on the client gui
+	public void receive(String txt) throws RemoteException
+	{
+		//System.out.println("Invoked receive method! Message: " + txt);
+
 		// update the client's GUI with the message received
-		if (clientGUI != null)
-		{
-			clientGUI.addToTextArea(txt);
-		}
-		else
-		{
-			System.out.println ("CallbackImpl err: clientGUI reference is null!");
-		}
+		clientGUI.addToTextArea(txt);
+	}
+	
+	//Method to ping client to check for connectivity
+	//Can display a message for debugging
+	public void ping() throws RemoteException
+	{
+		//System.out.println("Invoked ping method!");
 	}
 }
 
