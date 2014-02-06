@@ -16,7 +16,7 @@ public class Server
 	private static ConcurrentHashMap<String, Callback> clients;
 	private static ChatImpl chatroom;
 	
-	private static final int PING_RATE = 10000;
+	private static final int PING_RATE = 5000;
 	
 	//Main method to instantiate server and bind an ChatImpl object
 	public static void main(String args[]) 
