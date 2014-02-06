@@ -5,8 +5,8 @@ import java.rmi.registry.*;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.HashMap;
-import java.util.List;
-import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.Map.Entry;
 
 public class ChatImpl extends UnicastRemoteObject implements Chat
 {
@@ -19,7 +19,7 @@ public class ChatImpl extends UnicastRemoteObject implements Chat
 	 //Method to register a client to the server by passing a reference to the client's Callback stub
 	 public boolean register(Callback clientCallback) throws RemoteException
 	 {
-		System.out.println ("Invoked register method! Client name: " + clientCallback.getClientId());
+		//System.out.println ("Invoked register method! Client name: " + clientCallback.getClientId());
 		
 		//Check if there is already an existing client with the same ID.
 		if (!clients.containsKey(clientCallback.getClientId()))
@@ -40,38 +40,26 @@ public class ChatImpl extends UnicastRemoteObject implements Chat
 	 //Method to broadcast a message to all existing clients
  	 public void broadcast(String txt) throws RemoteException
 	 {
-		System.out.println ("Invoked broadcast method! Message: " + txt);
-		
-		//Temp array of client keys that need to be removed
-		List<String> disconnectedClients = new ArrayList<String>();
+		//System.out.println ("Invoked broadcast method! Message: " + txt);
 		
 		//Broadcast the message to all existing clients 
-		for (String client : clients.keySet())
+		for (Iterator<Entry<String, Callback>> it = clients.entrySet().iterator(); it.hasNext(); )
 		{
+			Entry<String, Callback> entry = it.next();			
 			//Send the message to the client
-			//If ConnectException occurs, assume client has disconnected
+			//If ConnectException occurs, assume client has disconnected and remove it from hashmap
 			try {
-				clients.get(client).receive(txt);
+				Callback client = entry.getValue();			
+				client.receive(txt);
 			} catch (ConnectException e) {
-				disconnectedClients.add(client);
+				it.remove();
+				broadcast(entry.getKey() + " has disconnected from the chatroom!");
 			} catch (Exception e) {
-				System.out.println("CallbackImpl err: " + e.getMessage()); 
+				System.out.println("ChatImpl err: " + e.getMessage()); 
 				e.printStackTrace(); 
 			}
 		}
-		
-		removeClients(disconnectedClients);
  	 }
-	 
-	 //Helper method to remove disconnected clients from hashmap
-	 private void removeClients(List<String> clientsToRemove) throws RemoteException
-	 {
-		for (String client : clientsToRemove)
-		{
-			clients.remove(client);
-			broadcast(client + " has disconnected from the chatroom!");
-		}
-	 }
 	
 	//Main method to instantiate and bind an ChatImpl object
 	public static void main(String args[]) 
