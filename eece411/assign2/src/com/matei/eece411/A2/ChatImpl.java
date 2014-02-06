@@ -4,34 +4,36 @@ import java.rmi.server.*;
 import java.rmi.registry.*;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
 
 public class ChatImpl extends UnicastRemoteObject implements Chat
 {
-	 //Maintain a list of clients based on references to their callback interfaces
-	 private List<Callback> clients = new ArrayList<Callback>();
+	 //Maintain a hashmap of client key-value pairs using client id and their callback object
+	 private HashMap<String, Callback> clients = new HashMap<String, Callback>();
 	
 	 //Constructor for ChatImpl object
 	 public ChatImpl() throws RemoteException{}
 	 
 	 //Method to register a client to the server by passing a reference to the client's Callback stub
-	 public void register(Callback clientCallback) throws RemoteException
+	 public boolean register(Callback clientCallback) throws RemoteException
 	 {
-		if (clientCallback != null)
+		System.out.println ("Invoked register method! Client name: " + clientCallback.getClientId());
+		
+		//Check if there is already an existing client with the same ID.
+		if (!clients.containsKey(clientCallback.getClientId()))
 		{
-			System.out.println ("Invoked register method! Client name: " + clientCallback.getClientId());
-			//Send a message to existing clients that a new client has joined
-			//Easier to do this with the foreach loop before actually adding the reference to the list
-			for (Callback client : clients)
-			{
-				client.receive("Client " + clientCallback.getClientId() + " has joined the chatroom!");
-			}
-			clients.add(clientCallback);
+			//Send a message to existing clients that a new client has joined before adding the new client to the list		
+			broadcast(clientCallback.getClientId() + " has joined the chatroom!");
+			clients.put(clientCallback.getClientId(), clientCallback);
+			System.out.println ("Added client " + clientCallback.getClientId() + " to hashmap.");
+			return true;
 		}
 		else
 		{
-			System.out.println ("ChatImpl err: client reference is null!");
+			System.out.println ("ChatImpl err: duplicate client id: " + clientCallback.getClientId() + ". Unable to register!");
+			return false;
 		}
 	}
 
@@ -39,17 +41,37 @@ public class ChatImpl extends UnicastRemoteObject implements Chat
  	 public void broadcast(String txt) throws RemoteException
 	 {
 		System.out.println ("Invoked broadcast method! Message: " + txt);
+		
+		//Temp array of client keys that need to be removed
+		List<String> disconnectedClients = new ArrayList<String>();
+		
 		//Broadcast the message to all existing clients 
-		for (Callback client : clients)
+		for (String client : clients.keySet())
 		{
+			//Send the message to the client
+			//If ConnectException occurs, assume client has disconnected
 			try {
-				client.receive(txt);
+				clients.get(client).receive(txt);
+			} catch (ConnectException e) {
+				disconnectedClients.add(client);
 			} catch (Exception e) {
 				System.out.println("CallbackImpl err: " + e.getMessage()); 
 				e.printStackTrace(); 
 			}
 		}
+		
+		removeClients(disconnectedClients);
  	 }
+	 
+	 //Helper method to remove disconnected clients from hashmap
+	 private void removeClients(List<String> clientsToRemove) throws RemoteException
+	 {
+		for (String client : clientsToRemove)
+		{
+			clients.remove(client);
+			broadcast(client + " has disconnected from the chatroom!");
+		}
+	 }
 	
 	//Main method to instantiate and bind an ChatImpl object
 	public static void main(String args[]) 
@@ -69,6 +91,7 @@ public class ChatImpl extends UnicastRemoteObject implements Chat
 			//Use createRegistry in case rmiregistry isn't running, using default port number
 			Registry registry = LocateRegistry.createRegistry(1099);
 			registry.rebind(chatroomName, obj);
+			System.out.println("Server is up and running...\n"); 
 		} catch (Exception e) { 
 			System.out.println("ChatImpl err: " + e.getMessage()); 
 			e.printStackTrace();

@@ -12,18 +12,18 @@ public class Client
 {    
     private static GUI gui;
     private static MessageQueue _queue;
-	private static String hostname = "Rocky-PC";//"dhcp-128-189-216-231.ubcsecure.wireless.ubc.ca";
     
     public static void main(String[] args)
 	{
         //Get the chatroom name and client name command line arguments
-		if (args.length != 2)
+		if (args.length != 3)
 		{
-			System.out.println("USAGE: Client " + "<chatroomName> <clientName>");
+			System.out.println("USAGE: Client " + "<hostname> <chatroomName> <clientName>");
 			System.exit(0);
-		}		
-		String chatroomName = (args.length == 2) ? args[0] : "ChatServer";
-		String clientName = (args.length == 2) ? args[1] : "Unknown Client";
+		}
+		String hostname = (args.length == 3) ? args[0] : "Rocky-PC";//"dhcp-128-189-216-231.ubcsecure.wireless.ubc.ca";
+		String chatroomName = (args.length == 3) ? args[1] : "ChatServer";
+		String clientName = (args.length == 3) ? args[2] : "Unknown Client";
 		
 		// create a shared buffer where the GUI add the messages thet need to 
         // be sent out by the main thread.  The main thread stays in a loop 
@@ -65,8 +65,16 @@ public class Client
         try {
 			//Look for the stub in the rmi registry with the specified chatroom name 
             chatStub = (Chat) Naming.lookup( "//" + hostname + "/" + chatroomName);
-			callbackStub = new CallbackImpl(clientName, gui);			
-		    chatStub.register(callbackStub);
+			callbackStub = new CallbackImpl(clientName, gui);
+			
+			//If register returns false, then there was a client name conflict
+			//So exit the client and inform user to use a new client name
+		    if (!chatStub.register(callbackStub))
+			{
+				System.out.println ("Error: A client already exists with the id " + clientName + "!\n");
+				System.out.println ("Please try again with a different id.");
+				System.exit(0);
+			}
         
 			while (true)
 			{
@@ -84,12 +92,16 @@ public class Client
 				System.out.println ("User entered: " + s + " -- now sending it to chat server");
 				
 				//Broadcast the message entered by the user
+				//If the a ConnectException occurs, assume server is down and
 				try {
 					//Prefix the message with client id
 					chatStub.broadcast(clientName + ":> " + s);
+				} catch (ConnectException e) {
+					System.out.println("Can't contact server!");
+					//TODO: Implement timeout/try 5 times here
 				} catch (Exception e) {
-				   System.out.println("Client exception: " + e.getMessage());
-				   e.printStackTrace();
+					System.out.println("Client exception: " + e.getMessage());
+					e.printStackTrace();
 				}
 			}
         } catch (Exception e) {
