@@ -59,20 +59,18 @@ public class Client
         System.setSecurityManager(new RMISecurityManager());
 
 		Chat chatStub = null;
-		Callback callbackStub = null;
 		
 		//Lookup the chat server, create a callback obj and try registering the client to it
         try {
 			//Look for the stub in the rmi registry with the specified chatroom name 
             chatStub = (Chat) Naming.lookup( "//" + hostname + "/" + chatroomName);
-			callbackStub = new CallbackImpl(clientName, gui);
 			
 			//If register returns false, then there was a client name conflict
 			//So exit the client and inform user to use a new client name
-		    if (!chatStub.register(callbackStub))
+		    if (!chatStub.register(new CallbackImpl(clientName, gui)))
 			{
-				System.out.println ("Error: A client already exists with the id " + clientName + "!\n");
-				System.out.println ("Please try again with a different id.");
+				System.out.println("Error: A client already exists with the id " + clientName + "!\n");
+				System.out.println("Please try again with a different id.");
 				System.exit(0);
 			}
         
@@ -82,8 +80,6 @@ public class Client
 				try {
 					//Wait until the user enters a new chat message
 					s = _queue.dequeue();
-					//Clear the text field after the user enters a message
-					gui.clearTextField();
 				} catch (InterruptedException ie) {
 					break;
 				}
@@ -97,16 +93,20 @@ public class Client
 					//Prefix the message with client id
 					chatStub.broadcast(clientName + ":> " + s);
 				} catch (ConnectException e) {
-					System.out.println("Can't contact server!");
+					System.out.println("Can't connect to server!");
 					//TODO: Implement timeout/try 5 times here
 				} catch (Exception e) {
 					System.out.println("Client exception: " + e.getMessage());
 					e.printStackTrace();
 				}
 			}
-        } catch (Exception e) {
-           System.out.println("Client exception: " + e.getMessage());
-           e.printStackTrace();
+        } catch (ConnectException e) {
+			System.out.println("Error: Can't connect to server.\n");
+			System.out.println("Please try again later.");
+			System.exit(0);
+		} catch (Exception e) {
+			System.out.println("Client exception: " + e.getMessage());
+			e.printStackTrace();
         }
     }
    
