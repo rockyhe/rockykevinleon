@@ -7,14 +7,10 @@
 2. Compile the code using
 	javac -cp . com/matei/eece411/A2/*.java
 
-3. Generate the stubs using
+3. Generate the stub using (note: we only need to generate the stub for ChatImpl since we only bind that to the rmiregistry)
 	rmic -classpath . com.matei.eece411.A2.ChatImpl
- 	rmic -classpath . com.matei.eece411.A2.CallbackImpl
 
-4. (OPTIONAL: We do this in the code now, but in case it doesn't work you can do this) Start the rmiregistry process using
-	rmiregistry &
-
-5. Run the client/server with the policy file argument using
+4. Run the client/server with the policy file argument using
 	java -cp . -Djava.security.policy=<path to policy file> <client/server class name>
 	
 	For example:
