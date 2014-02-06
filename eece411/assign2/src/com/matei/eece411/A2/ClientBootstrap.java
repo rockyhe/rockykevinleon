@@ -6,11 +6,15 @@ import java.rmi.registry.Registry;
 import java.rmi.RMISecurityManager;
 import java.rmi.Naming;
 import java.rmi.RemoteException;
+import java.util.TimerTask;
+import java.util.Timer;
 
-public class Client
+public class ClientBootstrap
 {    
     private static GUI gui;
     private static MessageQueue _queue;
+	
+	private static final int KEEP_ALIVE_RATE = 5000;
     
     public static void main(String[] args)
 	{
@@ -67,12 +71,17 @@ public class Client
 			//If register returns false, then there was a client name conflict
 			//So exit the client and inform user to use a new client name
 			//Assume if register throws a ConnectException that server is down
-		    if (!chatStub.register(new CallbackImpl(clientName, gui)))
+		    if (!chatStub.register(clientName, new CallbackImpl(gui)))
 			{
 				System.out.println("Error: A client already exists with the id " + clientName + "!\n");
 				System.out.println("Please try again with a different id.");
 				System.exit(0);
 			}
+			
+			//Instantiate a new PingServer and schedule it to run periodically
+			PingServer pingTask = new PingServer(chatStub, clientName);
+			Timer t = new Timer();
+			t.scheduleAtFixedRate(pingTask, 0, KEEP_ALIVE_RATE);
         
 			while (true)
 			{
@@ -125,6 +134,49 @@ public class Client
 			} catch (Exception e) {
 				System.out.println("Client exception: " + e.getMessage());
 				e.printStackTrace();
+			}
+		}
+	}
+	
+	//Nested timer class to ping server to inform it that client is alive
+	//See reference here: http://stackoverflow.com/questions/4985343/java-rmi-timeouts-crashes
+	private static class PingServer extends TimerTask
+	{
+		private Chat server;
+		private String clientId;
+		
+		public PingServer(Chat chatStub, String clientName)
+		{
+			server = chatStub;
+			clientId = clientName;
+		}
+	
+		public void run()
+		{
+			System.out.println("Running PingServer...");
+			//Send keepAlive to server up to 3 times.
+			//If keepAlive method fails after 3 tries, assume server is down and terminate the client
+			for (int i=0; i < 3; i++)
+			{
+				try {
+					server.keepAlive(clientId);
+					//Quit trying if we succeed (i.e. no exception)
+					break;
+				} catch (ConnectException e) {
+					if (i < 2)
+					{
+						System.out.println("Attempt " + (i+1) + ": Failed to invoke keepAlive. Trying again...");
+					}
+					else
+					{
+						System.out.println("Attempt " + (i+1) + ": Unable to connect to server. Terminating client!");
+						gui.addToTextArea("Unable to connect to server. Terminating client!");
+						System.exit(0);
+					}
+				} catch (Exception e) {
+					System.out.println("Client exception: " + e.getMessage());
+					e.printStackTrace();
+				}
 			}
 		}
 	}

@@ -15,5 +15,5 @@
 	java -cp . -Djava.security.policy=<path to policy file> <client/server class name>
 	
 	For example:
-	java -cp . -Djava.security.policy=com/matei/eece411/A2/allAccess.policy com.matei.eece411.A2.Server <chatroomName>
-	java -cp . -Djava.security.policy=com/matei/eece411/A2/allAccess.policy com.matei.eece411.A2.Client <hostname> <chatroomName> <clientName>
+	java -cp . -Djava.security.policy=com/matei/eece411/A2/allAccess.policy com.matei.eece411.A2.ServerBootstrap <chatroomName>
+	java -cp . -Djava.security.policy=com/matei/eece411/A2/allAccess.policy com.matei.eece411.A2.ClientBootstrap <hostname> <chatroomName> <clientName>

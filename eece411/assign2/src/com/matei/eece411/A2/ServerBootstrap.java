@@ -9,14 +9,18 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.TimerTask;
 import java.util.Timer;
+import java.util.List;
+import java.util.ArrayList;
 
-public class Server
+public class ServerBootstrap
 {
 	//Maintain a hashmap of client key-value pairs using client id and their callback object
 	private static ConcurrentHashMap<String, Callback> clients;
+	//Maintain a list of clients that have sent a keep alive signal each flush
+	private static List<String> clientKeepAlives;
 	private static ChatImpl chatroom;
 	
-	private static final int PING_RATE = 5000;
+	private static final int FLUSH_RATE = 10000;
 	
 	//Main method to instantiate server and bind an ChatImpl object
 	public static void main(String args[]) 
@@ -31,19 +35,20 @@ public class Server
 		
 		//Instantiate the hashmap to store client id and callback object key-value pairs
 		clients = new ConcurrentHashMap<String, Callback>();
+		clientKeepAlives = new ArrayList<String>();
 		
 		try {
 			//Instantiate a ChatImpl object and pass reference to the hashmap
-			chatroom = new ChatImpl(clients); 
+			chatroom = new ChatImpl(clients, clientKeepAlives); 
 			//Bind this object instance to the specified chatroom name in the rmiregistry
 			//Use createRegistry in case rmiregistry isn't running, using default port number
 			Registry registry = LocateRegistry.createRegistry(1099);
 			registry.rebind(chatroomName, chatroom);
 			
-			//Instantiate a new PingClients and schedule it to run every 5s
-			PingClients pingTask = new PingClients();
+			//Instantiate a new FlushClients and schedule it to run periodically
+			FlushClients flushTask = new FlushClients();
 			Timer t = new Timer();
-			t.scheduleAtFixedRate(pingTask, 0, PING_RATE);
+			t.scheduleAtFixedRate(flushTask, 0, FLUSH_RATE);
 			
 			System.out.println("Server is up and running...\n");
 		} catch (Exception e) { 
@@ -52,46 +57,40 @@ public class Server
 		}
 	}
 	
-	//Nested timer class to ping clients to check for connectivity
+	//Nested timer class to check for clients that haven't sent a keep alive recently
 	//See reference here: http://stackoverflow.com/questions/4985343/java-rmi-timeouts-crashes
-	private static class PingClients extends TimerTask
+	//Also see: http://www.teamliquid.net/blogs/viewblog.php?topic_id=192763
+	private static class FlushClients extends TimerTask
 	{
 		public void run()
 		{
+			System.out.println("Running FlushClients...");
+			//If a client id is not in the keep alive list, assume the client has disconnected and remove it from the client list
 			for (Iterator<Entry<String, Callback>> it = clients.entrySet().iterator(); it.hasNext(); )
 			{
-				Entry<String, Callback> entry = it.next();				
-				Callback client = entry.getValue();
-				//Ping each client up to 3 times. 
-				//If ping fails to get reponse after 3 tries, assume client has disconnected so remove it from the list of clients.
-				for (int i=0; i < 3; i++)
+				Entry<String, Callback> entry = it.next();
+				String id = entry.getKey();
+				
+				if (!clientKeepAlives.contains(id))
 				{
+					//Remove the entry from the hashmap
+					it.remove();
+					//Broadcast the disconnection to all other clients
+					//Since the server is invoking this, assume we don't need to do retries
+					String msg = entry.getKey() + " has disconnected from the chatroom!";
 					try {
-						client.ping();
-						//Quit trying if we succeed (i.e. no exception)
-						break;
-					} catch (RemoteException re) {
-						if (i < 2)
-						{
-							System.out.println("Attempt " + (i+1) + ": No ping reply from client " + entry.getKey() + ". Trying again.");
-						}
-						else
-						{
-							//Remove the entry from the hashmap
-							it.remove();
-							System.out.println("Attempt " + (i+1) + ": No ping reply from client " + entry.getKey() + ". Assumming disconnected!");
-							//Broadcast the disconnection to all other clients
-							//Since the server is invoking this, assume we don't need to do retries
-							try {
-								chatroom.broadcast(entry.getKey() + " has disconnected from the chatroom!");
-							} catch (Exception e) {
-								System.out.println("Server exception: " + e.getMessage());
-								e.printStackTrace();
-							}
-						}
+						chatroom.broadcast(msg);
+						System.out.println(msg);
+					} catch (Exception e) {
+						System.out.println("Server exception: " + e.getMessage());
+						e.printStackTrace();
 					}
 				}
 			}
+			
+			//Clear the clientKeepAlive list once flush is complete
+			clientKeepAlives.clear();
+			//System.out.println("Finished FlushClients!");
 		}
 	}
 }

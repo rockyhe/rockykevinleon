@@ -3,7 +3,8 @@ import java.rmi.*;
 
 public interface Chat extends Remote
 {       
-    public boolean register(Callback clientCallback) throws RemoteException;
+    public boolean register(String id, Callback clientCallback) throws RemoteException;
 	public void broadcast(String txt) throws RemoteException;
+    public void keepAlive(String id) throws RemoteException;
 }
 
