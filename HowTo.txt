@@ -5,15 +5,15 @@
 	rockykevinleon/eece411/assign2/src
 
 2. Compile the code using
-	javac -cp . com/matei/eece411/A2/*.java
+	javac -cp . com/v3l7/eece411/A2/*.java
 
 3. Generate the stubs using
-	rmic -classpath . com.matei.eece411.A2.ChatImpl
-	rmic -classpath . com.matei.eece411.A2.CallbackImpl
+	rmic -classpath . com.v3l7.eece411.A2.ChatImpl
+	rmic -classpath . com.v3l7.eece411.A2.CallbackImpl
 
 4. Run the client/server with the policy file argument using
 	java -cp . -Djava.security.policy=<path to policy file> <client/server class name>
 	
 	For example:
-	java -cp . -Djava.security.policy=com/matei/eece411/A2/allAccess.policy com.matei.eece411.A2.ServerBootstrap <chatroomName>
-	java -cp . -Djava.security.policy=com/matei/eece411/A2/allAccess.policy com.matei.eece411.A2.ClientBootstrap <hostname> <chatroomName> <clientName>
+	java -cp . -Djava.security.policy=com/v3l7/eece411/A2/allAccess.policy com.v3l7.eece411.A2.ServerBootstrap <chatroomName>
+	java -cp . -Djava.security.policy=com/v3l7/eece411/A2/allAccess.policy com.v3l7.eece411.A2.ClientBootstrap <hostname> <chatroomName> <clientName>
