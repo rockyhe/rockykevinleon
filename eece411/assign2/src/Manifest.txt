@@ -1,5 +1,5 @@
 Manifest-Version: 1.0
 Created-By: 1.7.0_06 (Oracle Corporation)
-Main-Class: com.v3l7.eece411.A2.ServerBootstrap
+Main-Class: com.v3l7.eece411.A2.ClientBootstrap
 
 

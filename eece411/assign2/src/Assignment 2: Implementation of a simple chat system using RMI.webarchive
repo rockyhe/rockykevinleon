@@ -1,0 +1,1046 @@
+bplist00Ñ_WebMainResourceÕ	
+_WebResourceFrameName^WebResourceURL_WebResourceData_WebResourceMIMEType_WebResourceTextEncodingNameP_,http://www.ece.ubc.ca/~matei/EECE411/a02.htmOØ„<html xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns:m="http://schemas.microsoft.com/office/2004/12/omml" xmlns="http://www.w3.org/TR/REC-html40"><head>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<meta name="ProgId" content="Word.Document">
+<meta name="Generator" content="Microsoft Word 14">
+<meta name="Originator" content="Microsoft Word 14">
+<link rel="File-List" href="a02_files/filelist.xml">
+<title>Assignment 2: Implementation of a simple chat system using RMI</title>
+<!--[if gte mso 9]><xml>
+ <o:DocumentProperties>
+  <o:Author>Matei Ripeanu</o:Author>
+  <o:Template>Normal</o:Template>
+  <o:LastAuthor>matei</o:LastAuthor>
+  <o:Revision>38</o:Revision>
+  <o:TotalTime>248</o:TotalTime>
+  <o:Created>2006-09-20T00:42:00Z</o:Created>
+  <o:LastSaved>2014-01-27T22:55:00Z</o:LastSaved>
+  <o:Pages>1</o:Pages>
+  <o:Words>679</o:Words>
+  <o:Characters>3876</o:Characters>
+  <o:Company>The University of Chicago</o:Company>
+  <o:Lines>32</o:Lines>
+  <o:Paragraphs>9</o:Paragraphs>
+  <o:CharactersWithSpaces>4546</o:CharactersWithSpaces>
+  <o:Version>14.00</o:Version>
+ </o:DocumentProperties>
+</xml><![endif]-->
+<link rel="themeData" href="a02_files/themedata.thmx">
+<link rel="colorSchemeMapping" href="a02_files/colorschememapping.xml">
+<!--[if gte mso 9]><xml>
+ <w:WordDocument>
+  <w:Zoom>111</w:Zoom>
+  <w:DontDisplayPageBoundaries/>
+  <w:SpellingState>Clean</w:SpellingState>
+  <w:GrammarState>Clean</w:GrammarState>
+  <w:TrackMoves>false</w:TrackMoves>
+  <w:TrackFormatting/>
+  <w:PunctuationKerning/>
+  <w:ValidateAgainstSchemas/>
+  <w:SaveIfXMLInvalid>false</w:SaveIfXMLInvalid>
+  <w:IgnoreMixedContent>false</w:IgnoreMixedContent>
+  <w:AlwaysShowPlaceholderText>false</w:AlwaysShowPlaceholderText>
+  <w:DoNotPromoteQF/>
+  <w:LidThemeOther>EN-CA</w:LidThemeOther>
+  <w:LidThemeAsian>X-NONE</w:LidThemeAsian>
+  <w:LidThemeComplexScript>X-NONE</w:LidThemeComplexScript>
+  <w:Compatibility>
+   <w:BreakWrappedTables/>
+   <w:SnapToGridInCell/>
+   <w:WrapTextWithPunct/>
+   <w:UseAsianBreakRules/>
+   <w:DontGrowAutofit/>
+   <w:SplitPgBreakAndParaMark/>
+  </w:Compatibility>
+  <w:BrowserLevel>MicrosoftInternetExplorer4</w:BrowserLevel>
+  <m:mathPr>
+   <m:mathFont m:val="Cambria Math"/>
+   <m:brkBin m:val="before"/>
+   <m:brkBinSub m:val="&#45;-"/>
+   <m:smallFrac m:val="off"/>
+   <m:dispDef/>
+   <m:lMargin m:val="0"/>
+   <m:rMargin m:val="0"/>
+   <m:defJc m:val="centerGroup"/>
+   <m:wrapIndent m:val="1440"/>
+   <m:intLim m:val="subSup"/>
+   <m:naryLim m:val="undOvr"/>
+  </m:mathPr></w:WordDocument>
+</xml><![endif]--><!--[if gte mso 9]><xml>
+ <w:LatentStyles DefLockedState="false" DefUnhideWhenUsed="false"
+  DefSemiHidden="false" DefQFormat="false" LatentStyleCount="267">
+  <w:LsdException Locked="false" QFormat="true" Name="Normal"/>
+  <w:LsdException Locked="false" QFormat="true" Name="heading 1"/>
+  <w:LsdException Locked="false" QFormat="true" Name="heading 2"/>
+  <w:LsdException Locked="false" QFormat="true" Name="heading 3"/>
+  <w:LsdException Locked="false" QFormat="true" Name="heading 4"/>
+  <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+   QFormat="true" Name="heading 5"/>
+  <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+   QFormat="true" Name="heading 6"/>
+  <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+   QFormat="true" Name="heading 7"/>
+  <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+   QFormat="true" Name="heading 8"/>
+  <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+   QFormat="true" Name="heading 9"/>
+  <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+   QFormat="true" Name="caption"/>
+  <w:LsdException Locked="false" QFormat="true" Name="Title"/>
+  <w:LsdException Locked="false" Priority="1" Name="Default Paragraph Font"/>
+  <w:LsdException Locked="false" QFormat="true" Name="Subtitle"/>
+  <w:LsdException Locked="false" QFormat="true" Name="Strong"/>
+  <w:LsdException Locked="false" QFormat="true" Name="Emphasis"/>
+  <w:LsdException Locked="false" Priority="99" Name="No List"/>
+  <w:LsdException Locked="false" Priority="99" SemiHidden="true"
+   Name="Placeholder Text"/>
+  <w:LsdException Locked="false" Priority="1" QFormat="true" Name="No Spacing"/>
+  <w:LsdException Locked="false" Priority="60" Name="Light Shading"/>
+  <w:LsdException Locked="false" Priority="61" Name="Light List"/>
+  <w:LsdException Locked="false" Priority="62" Name="Light Grid"/>
+  <w:LsdException Locked="false" Priority="63" Name="Medium Shading 1"/>
+  <w:LsdException Locked="false" Priority="64" Name="Medium Shading 2"/>
+  <w:LsdException Locked="false" Priority="65" Name="Medium List 1"/>
+  <w:LsdException Locked="false" Priority="66" Name="Medium List 2"/>
+  <w:LsdException Locked="false" Priority="67" Name="Medium Grid 1"/>
+  <w:LsdException Locked="false" Priority="68" Name="Medium Grid 2"/>
+  <w:LsdException Locked="false" Priority="69" Name="Medium Grid 3"/>
+  <w:LsdException Locked="false" Priority="70" Name="Dark List"/>
+  <w:LsdException Locked="false" Priority="71" Name="Colorful Shading"/>
+  <w:LsdException Locked="false" Priority="72" Name="Colorful List"/>
+  <w:LsdException Locked="false" Priority="73" Name="Colorful Grid"/>
+  <w:LsdException Locked="false" Priority="60" Name="Light Shading Accent 1"/>
+  <w:LsdException Locked="false" Priority="61" Name="Light List Accent 1"/>
+  <w:LsdException Locked="false" Priority="62" Name="Light Grid Accent 1"/>
+  <w:LsdException Locked="false" Priority="63" Name="Medium Shading 1 Accent 1"/>
+  <w:LsdException Locked="false" Priority="64" Name="Medium Shading 2 Accent 1"/>
+  <w:LsdException Locked="false" Priority="65" Name="Medium List 1 Accent 1"/>
+  <w:LsdException Locked="false" Priority="99" SemiHidden="true" Name="Revision"/>
+  <w:LsdException Locked="false" Priority="34" QFormat="true"
+   Name="List Paragraph"/>
+  <w:LsdException Locked="false" Priority="29" QFormat="true" Name="Quote"/>
+  <w:LsdException Locked="false" Priority="30" QFormat="true"
+   Name="Intense Quote"/>
+  <w:LsdException Locked="false" Priority="66" Name="Medium List 2 Accent 1"/>
+  <w:LsdException Locked="false" Priority="67" Name="Medium Grid 1 Accent 1"/>
+  <w:LsdException Locked="false" Priority="68" Name="Medium Grid 2 Accent 1"/>
+  <w:LsdException Locked="false" Priority="69" Name="Medium Grid 3 Accent 1"/>
+  <w:LsdException Locked="false" Priority="70" Name="Dark List Accent 1"/>
+  <w:LsdException Locked="false" Priority="71" Name="Colorful Shading Accent 1"/>
+  <w:LsdException Locked="false" Priority="72" Name="Colorful List Accent 1"/>
+  <w:LsdException Locked="false" Priority="73" Name="Colorful Grid Accent 1"/>
+  <w:LsdException Locked="false" Priority="60" Name="Light Shading Accent 2"/>
+  <w:LsdException Locked="false" Priority="61" Name="Light List Accent 2"/>
+  <w:LsdException Locked="false" Priority="62" Name="Light Grid Accent 2"/>
+  <w:LsdException Locked="false" Priority="63" Name="Medium Shading 1 Accent 2"/>
+  <w:LsdException Locked="false" Priority="64" Name="Medium Shading 2 Accent 2"/>
+  <w:LsdException Locked="false" Priority="65" Name="Medium List 1 Accent 2"/>
+  <w:LsdException Locked="false" Priority="66" Name="Medium List 2 Accent 2"/>
+  <w:LsdException Locked="false" Priority="67" Name="Medium Grid 1 Accent 2"/>
+  <w:LsdException Locked="false" Priority="68" Name="Medium Grid 2 Accent 2"/>
+  <w:LsdException Locked="false" Priority="69" Name="Medium Grid 3 Accent 2"/>
+  <w:LsdException Locked="false" Priority="70" Name="Dark List Accent 2"/>
+  <w:LsdException Locked="false" Priority="71" Name="Colorful Shading Accent 2"/>
+  <w:LsdException Locked="false" Priority="72" Name="Colorful List Accent 2"/>
+  <w:LsdException Locked="false" Priority="73" Name="Colorful Grid Accent 2"/>
+  <w:LsdException Locked="false" Priority="60" Name="Light Shading Accent 3"/>
+  <w:LsdException Locked="false" Priority="61" Name="Light List Accent 3"/>
+  <w:LsdException Locked="false" Priority="62" Name="Light Grid Accent 3"/>
+  <w:LsdException Locked="false" Priority="63" Name="Medium Shading 1 Accent 3"/>
+  <w:LsdException Locked="false" Priority="64" Name="Medium Shading 2 Accent 3"/>
+  <w:LsdException Locked="false" Priority="65" Name="Medium List 1 Accent 3"/>
+  <w:LsdException Locked="false" Priority="66" Name="Medium List 2 Accent 3"/>
+  <w:LsdException Locked="false" Priority="67" Name="Medium Grid 1 Accent 3"/>
+  <w:LsdException Locked="false" Priority="68" Name="Medium Grid 2 Accent 3"/>
+  <w:LsdException Locked="false" Priority="69" Name="Medium Grid 3 Accent 3"/>
+  <w:LsdException Locked="false" Priority="70" Name="Dark List Accent 3"/>
+  <w:LsdException Locked="false" Priority="71" Name="Colorful Shading Accent 3"/>
+  <w:LsdException Locked="false" Priority="72" Name="Colorful List Accent 3"/>
+  <w:LsdException Locked="false" Priority="73" Name="Colorful Grid Accent 3"/>
+  <w:LsdException Locked="false" Priority="60" Name="Light Shading Accent 4"/>
+  <w:LsdException Locked="false" Priority="61" Name="Light List Accent 4"/>
+  <w:LsdException Locked="false" Priority="62" Name="Light Grid Accent 4"/>
+  <w:LsdException Locked="false" Priority="63" Name="Medium Shading 1 Accent 4"/>
+  <w:LsdException Locked="false" Priority="64" Name="Medium Shading 2 Accent 4"/>
+  <w:LsdException Locked="false" Priority="65" Name="Medium List 1 Accent 4"/>
+  <w:LsdException Locked="false" Priority="66" Name="Medium List 2 Accent 4"/>
+  <w:LsdException Locked="false" Priority="67" Name="Medium Grid 1 Accent 4"/>
+  <w:LsdException Locked="false" Priority="68" Name="Medium Grid 2 Accent 4"/>
+  <w:LsdException Locked="false" Priority="69" Name="Medium Grid 3 Accent 4"/>
+  <w:LsdException Locked="false" Priority="70" Name="Dark List Accent 4"/>
+  <w:LsdException Locked="false" Priority="71" Name="Colorful Shading Accent 4"/>
+  <w:LsdException Locked="false" Priority="72" Name="Colorful List Accent 4"/>
+  <w:LsdException Locked="false" Priority="73" Name="Colorful Grid Accent 4"/>
+  <w:LsdException Locked="false" Priority="60" Name="Light Shading Accent 5"/>
+  <w:LsdException Locked="false" Priority="61" Name="Light List Accent 5"/>
+  <w:LsdException Locked="false" Priority="62" Name="Light Grid Accent 5"/>
+  <w:LsdException Locked="false" Priority="63" Name="Medium Shading 1 Accent 5"/>
+  <w:LsdException Locked="false" Priority="64" Name="Medium Shading 2 Accent 5"/>
+  <w:LsdException Locked="false" Priority="65" Name="Medium List 1 Accent 5"/>
+  <w:LsdException Locked="false" Priority="66" Name="Medium List 2 Accent 5"/>
+  <w:LsdException Locked="false" Priority="67" Name="Medium Grid 1 Accent 5"/>
+  <w:LsdException Locked="false" Priority="68" Name="Medium Grid 2 Accent 5"/>
+  <w:LsdException Locked="false" Priority="69" Name="Medium Grid 3 Accent 5"/>
+  <w:LsdException Locked="false" Priority="70" Name="Dark List Accent 5"/>
+  <w:LsdException Locked="false" Priority="71" Name="Colorful Shading Accent 5"/>
+  <w:LsdException Locked="false" Priority="72" Name="Colorful List Accent 5"/>
+  <w:LsdException Locked="false" Priority="73" Name="Colorful Grid Accent 5"/>
+  <w:LsdException Locked="false" Priority="60" Name="Light Shading Accent 6"/>
+  <w:LsdException Locked="false" Priority="61" Name="Light List Accent 6"/>
+  <w:LsdException Locked="false" Priority="62" Name="Light Grid Accent 6"/>
+  <w:LsdException Locked="false" Priority="63" Name="Medium Shading 1 Accent 6"/>
+  <w:LsdException Locked="false" Priority="64" Name="Medium Shading 2 Accent 6"/>
+  <w:LsdException Locked="false" Priority="65" Name="Medium List 1 Accent 6"/>
+  <w:LsdException Locked="false" Priority="66" Name="Medium List 2 Accent 6"/>
+  <w:LsdException Locked="false" Priority="67" Name="Medium Grid 1 Accent 6"/>
+  <w:LsdException Locked="false" Priority="68" Name="Medium Grid 2 Accent 6"/>
+  <w:LsdException Locked="false" Priority="69" Name="Medium Grid 3 Accent 6"/>
+  <w:LsdException Locked="false" Priority="70" Name="Dark List Accent 6"/>
+  <w:LsdException Locked="false" Priority="71" Name="Colorful Shading Accent 6"/>
+  <w:LsdException Locked="false" Priority="72" Name="Colorful List Accent 6"/>
+  <w:LsdException Locked="false" Priority="73" Name="Colorful Grid Accent 6"/>
+  <w:LsdException Locked="false" Priority="19" QFormat="true"
+   Name="Subtle Emphasis"/>
+  <w:LsdException Locked="false" Priority="21" QFormat="true"
+   Name="Intense Emphasis"/>
+  <w:LsdException Locked="false" Priority="31" QFormat="true"
+   Name="Subtle Reference"/>
+  <w:LsdException Locked="false" Priority="32" QFormat="true"
+   Name="Intense Reference"/>
+  <w:LsdException Locked="false" Priority="33" QFormat="true" Name="Book Title"/>
+  <w:LsdException Locked="false" Priority="37" SemiHidden="true"
+   UnhideWhenUsed="true" Name="Bibliography"/>
+  <w:LsdException Locked="false" Priority="39" SemiHidden="true"
+   UnhideWhenUsed="true" QFormat="true" Name="TOC Heading"/>
+ </w:LatentStyles>
+</xml><![endif]-->
+<style>
+<!--
+ /* Font Definitions */
+ @font-face
+	{font-family:Wingdings;
+	panose-1:5 0 0 0 0 0 0 0 0 0;
+	mso-font-charset:2;
+	mso-generic-font-family:auto;
+	mso-font-pitch:variable;
+	mso-font-signature:0 268435456 0 0 -2147483648 0;}
+@font-face
+	{font-family:"MS Mincho";
+	panose-1:2 2 6 9 4 2 5 8 3 4;
+	mso-font-alt:"\FF2D\FF33 \660E\671D";
+	mso-font-charset:128;
+	mso-generic-font-family:modern;
+	mso-font-pitch:fixed;
+	mso-font-signature:-536870145 1791491579 18 0 131231 0;}
+@font-face
+	{font-family:"MS Mincho";
+	panose-1:2 2 6 9 4 2 5 8 3 4;
+	mso-font-alt:"\FF2D\FF33 \660E\671D";
+	mso-font-charset:128;
+	mso-generic-font-family:modern;
+	mso-font-pitch:fixed;
+	mso-font-signature:-536870145 1791491579 18 0 131231 0;}
+@font-face
+	{font-family:Tahoma;
+	panose-1:2 11 6 4 3 5 4 4 2 4;
+	mso-font-charset:0;
+	mso-generic-font-family:swiss;
+	mso-font-pitch:variable;
+	mso-font-signature:-520081665 -1073717157 41 0 66047 0;}
+@font-face
+	{font-family:Verdana;
+	panose-1:2 11 6 4 3 5 4 4 2 4;
+	mso-font-charset:0;
+	mso-generic-font-family:swiss;
+	mso-font-pitch:variable;
+	mso-font-signature:-1593833729 1073750107 16 0 415 0;}
+@font-face
+	{font-family:"\@MS Mincho";
+	panose-1:2 2 6 9 4 2 5 8 3 4;
+	mso-font-charset:128;
+	mso-generic-font-family:modern;
+	mso-font-pitch:fixed;
+	mso-font-signature:-536870145 1791491579 18 0 131231 0;}
+@font-face
+	{font-family:Consolas;
+	panose-1:2 11 6 9 2 2 4 3 2 4;
+	mso-font-charset:0;
+	mso-generic-font-family:modern;
+	mso-font-pitch:fixed;
+	mso-font-signature:-520092929 1073806591 9 0 415 0;}
+ /* Style Definitions */
+ p.MsoNormal, li.MsoNormal, div.MsoNormal
+	{mso-style-unhide:no;
+	mso-style-qformat:yes;
+	mso-style-parent:"";
+	margin:0cm;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan;
+	font-size:12.0pt;
+	font-family:"Times New Roman","serif";
+	mso-fareast-font-family:"MS Mincho";}
+h1
+	{mso-style-unhide:no;
+	mso-style-qformat:yes;
+	mso-style-link:"Heading 1 Char";
+	mso-margin-top-alt:auto;
+	margin-right:0cm;
+	mso-margin-bottom-alt:auto;
+	margin-left:0cm;
+	mso-pagination:widow-orphan;
+	mso-outline-level:1;
+	font-size:24.0pt;
+	font-family:"Times New Roman","serif";
+	mso-fareast-font-family:"Times New Roman";
+	font-weight:bold;}
+h2
+	{mso-style-unhide:no;
+	mso-style-qformat:yes;
+	mso-style-link:"Heading 2 Char";
+	mso-margin-top-alt:auto;
+	margin-right:0cm;
+	mso-margin-bottom-alt:auto;
+	margin-left:0cm;
+	mso-pagination:widow-orphan;
+	mso-outline-level:2;
+	font-size:18.0pt;
+	font-family:"Times New Roman","serif";
+	mso-fareast-font-family:"Times New Roman";
+	font-weight:bold;}
+h3
+	{mso-style-unhide:no;
+	mso-style-qformat:yes;
+	mso-style-link:"Heading 3 Char";
+	mso-margin-top-alt:auto;
+	margin-right:0cm;
+	mso-margin-bottom-alt:auto;
+	margin-left:0cm;
+	mso-pagination:widow-orphan;
+	mso-outline-level:3;
+	font-size:13.5pt;
+	font-family:"Times New Roman","serif";
+	mso-fareast-font-family:"Times New Roman";
+	font-weight:bold;}
+h4
+	{mso-style-unhide:no;
+	mso-style-qformat:yes;
+	mso-style-link:"Heading 4 Char";
+	mso-margin-top-alt:auto;
+	margin-right:0cm;
+	mso-margin-bottom-alt:auto;
+	margin-left:0cm;
+	mso-pagination:widow-orphan;
+	mso-outline-level:4;
+	font-size:12.0pt;
+	font-family:"Times New Roman","serif";
+	mso-fareast-font-family:"Times New Roman";
+	font-weight:bold;}
+a:link, span.MsoHyperlink
+	{mso-style-unhide:no;
+	color:blue;
+	text-decoration:underline;
+	text-underline:single;}
+a:visited, span.MsoHyperlinkFollowed
+	{mso-style-unhide:no;
+	color:purple;
+	text-decoration:underline;
+	text-underline:single;}
+p.MsoPlainText, li.MsoPlainText, div.MsoPlainText
+	{mso-style-unhide:no;
+	mso-style-link:"Plain Text Char";
+	margin:0cm;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan;
+	font-size:10.0pt;
+	font-family:"Courier New";
+	mso-fareast-font-family:"MS Mincho";}
+p
+	{mso-style-unhide:no;
+	mso-margin-top-alt:auto;
+	margin-right:0cm;
+	mso-margin-bottom-alt:auto;
+	margin-left:0cm;
+	mso-pagination:widow-orphan;
+	font-size:12.0pt;
+	font-family:"Times New Roman","serif";
+	mso-fareast-font-family:"MS Mincho";}
+p.MsoAcetate, li.MsoAcetate, div.MsoAcetate
+	{mso-style-noshow:yes;
+	mso-style-unhide:no;
+	mso-style-link:"Balloon Text Char";
+	margin:0cm;
+	margin-bottom:.0001pt;
+	mso-pagination:widow-orphan;
+	font-size:8.0pt;
+	font-family:"Tahoma","sans-serif";
+	mso-fareast-font-family:"Times New Roman";}
+span.Heading1Char
+	{mso-style-name:"Heading 1 Char";
+	mso-style-unhide:no;
+	mso-style-locked:yes;
+	mso-style-link:"Heading 1";
+	mso-ansi-font-size:14.0pt;
+	mso-bidi-font-size:14.0pt;
+	font-family:"Cambria","serif";
+	mso-ascii-font-family:Cambria;
+	mso-ascii-theme-font:major-latin;
+	mso-fareast-font-family:"Times New Roman";
+	mso-fareast-theme-font:major-fareast;
+	mso-hansi-font-family:Cambria;
+	mso-hansi-theme-font:major-latin;
+	mso-bidi-font-family:"Times New Roman";
+	mso-bidi-theme-font:major-bidi;
+	color:#365F91;
+	mso-themecolor:accent1;
+	mso-themeshade:191;
+	font-weight:bold;}
+span.Heading2Char
+	{mso-style-name:"Heading 2 Char";
+	mso-style-unhide:no;
+	mso-style-locked:yes;
+	mso-style-link:"Heading 2";
+	mso-ansi-font-size:13.0pt;
+	mso-bidi-font-size:13.0pt;
+	font-family:"Cambria","serif";
+	mso-ascii-font-family:Cambria;
+	mso-ascii-theme-font:major-latin;
+	mso-fareast-font-family:"Times New Roman";
+	mso-fareast-theme-font:major-fareast;
+	mso-hansi-font-family:Cambria;
+	mso-hansi-theme-font:major-latin;
+	mso-bidi-font-family:"Times New Roman";
+	mso-bidi-theme-font:major-bidi;
+	color:#4F81BD;
+	mso-themecolor:accent1;
+	font-weight:bold;}
+span.Heading3Char
+	{mso-style-name:"Heading 3 Char";
+	mso-style-unhide:no;
+	mso-style-locked:yes;
+	mso-style-link:"Heading 3";
+	mso-ansi-font-size:12.0pt;
+	mso-bidi-font-size:12.0pt;
+	font-family:"Cambria","serif";
+	mso-ascii-font-family:Cambria;
+	mso-ascii-theme-font:major-latin;
+	mso-fareast-font-family:"Times New Roman";
+	mso-fareast-theme-font:major-fareast;
+	mso-hansi-font-family:Cambria;
+	mso-hansi-theme-font:major-latin;
+	mso-bidi-font-family:"Times New Roman";
+	mso-bidi-theme-font:major-bidi;
+	color:#4F81BD;
+	mso-themecolor:accent1;
+	font-weight:bold;}
+span.Heading4Char
+	{mso-style-name:"Heading 4 Char";
+	mso-style-unhide:no;
+	mso-style-locked:yes;
+	mso-style-link:"Heading 4";
+	mso-ansi-font-size:12.0pt;
+	mso-bidi-font-size:12.0pt;
+	font-family:"Cambria","serif";
+	mso-ascii-font-family:Cambria;
+	mso-ascii-theme-font:major-latin;
+	mso-fareast-font-family:"Times New Roman";
+	mso-fareast-theme-font:major-fareast;
+	mso-hansi-font-family:Cambria;
+	mso-hansi-theme-font:major-latin;
+	mso-bidi-font-family:"Times New Roman";
+	mso-bidi-theme-font:major-bidi;
+	color:#4F81BD;
+	mso-themecolor:accent1;
+	font-weight:bold;
+	font-style:italic;}
+span.PlainTextChar
+	{mso-style-name:"Plain Text Char";
+	mso-style-unhide:no;
+	mso-style-locked:yes;
+	mso-style-link:"Plain Text";
+	mso-ansi-font-size:10.5pt;
+	mso-bidi-font-size:10.5pt;
+	font-family:Consolas;
+	mso-ascii-font-family:Consolas;
+	mso-fareast-font-family:"MS Mincho";
+	mso-hansi-font-family:Consolas;
+	mso-bidi-font-family:Consolas;}
+span.BalloonTextChar
+	{mso-style-name:"Balloon Text Char";
+	mso-style-unhide:no;
+	mso-style-locked:yes;
+	mso-style-link:"Balloon Text";
+	mso-ansi-font-size:8.0pt;
+	mso-bidi-font-size:8.0pt;
+	font-family:"Tahoma","sans-serif";
+	mso-ascii-font-family:Tahoma;
+	mso-fareast-font-family:"MS Mincho";
+	mso-hansi-font-family:Tahoma;
+	mso-bidi-font-family:Tahoma;}
+span.SpellE
+	{mso-style-name:"";
+	mso-spl-e:yes;}
+span.GramE
+	{mso-style-name:"";
+	mso-gram-e:yes;}
+.MsoChpDefault
+	{mso-style-type:export-only;
+	mso-default-props:yes;
+	font-size:10.0pt;
+	mso-ansi-font-size:10.0pt;
+	mso-bidi-font-size:10.0pt;}
+@page WordSection1
+	{size:612.0pt 792.0pt;
+	margin:72.0pt 90.0pt 72.0pt 90.0pt;
+	mso-header-margin:36.0pt;
+	mso-footer-margin:36.0pt;
+	mso-paper-source:0;}
+div.WordSection1
+	{page:WordSection1;}
+ /* List Definitions */
+ @list l0
+	{mso-list-id:932201386;
+	mso-list-template-ids:858945326;}
+@list l0:level1
+	{mso-level-start-at:2;
+	mso-level-tab-stop:36.0pt;
+	mso-level-number-position:left;
+	text-indent:-18.0pt;}
+@list l0:level2
+	{mso-level-tab-stop:72.0pt;
+	mso-level-number-position:left;
+	text-indent:-18.0pt;}
+@list l0:level3
+	{mso-level-tab-stop:108.0pt;
+	mso-level-number-position:left;
+	text-indent:-18.0pt;}
+@list l0:level4
+	{mso-level-tab-stop:144.0pt;
+	mso-level-number-position:left;
+	text-indent:-18.0pt;}
+@list l0:level5
+	{mso-level-tab-stop:180.0pt;
+	mso-level-number-position:left;
+	text-indent:-18.0pt;}
+@list l0:level6
+	{mso-level-tab-stop:216.0pt;
+	mso-level-number-position:left;
+	text-indent:-18.0pt;}
+@list l0:level7
+	{mso-level-tab-stop:252.0pt;
+	mso-level-number-position:left;
+	text-indent:-18.0pt;}
+@list l0:level8
+	{mso-level-tab-stop:288.0pt;
+	mso-level-number-position:left;
+	text-indent:-18.0pt;}
+@list l0:level9
+	{mso-level-tab-stop:324.0pt;
+	mso-level-number-position:left;
+	text-indent:-18.0pt;}
+@list l1
+	{mso-list-id:1218084814;
+	mso-list-type:hybrid;
+	mso-list-template-ids:-1878749500 1390470990 67698691 67698693 67698689 67698691 67698693 67698689 67698691 67698693;}
+@list l1:level1
+	{mso-level-number-format:bullet;
+	mso-level-text:\F0A7;
+	mso-level-tab-stop:11.35pt;
+	mso-level-number-position:left;
+	margin-left:11.35pt;
+	text-indent:-11.35pt;
+	font-family:Wingdings;}
+@list l1:level2
+	{mso-level-tab-stop:72.0pt;
+	mso-level-number-position:left;
+	text-indent:-18.0pt;}
+@list l1:level3
+	{mso-level-tab-stop:108.0pt;
+	mso-level-number-position:left;
+	text-indent:-18.0pt;}
+@list l1:level4
+	{mso-level-tab-stop:144.0pt;
+	mso-level-number-position:left;
+	text-indent:-18.0pt;}
+@list l1:level5
+	{mso-level-tab-stop:180.0pt;
+	mso-level-number-position:left;
+	text-indent:-18.0pt;}
+@list l1:level6
+	{mso-level-tab-stop:216.0pt;
+	mso-level-number-position:left;
+	text-indent:-18.0pt;}
+@list l1:level7
+	{mso-level-tab-stop:252.0pt;
+	mso-level-number-position:left;
+	text-indent:-18.0pt;}
+@list l1:level8
+	{mso-level-tab-stop:288.0pt;
+	mso-level-number-position:left;
+	text-indent:-18.0pt;}
+@list l1:level9
+	{mso-level-tab-stop:324.0pt;
+	mso-level-number-position:left;
+	text-indent:-18.0pt;}
+@list l2
+	{mso-list-id:1539004070;
+	mso-list-template-ids:-397659266;}
+@list l2:level1
+	{mso-level-tab-stop:36.0pt;
+	mso-level-number-position:left;
+	text-indent:-18.0pt;}
+@list l2:level2
+	{mso-level-number-format:bullet;
+	mso-level-text:\F0B7;
+	mso-level-tab-stop:72.0pt;
+	mso-level-number-position:left;
+	text-indent:-18.0pt;
+	mso-ansi-font-size:10.0pt;
+	font-family:Symbol;}
+@list l2:level3
+	{mso-level-tab-stop:108.0pt;
+	mso-level-number-position:left;
+	text-indent:-18.0pt;}
+@list l2:level4
+	{mso-level-tab-stop:144.0pt;
+	mso-level-number-position:left;
+	text-indent:-18.0pt;}
+@list l2:level5
+	{mso-level-tab-stop:180.0pt;
+	mso-level-number-position:left;
+	text-indent:-18.0pt;}
+@list l2:level6
+	{mso-level-tab-stop:216.0pt;
+	mso-level-number-position:left;
+	text-indent:-18.0pt;}
+@list l2:level7
+	{mso-level-tab-stop:252.0pt;
+	mso-level-number-position:left;
+	text-indent:-18.0pt;}
+@list l2:level8
+	{mso-level-tab-stop:288.0pt;
+	mso-level-number-position:left;
+	text-indent:-18.0pt;}
+@list l2:level9
+	{mso-level-tab-stop:324.0pt;
+	mso-level-number-position:left;
+	text-indent:-18.0pt;}
+@list l3
+	{mso-list-id:1740444437;
+	mso-list-template-ids:-2035403202;}
+@list l3:level1
+	{mso-level-tab-stop:36.0pt;
+	mso-level-number-position:left;
+	text-indent:-18.0pt;}
+@list l3:level2
+	{mso-level-tab-stop:72.0pt;
+	mso-level-number-position:left;
+	text-indent:-18.0pt;}
+@list l3:level3
+	{mso-level-tab-stop:108.0pt;
+	mso-level-number-position:left;
+	text-indent:-18.0pt;}
+@list l3:level4
+	{mso-level-tab-stop:144.0pt;
+	mso-level-number-position:left;
+	text-indent:-18.0pt;}
+@list l3:level5
+	{mso-level-tab-stop:180.0pt;
+	mso-level-number-position:left;
+	text-indent:-18.0pt;}
+@list l3:level6
+	{mso-level-tab-stop:216.0pt;
+	mso-level-number-position:left;
+	text-indent:-18.0pt;}
+@list l3:level7
+	{mso-level-tab-stop:252.0pt;
+	mso-level-number-position:left;
+	text-indent:-18.0pt;}
+@list l3:level8
+	{mso-level-tab-stop:288.0pt;
+	mso-level-number-position:left;
+	text-indent:-18.0pt;}
+@list l3:level9
+	{mso-level-tab-stop:324.0pt;
+	mso-level-number-position:left;
+	text-indent:-18.0pt;}
+ol
+	{margin-bottom:0cm;}
+ul
+	{margin-bottom:0cm;}
+-->
+</style>
+<!--[if gte mso 10]>
+<style>
+ /* Style Definitions */
+ table.MsoNormalTable
+	{mso-style-name:"Table Normal";
+	mso-tstyle-rowband-size:0;
+	mso-tstyle-colband-size:0;
+	mso-style-noshow:yes;
+	mso-style-priority:99;
+	mso-style-parent:"";
+	mso-padding-alt:0cm 5.4pt 0cm 5.4pt;
+	mso-para-margin:0cm;
+	mso-para-margin-bottom:.0001pt;
+	mso-pagination:widow-orphan;
+	font-size:10.0pt;
+	font-family:"Times New Roman","serif";}
+table.MsoTableGrid
+	{mso-style-name:"Table Grid";
+	mso-tstyle-rowband-size:0;
+	mso-tstyle-colband-size:0;
+	mso-style-unhide:no;
+	border:solid windowtext 1.0pt;
+	mso-border-alt:solid windowtext .5pt;
+	mso-padding-alt:0cm 5.4pt 0cm 5.4pt;
+	mso-border-insideh:.5pt solid windowtext;
+	mso-border-insidev:.5pt solid windowtext;
+	mso-para-margin:0cm;
+	mso-para-margin-bottom:.0001pt;
+	mso-pagination:widow-orphan;
+	font-size:10.0pt;
+	font-family:"Times New Roman","serif";}
+</style>
+<![endif]--><!--[if gte mso 9]><xml>
+ <o:shapedefaults v:ext="edit" spidmax="1026"/>
+</xml><![endif]--><!--[if gte mso 9]><xml>
+ <o:shapelayout v:ext="edit">
+  <o:idmap v:ext="edit" data="1"/>
+ </o:shapelayout></xml><![endif]-->
+<style type="text/css"></style></head>
+
+<body lang="EN-CA" link="blue" vlink="purple" style="tab-interval:36.0pt">
+
+<div class="WordSection1">
+
+<p class="MsoNormal"><b style="mso-bidi-font-weight:normal"><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;color:red;
+mso-ansi-language:EN-US">Please note:<span style="mso-spacerun:yes">&nbsp;
+</span>this is a draft. Minor changes are possible by 29/01 </span></b><b style="mso-bidi-font-weight:normal"><span lang="EN-US" style="font-size:11.0pt;
+font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;color:#993300;mso-ansi-language:EN-US"><o:p></o:p></span></b></p>
+
+<p class="MsoNormal"><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;
+mso-ansi-language:EN-US"><o:p>&nbsp;</o:p></span></p>
+
+<p class="MsoNormal"><b><span lang="EN-US" style="font-size:11.0pt;font-family:
+&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-ansi-language:EN-US"><o:p>&nbsp;</o:p></span></b></p>
+
+<p class="MsoNormal"><b><span lang="EN-US" style="font-size:11.0pt;font-family:
+&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-ansi-language:EN-US">Assignment 2</span></b><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;
+mso-ansi-language:EN-US">: Implementation of a simple chat system using
+RMI.<span style="mso-spacerun:yes">&nbsp; </span><b style="mso-bidi-font-weight:
+normal"><span style="color:red">You can work in groups of up to four on this
+assignment. </span><span style="color:#993300"><o:p></o:p></span></b></span></p>
+
+<p class="MsoNormal"><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;
+mso-ansi-language:EN-US"><o:p>&nbsp;</o:p></span></p>
+
+<p class="MsoNormal"><b><span lang="EN-US" style="font-size:11.0pt;font-family:
+&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-ansi-language:EN-US">Due date</span></b><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;
+mso-ansi-language:EN-US">: See website<span style="mso-spacerun:yes">&nbsp; </span><o:p></o:p></span></p>
+
+<p class="MsoNormal"><b><span lang="EN-US" style="font-size:11.0pt;font-family:
+&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-ansi-language:EN-US"><o:p>&nbsp;</o:p></span></b></p>
+
+<p class="MsoNormal"><b><span lang="EN-US" style="font-size:11.0pt;font-family:
+&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-ansi-language:EN-US">Late policy</span></b><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;
+mso-ansi-language:EN-US">: 33% point deduction for each late day.<o:p></o:p></span></p>
+
+<p class="MsoNormal"><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;
+mso-ansi-language:EN-US"><o:p>&nbsp;</o:p></span></p>
+
+<p><b><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;
+mso-ansi-language:EN-US">The story</span></b><span lang="EN-US" style="font-size:
+11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-ansi-language:EN-US">: You will implement
+a simple, chat system based on the Java RMI middleware.<o:p></o:p></span></p>
+
+<p><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;
+mso-ansi-language:EN-US">Your chat system includes two types of components: a
+chat room and the clients. The clients may appear at any time, but the chat
+room is a long-lived <i>'server'</i> component. There is no user-level notion
+of user registration; any chat client can send a message as soon as it finished
+<span class="SpellE">botstraping</span>. All messages are to be broadcasted to
+all clients connected to the chat room.<o:p></o:p></span></p>
+
+<p><b><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;
+mso-ansi-language:EN-US">Key Constraint</span></b><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-ansi-language:
+EN-US">: only the chat room server can be registered in the <span class="SpellE"><i>rmiregistry</i></span><o:p></o:p></span></p>
+
+<p><b><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;
+mso-ansi-language:EN-US">More details:<o:p></o:p></span></b></p>
+
+<p><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;
+mso-ansi-language:EN-US">The server does not need to have a <span class="GramE">GUI,</span>
+a command line-based user interface is good enough. <o:p></o:p></span></p>
+
+<p><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;
+mso-ansi-language:EN-US">Try to keep the client user interface (UI) in as
+simple as possible: as long as the user can enter her messages and the UI can
+properly display the messages received from the other chat users your UI is
+fine. To simplify things, <a href="http://www.ece.ubc.ca/~samera/TA/411/HW2">here</a>
+I provide a minimal UI as a Java application (we will discuss its design in
+class). You are free however to implement your own GUI.<o:p></o:p></span></p>
+
+<p><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;
+mso-ansi-language:EN-US">You may use any Java development environment you like.<o:p></o:p></span></p>
+
+<h3><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;
+mso-ansi-language:EN-US">Deliverables<o:p></o:p></span></h3>
+
+<p class="MsoNormal" style="mso-margin-top-alt:auto;mso-margin-bottom-alt:auto"><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;
+mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:EN-US">Email to </span><b><span lang="EN-US" style="font-size:9.0pt;font-family:&quot;Arial&quot;,&quot;sans-serif&quot;;mso-fareast-font-family:
+&quot;Times New Roman&quot;;mso-ansi-language:EN-US"><a href="mailto:202020m@gmail.com"><span style="mso-bidi-font-size:12.0pt">202020m@gmail.com</span></a></span></b><span lang="EN-US" style="mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:
+EN-US"> </span><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;
+mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:EN-US">the
+following: </span><span lang="EN-US" style="mso-fareast-font-family:&quot;Times New Roman&quot;;
+mso-ansi-language:EN-US"><o:p></o:p></span></p>
+
+<p class="MsoNormal" style="mso-margin-top-alt:auto;mso-margin-bottom-alt:auto"><span class="GramE"><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;
+mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:EN-US">A single
+zip/tar file</span></span><span lang="EN-US" style="font-size:11.0pt;font-family:
+&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:
+EN-US"> containing the following</span><span lang="EN-US" style="mso-fareast-font-family:
+&quot;Times New Roman&quot;;mso-ansi-language:EN-US"><o:p></o:p></span></p>
+
+<ol start="1" type="1">
+ <li class="MsoNormal" style="mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+     mso-list:l3 level1 lfo1;tab-stops:list 36.0pt"><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-fareast-font-family:
+     &quot;Times New Roman&quot;;mso-ansi-language:EN-US">A brief <b style="mso-bidi-font-weight:
+     normal"><i>readme file</i></b><i> </i>listing your name(s), student IDs,
+     and everything you think it is worth mentioning about your implementation;</span><span lang="EN-US" style="mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:
+     EN-US"><o:p></o:p></span></li>
+</ol>
+
+<p class="MsoNormal" style="mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+text-indent:36.0pt"><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;
+mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:EN-US">Your readme
+file should include comments on the main design decisions you have made:</span><span lang="EN-US" style="mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:
+EN-US"><o:p></o:p></span></p>
+
+<p class="MsoNormal" style="mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+margin-left:54.0pt;text-indent:-18.0pt"><span lang="EN-US" style="font-size:11.0pt;
+font-family:Symbol;mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:
+EN-US">Â·</span><span lang="EN-US" style="font-size:7.0pt;mso-fareast-font-family:
+&quot;Times New Roman&quot;;mso-ansi-language:EN-US">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</span><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;
+mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:EN-US">Pull vs.
+push design</span><span lang="EN-US" style="mso-fareast-font-family:&quot;Times New Roman&quot;;
+mso-ansi-language:EN-US"><o:p></o:p></span></p>
+
+<p class="MsoNormal" style="mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+margin-left:54.0pt;text-indent:-18.0pt"><span lang="EN-US" style="font-size:11.0pt;
+font-family:Symbol;mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:
+EN-US">Â·</span><span lang="EN-US" style="font-size:7.0pt;mso-fareast-font-family:
+&quot;Times New Roman&quot;;mso-ansi-language:EN-US">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</span><span class="GramE"><span lang="EN-US" style="font-size:11.0pt;font-family:
+&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:
+EN-US">A</span></span><span lang="EN-US" style="font-size:11.0pt;font-family:
+&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:
+EN-US"> description of the remote interfaces </span><span lang="EN-US" style="mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:EN-US"><o:p></o:p></span></p>
+
+<p class="MsoNormal" style="mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+margin-left:54.0pt;text-indent:-18.0pt"><span lang="EN-US" style="font-size:11.0pt;
+font-family:Symbol;mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:
+EN-US">Â·</span><span lang="EN-US" style="font-size:7.0pt;mso-fareast-font-family:
+&quot;Times New Roman&quot;;mso-ansi-language:EN-US">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</span><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;
+mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:EN-US">Message
+formats</span><span lang="EN-US" style="mso-fareast-font-family:&quot;Times New Roman&quot;;
+mso-ansi-language:EN-US"><o:p></o:p></span></p>
+
+<p class="MsoNormal" style="mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+margin-left:54.0pt;text-indent:-18.0pt"><span lang="EN-US" style="font-size:11.0pt;
+font-family:Symbol;mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:
+EN-US">Â·</span><span lang="EN-US" style="font-size:7.0pt;mso-fareast-font-family:
+&quot;Times New Roman&quot;;mso-ansi-language:EN-US">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</span><span class="GramE"><span lang="EN-US" style="font-size:11.0pt;font-family:
+&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:
+EN-US">How</span></span><span lang="EN-US" style="font-size:11.0pt;font-family:
+&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:
+EN-US"> does your code deal with concurrency-related issues</span><span lang="EN-US" style="mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:
+EN-US"><o:p></o:p></span></p>
+
+<p class="MsoNormal" style="mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+margin-left:54.0pt;text-indent:-18.0pt"><span lang="EN-US" style="font-size:11.0pt;
+font-family:Symbol;mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:
+EN-US">Â·</span><span lang="EN-US" style="font-size:7.0pt;mso-fareast-font-family:
+&quot;Times New Roman&quot;;mso-ansi-language:EN-US">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</span><span class="GramE"><span lang="EN-US" style="font-size:11.0pt;font-family:
+&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:
+EN-US">How</span></span><span lang="EN-US" style="font-size:11.0pt;font-family:
+&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:
+EN-US"> does the chat server deal with client failures</span><span lang="EN-US" style="mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:EN-US"><o:p></o:p></span></p>
+
+<p class="MsoNormal" style="mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+margin-left:54.0pt;text-indent:-18.0pt"><span lang="EN-US" style="font-size:11.0pt;
+font-family:Symbol;mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:
+EN-US">Â·</span><span lang="EN-US" style="font-size:7.0pt;mso-fareast-font-family:
+&quot;Times New Roman&quot;;mso-ansi-language:EN-US">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</span><span class="GramE"><span lang="EN-US" style="font-size:11.0pt;font-family:
+&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:
+EN-US">How</span></span><span lang="EN-US" style="font-size:11.0pt;font-family:
+&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:
+EN-US"> do clients deal with chat server failures</span><span lang="EN-US" style="mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:EN-US"><o:p></o:p></span></p>
+
+<p class="MsoNormal" style="mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+margin-left:54.0pt;text-indent:-18.0pt"><span lang="EN-US" style="font-size:11.0pt;
+font-family:Symbol;mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:
+EN-US">Â·</span><span lang="EN-US" style="font-size:7.0pt;mso-fareast-font-family:
+&quot;Times New Roman&quot;;mso-ansi-language:EN-US">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</span><span class="GramE"><span lang="EN-US" style="font-size:11.0pt;font-family:
+&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:
+EN-US">Any</span></span><span lang="EN-US" style="font-size:11.0pt;font-family:
+&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:
+EN-US"> other decision you feel it influenced your design </span><span lang="EN-US" style="mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:
+EN-US"><o:p></o:p></span></p>
+
+<ol start="2" type="1">
+ <li class="MsoNormal" style="mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+     mso-list:l0 level1 lfo2;tab-stops:list 36.0pt"><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-fareast-font-family:
+     &quot;Times New Roman&quot;;mso-ansi-language:EN-US">A <b style="mso-bidi-font-weight:
+     normal">HowTo.txt</b> file, detailing how to run the server, and the
+     client.</span><span lang="EN-US" style="mso-fareast-font-family:&quot;Times New Roman&quot;;
+     mso-ansi-language:EN-US"><o:p></o:p></span></li>
+</ol>
+
+<p class="MsoNormal" style="mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+margin-left:18.0pt"><span lang="EN-US" style="mso-fareast-font-family:&quot;Times New Roman&quot;;
+mso-ansi-language:EN-US"><o:p>&nbsp;</o:p></span></p>
+
+<ol start="3" type="1">
+ <li class="MsoNormal" style="mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+     mso-list:l0 level1 lfo2;tab-stops:list 36.0pt"><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-fareast-font-family:
+     &quot;Times New Roman&quot;;mso-ansi-language:EN-US">TWO separate executable JAR
+     files. They may have the same content, with the following exceptions: </span><span lang="EN-US" style="mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:
+     EN-US"><o:p></o:p></span></li>
+</ol>
+
+<ol start="1" type="1">
+ <ul type="disc">
+  <li class="MsoNormal" style="mso-margin-top-alt:auto;mso-margin-bottom-alt:
+      auto;mso-list:l2 level2 lfo3;tab-stops:list 72.0pt"><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-fareast-font-family:
+      &quot;Times New Roman&quot;;mso-ansi-language:EN-US">One JAR file will be called </span><i><span lang="EN-US" style="font-size:11.0pt;mso-bidi-font-size:12.0pt;font-family:
+      &quot;Verdana&quot;,&quot;sans-serif&quot;;mso-fareast-font-family:&quot;Times New Roman&quot;;
+      mso-ansi-language:EN-US">server.jar</span></i><i><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-fareast-font-family:
+      &quot;Times New Roman&quot;;mso-ansi-language:EN-US"> </span></i><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-fareast-font-family:
+      &quot;Times New Roman&quot;;mso-ansi-language:EN-US">and<i> </i>its and its <a href="http://java.sun.com/j2se/1.4.2/docs/guide/jar/jar.html"><span style="mso-bidi-font-size:12.0pt">manifest</span></a> will <a href="http://csdl.ics.hawaii.edu/%7Ejohnson/613f99/modules/04/jar-files.html"><span style="mso-bidi-font-size:12.0pt">designate the main class</span></a> <i>com.your_login.eece411.A2</i></span><span lang="EN-US" style="mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:
+      EN-US">.</span><i><span lang="EN-US" style="font-size:11.0pt;font-family:
+      &quot;Verdana&quot;,&quot;sans-serif&quot;;mso-fareast-font-family:&quot;Times New Roman&quot;;
+      mso-ansi-language:EN-US">ServerBootstrap</span></i><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-fareast-font-family:
+      &quot;Times New Roman&quot;;mso-ansi-language:EN-US">. </span><span lang="EN-US" style="mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:EN-US"><o:p></o:p></span></li>
+  <li class="MsoNormal" style="mso-margin-top-alt:auto;mso-margin-bottom-alt:
+      auto;mso-list:l2 level2 lfo3;tab-stops:list 72.0pt"><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-fareast-font-family:
+      &quot;Times New Roman&quot;;mso-ansi-language:EN-US">The other JAR file will be
+      called </span><i><span lang="EN-US" style="font-size:11.0pt;mso-bidi-font-size:
+      12.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-fareast-font-family:&quot;Times New Roman&quot;;
+      mso-ansi-language:EN-US">client.jar</span></i><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-fareast-font-family:
+      &quot;Times New Roman&quot;;mso-ansi-language:EN-US"> and its <a href="http://java.sun.com/j2se/1.4.2/docs/guide/jar/jar.html"><span style="mso-bidi-font-size:12.0pt">manifest</span></a> will <a href="http://csdl.ics.hawaii.edu/%7Ejohnson/613f99/modules/04/jar-files.html"><span style="mso-bidi-font-size:12.0pt">designate the main class</span></a> <i>com.your_login.eece411.A2</i>.<i>ClientBootstrap</i>.
+      </span><span lang="EN-US" style="mso-fareast-font-family:&quot;Times New Roman&quot;;
+      mso-ansi-language:EN-US"><o:p></o:p></span></li>
+ </ul>
+</ol>
+
+<p class="MsoNormal" style="mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+margin-left:54.0pt"><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;
+mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:EN-US">The
+procedure for creating an executable JAR file is detailed <a href="http://csdl.ics.hawaii.edu/%7Ejohnson/613f99/modules/04/jar-files.html"><span style="mso-bidi-font-size:12.0pt">here</span></a>. The TA will be running your
+program with the following steps at the command line: </span><span lang="EN-US" style="mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:EN-US"><o:p></o:p></span></p>
+
+<p class="MsoNormal" style="mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+margin-left:54.0pt"><span class="GramE"><span lang="EN-US" style="font-size:11.0pt;
+mso-bidi-font-size:12.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-fareast-font-family:
+&quot;Times New Roman&quot;;mso-ansi-language:EN-US">java</span></span><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-fareast-font-family:
+&quot;Times New Roman&quot;;mso-ansi-language:EN-US"> -jar </span><span lang="EN-US" style="font-size:11.0pt;mso-bidi-font-size:12.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;
+mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:EN-US">server.jar</span><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;
+mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:EN-US"> &lt;</span><span class="SpellE"><span lang="EN-US" style="font-size:11.0pt;mso-bidi-font-size:12.0pt;
+font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-fareast-font-family:&quot;Times New Roman&quot;;
+mso-ansi-language:EN-US">chatroom_name</span></span><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-fareast-font-family:
+&quot;Times New Roman&quot;;mso-ansi-language:EN-US">&gt; </span><span lang="EN-US" style="mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:EN-US"><o:p></o:p></span></p>
+
+<p class="MsoNormal" style="mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+margin-left:54.0pt"><span class="GramE"><span lang="EN-US" style="font-size:11.0pt;
+mso-bidi-font-size:12.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-fareast-font-family:
+&quot;Times New Roman&quot;;mso-ansi-language:EN-US">java</span></span><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-fareast-font-family:
+&quot;Times New Roman&quot;;mso-ansi-language:EN-US"> -jar </span><span lang="EN-US" style="font-size:11.0pt;mso-bidi-font-size:12.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;
+mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:EN-US">client.jar</span><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;
+mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:EN-US"> &lt;</span><span class="SpellE"><span lang="EN-US" style="font-size:11.0pt;mso-bidi-font-size:12.0pt;
+font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-fareast-font-family:&quot;Times New Roman&quot;;
+mso-ansi-language:EN-US">chatroom_name</span></span><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-fareast-font-family:
+&quot;Times New Roman&quot;;mso-ansi-language:EN-US">&gt; &lt;</span><span class="SpellE"><span lang="EN-US" style="font-size:11.0pt;mso-bidi-font-size:12.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;
+mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:EN-US">client_name</span></span><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;
+mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:EN-US">&gt;&nbsp; [</span><span class="SpellE"><span lang="EN-US" style="font-size:11.0pt;mso-bidi-font-size:12.0pt;
+font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-fareast-font-family:&quot;Times New Roman&quot;;
+mso-ansi-language:EN-US">rmiregistrymachine:port</span></span><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-fareast-font-family:
+&quot;Times New Roman&quot;;mso-ansi-language:EN-US">]<o:p></o:p></span></p>
+
+<p class="MsoNormal" style="mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+margin-left:54.0pt"><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;
+mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:EN-US">As you can
+guess, the â€˜<span class="SpellE">chatroom_name</span>â€™ is the name the server
+uses to register the <span class="SpellE">chatroom</span> with the RMI registry</span><span lang="EN-US" style="mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:
+EN-US"><o:p></o:p></span></p>
+
+<ol start="4" type="1">
+ <li class="MsoNormal" style="mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+     mso-list:l0 level1 lfo2;tab-stops:list 36.0pt"><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-fareast-font-family:
+     &quot;Times New Roman&quot;;mso-ansi-language:EN-US">TWO folders containing your
+     source files, one folder for the server source <span class="GramE">files,</span>
+     and the other for the client source files.<o:p></o:p></span></li>
+</ol>
+
+<p class="MsoNormal" style="mso-margin-top-alt:auto;mso-margin-bottom-alt:auto"><i><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;
+mso-fareast-font-family:&quot;Times New Roman&quot;;mso-ansi-language:EN-US">Note: The
+email account is setup to reply with an acknowledge email to your email
+submission. <o:p></o:p></span></i></p>
+
+<p><b><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;
+mso-ansi-language:EN-US">Grading details <o:p></o:p></span></b></p>
+
+<p><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;
+mso-ansi-language:EN-US">In evaluating your work, 10% of the credit will be
+earned for quality of design, 15% for source code organization and
+documentation, and 75% for correct operation of the program. <o:p></o:p></span></p>
+
+<p><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;
+mso-ansi-language:EN-US">If the TA is unable to run your program, you will get
+a zero on that portion of the assignment.<o:p></o:p></span></p>
+
+<p class="MsoNormal"><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;
+mso-ansi-language:EN-US">The TA will try to execute your code in two separate
+VMs on the same physical machine with the <span class="SpellE">rmiregistry</span>
+running on the same host.<span style="mso-spacerun:yes">&nbsp; </span>If your code
+passes this test you get 90% of the points allocated for the correct operation
+of the program.<span style="mso-spacerun:yes">&nbsp; </span><o:p></o:p></span></p>
+
+<p class="MsoNormal"><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;
+mso-ansi-language:EN-US"><o:p>&nbsp;</o:p></span></p>
+
+<p class="MsoNormal"><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;
+mso-ansi-language:EN-US">The TA may try to run your program on two separate
+boxes with the RMI registry running on the same box as the chat server.<span style="mso-spacerun:yes">&nbsp; </span>While, you are not responsible for helping
+the TA configure the code to run in this setup you should attempt to test it
+yourself in a similar scenario.<o:p></o:p></span></p>
+
+<p class="MsoNormal"><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;
+mso-ansi-language:EN-US"><o:p>&nbsp;</o:p></span></p>
+
+<p><b><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;
+mso-ansi-language:EN-US">Useful links<o:p></o:p></span></b></p>
+
+<p class="MsoNormal" style="margin-left:11.35pt;text-indent:-11.35pt;mso-list:
+l1 level1 lfo4;tab-stops:list 11.35pt"><!--[if !supportLists]--><span lang="EN-US" style="font-size:11.0pt;font-family:Wingdings;mso-fareast-font-family:Wingdings;
+mso-bidi-font-family:Wingdings;mso-ansi-language:EN-US;mso-bidi-font-weight:
+bold"><span style="mso-list:Ignore">Â§<span style="font:7.0pt &quot;Times New Roman&quot;">
+</span></span></span><!--[endif]--><span lang="EN-US" style="font-size:11.0pt;
+font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;mso-ansi-language:EN-US;mso-bidi-font-weight:
+bold">Dynamic code downloading using Java RMI (using the <span class="SpellE">java.rmi.server.codebase</span>
+property)<a href="http://java.sun.com/javase/6/docs/technotes/guides/rmi/codebase.html"><span style="color:windowtext;text-decoration:none;text-underline:none"> </span>link</a><o:p></o:p></span></p>
+
+<p class="MsoNormal"><span lang="EN-US" style="font-size:11.0pt;font-family:&quot;Verdana&quot;,&quot;sans-serif&quot;;
+mso-ansi-language:EN-US"><o:p>&nbsp;</o:p></span></p>
+
+</div>
+
+
+
+
+</body></html>Ytext/htmlUUTF-8    ( ? N ` v ” • ÄÙLÙV                           Ù\
