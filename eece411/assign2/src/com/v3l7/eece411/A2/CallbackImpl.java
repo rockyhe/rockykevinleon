@@ -18,8 +18,7 @@ public class CallbackImpl extends UnicastRemoteObject implements Callback
 	public void receive(String txt) throws RemoteException
 	{
 		//System.out.println("Invoked receive method! Message: " + txt);
-
-		// update the client's GUI with the message received
+		//Update the client's GUI with the message received
 		clientGUI.addToTextArea(txt);
 	}
 }

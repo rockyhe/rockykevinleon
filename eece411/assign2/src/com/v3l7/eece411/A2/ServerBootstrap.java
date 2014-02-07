@@ -20,7 +20,7 @@ public class ServerBootstrap
 	private static List<String> clientKeepAlives;
 	private static ChatImpl chatroom;
 	
-	private static final int FLUSH_RATE = 10000;
+	private static final int FLUSH_RATE = 10000; //Time in ms between each client list flush
 	
 	//Main method to instantiate server and bind an ChatImpl object
 	public static void main(String args[]) 
@@ -37,23 +37,34 @@ public class ServerBootstrap
 		clients = new ConcurrentHashMap<String, Callback>();
 		clientKeepAlives = new ArrayList<String>();
 		
+		Registry registry = null;
 		try {
-			//Instantiate a ChatImpl object and pass reference to the hashmap
-			chatroom = new ChatImpl(clients, clientKeepAlives); 
-			//Bind this object instance to the specified chatroom name in the rmiregistry
 			//Use createRegistry in case rmiregistry isn't running, using default port number
-			Registry registry = LocateRegistry.createRegistry(1099);
-			registry.rebind(chatroomName, chatroom);
-			
-			//Instantiate a new FlushClients and schedule it to run periodically
-			FlushClients flushTask = new FlushClients();
-			Timer t = new Timer();
-			t.scheduleAtFixedRate(flushTask, 0, FLUSH_RATE);
-			
-			System.out.println("Server is up and running...\n");
-		} catch (Exception e) { 
-			System.out.println("Server err: " + e.getMessage()); 
-			e.printStackTrace();
+			registry = LocateRegistry.createRegistry(1099);			
+		} catch (RemoteException e) {
+			System.out.println("Error: Failed to export rmi registry. " + e.getMessage());
+			System.exit(0);
+		}
+		
+		if (registry != null)
+		{
+			//Bind the chatroom object once rmiregistry is successfully located
+			try {
+				//Instantiate a ChatImpl object and pass reference to the hashmap
+				chatroom = new ChatImpl(clients, clientKeepAlives); 
+				registry.rebind(chatroomName, chatroom);
+				
+				//Instantiate a new FlushClients
+				//Schedule it to run periodically using Timer, which runs on a separate thread
+				FlushClients flushTask = new FlushClients();
+				Timer t = new Timer();
+				t.scheduleAtFixedRate(flushTask, 0, FLUSH_RATE);
+				
+				System.out.println("Server is up and running...\n");
+			} catch (RemoteException e) { 
+				System.out.println("Error: Server failed to start! " + e.getMessage());
+				System.exit(0);
+			}
 		}
 	}
 	
@@ -64,7 +75,7 @@ public class ServerBootstrap
 	{
 		public void run()
 		{
-			System.out.println("Running FlushClients...");
+			//System.out.println("Running FlushClients...");
 			//If a client id is not in the keep alive list, assume the client has disconnected and remove it from the client list
 			for (Iterator<Entry<String, Callback>> it = clients.entrySet().iterator(); it.hasNext(); )
 			{
@@ -77,13 +88,12 @@ public class ServerBootstrap
 					it.remove();
 					//Broadcast the disconnection to all other clients
 					//Since the server is invoking this, assume we don't need to do retries
-					String msg = entry.getKey() + " has disconnected from the chatroom!";
+					String msg = entry.getKey() + " has been disconnected from the chatroom!";
 					try {
 						chatroom.broadcast(msg);
 						System.out.println(msg);
-					} catch (Exception e) {
+					} catch (RemoteException e) {
 						System.out.println("Server exception: " + e.getMessage());
-						e.printStackTrace();
 					}
 				}
 			}

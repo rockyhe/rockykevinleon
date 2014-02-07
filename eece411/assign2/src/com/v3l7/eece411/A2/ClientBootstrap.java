@@ -14,7 +14,7 @@ public class ClientBootstrap
     private static GUI gui;
     private static MessageQueue _queue;
 	
-	private static final int KEEP_ALIVE_RATE = 5000;
+	private static final int KEEP_ALIVE_RATE = 5000; //Time in ms between each client keep alive signal
     
     public static void main(String[] args)
 	{
@@ -60,17 +60,15 @@ public class ClientBootstrap
 
         // I download server's stubs ==> must set a SecurityManager 
         System.setSecurityManager(new RMISecurityManager());
-
-		Chat chatStub = null;
 		
 		//Lookup the chat server, create a callback obj and try registering the client to it
         try {
 			//Look for the stub in the rmi registry with the specified chatroom name 
-            chatStub = (Chat) Naming.lookup( "//" + hostname + "/" + chatroomName);
+            Chat chatStub = (Chat) Naming.lookup( "//" + hostname + "/" + chatroomName);
 			
 			//If register returns false, then there was a client name conflict
 			//So exit the client and inform user to use a new client name
-			//Assume if register throws a ConnectException that server is down
+			//Assume if register throws a RemoteException that server is down
 		    if (!chatStub.register(clientName, new CallbackImpl(gui)))
 			{
 				System.out.println("Error: A client already exists with the id " + clientName + "!\n");
@@ -78,7 +76,8 @@ public class ClientBootstrap
 				System.exit(0);
 			}
 			
-			//Instantiate a new PingServer and schedule it to run periodically
+			//Instantiate a new PingServer
+			//Schedule it to run periodically using Timer, which runs on a separate thread
 			PingServer pingTask = new PingServer(chatStub, clientName);
 			Timer t = new Timer();
 			t.scheduleAtFixedRate(pingTask, 0, KEEP_ALIVE_RATE);
@@ -101,29 +100,36 @@ public class ClientBootstrap
 				String message = clientName + ":> " + s;
 				sendMessage(chatStub, message);
 			}
-        } catch (ConnectException e) {
+        } catch (RemoteException e) {
 			System.out.println("Error: Can't connect to server.\n");
-			System.out.println("Please try again later.");
+			System.out.println("Please check the hostname or try again later.");
 			System.exit(0);
-		} catch (Exception e) {
-			System.out.println("Client exception: " + e.getMessage());
-			e.printStackTrace();
-        }
+		} catch (NotBoundException e) {
+			System.out.println("Error: Can't find chatroom with name " + chatroomName + ".");
+			System.exit(0);
+		} catch (java.net.MalformedURLException e) {
+			System.out.println("URL Error: " + e.getMessage());
+			System.exit(0);
+		}
     }
 	
 	private static void sendMessage(Chat chatStub, String message)
 	{
-		//Try up to 3 times. If the a ConnectException occurs, assume server is down and terminate the client
+		//Try up to 3 times. If the a RemoteException occurs, assume server is down and terminate the client
 		for (int i=0; i < 3; i++)
 		{
 			try {				
 				chatStub.broadcast(message);
 				//Quit trying if we succeed (i.e. no exception)
 				break;
-			} catch (ConnectException e) {
+			} catch (RemoteException e) {
 				if (i < 2)
 				{
 					System.out.println("Attempt " + (i+1) + ": Failed to broadcast message to server. Trying again...");
+					//Wait a bit before trying again
+					try {
+						Thread.sleep(3000);
+					} catch (InterruptedException ie) { }
 				}
 				else
 				{
@@ -131,9 +137,6 @@ public class ClientBootstrap
 					gui.addToTextArea("Unable to connect to server. Terminating client!");
 					System.exit(0);
 				}
-			} catch (Exception e) {
-				System.out.println("Client exception: " + e.getMessage());
-				e.printStackTrace();
 			}
 		}
 	}
@@ -153,7 +156,7 @@ public class ClientBootstrap
 	
 		public void run()
 		{
-			System.out.println("Running PingServer...");
+			//System.out.println("Running PingServer...");
 			//Send keepAlive to server up to 3 times.
 			//If keepAlive method fails after 3 tries, assume server is down and terminate the client
 			for (int i=0; i < 3; i++)
@@ -162,20 +165,22 @@ public class ClientBootstrap
 					server.keepAlive(clientId);
 					//Quit trying if we succeed (i.e. no exception)
 					break;
-				} catch (ConnectException e) {
+				} catch (RemoteException e) {
+					System.out.println("Attempt " + (i+1) + ": Unable to connect to server.");
 					if (i < 2)
 					{
-						System.out.println("Attempt " + (i+1) + ": Failed to invoke keepAlive. Trying again...");
+						System.out.println("Trying again...");
+						//Wait a bit before trying again						
+						try {
+							Thread.sleep(3000);
+						} catch (InterruptedException ie) { }
 					}
 					else
 					{
-						System.out.println("Attempt " + (i+1) + ": Unable to connect to server. Terminating client!");
+						System.out.println("Terminating client!");
 						gui.addToTextArea("Unable to connect to server. Terminating client!");
 						System.exit(0);
 					}
-				} catch (Exception e) {
-					System.out.println("Client exception: " + e.getMessage());
-					e.printStackTrace();
 				}
 			}
 		}

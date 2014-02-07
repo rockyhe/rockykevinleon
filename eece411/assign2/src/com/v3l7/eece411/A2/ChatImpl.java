@@ -44,7 +44,7 @@ public class ChatImpl extends UnicastRemoteObject implements Chat
 			}
 			else
 			{
-				System.out.println("ChatImpl err: client id " + id + " already exists in client keep alive list. Something went wrong!");
+				System.out.println("ChatImpl err: client id " + id + " already exists in client keep alive list.");
 			}
 			
 			System.out.println(msg);
@@ -61,34 +61,64 @@ public class ChatImpl extends UnicastRemoteObject implements Chat
 	public void broadcast(String txt) throws RemoteException
 	{
 		//System.out.println("Invoked broadcast method! Message: " + txt);
-
+		System.out.println("Broadcasting message: " + txt);		
+		
+		//List to maintain clients that fail to receive the message
+		List<String> failedClients = new ArrayList<String>();
+		
 		//Broadcast the message to all existing clients by iterating over the hashmap
 		for (Iterator<Entry<String, Callback>> it = clients.entrySet().iterator(); it.hasNext(); )
 		{
-			Entry<String, Callback> entry = it.next();			
-			//Get the client's callback interface
+			Entry<String, Callback> entry = it.next();
+			String id = entry.getKey();
 			Callback client = entry.getValue();
 			
-			//Send the message to the client
-			//Try up to 3 times. Don't remove the entry here, let the server handle detection of disconnection/updating the list.
+			//Send the message to the client.
+			try {
+				client.receive(txt);
+			} catch (RemoteException e) {
+				System.out.println("Failed to send message to " + id + ".");
+				failedClients.add(id);
+			}
+		}
+		
+		//This code is for retrying to send messages to clients that failed to receive the first time
+		//However it sacrifices responsiveness for other users.
+		if (!failedClients.isEmpty())
+		{		
+			//Try up to 3 times to send message to each client that failed to receive the first time.
 			for (int i=0; i < 3; i++)
-			{				
-				try {
-					client.receive(txt);
-					//Quit trying if we succeed (i.e. no exception)
+			{
+				for (Iterator<String> it = failedClients.iterator(); it.hasNext(); )
+				{
+					//Lookup the client's callback interface from the hashmap using the client name key
+					//If null, assume server has flushed the client (i.e. determined client has disconnected), so don't bother 
+					String id = it.next();
+					Callback client = clients.get(id);
+					
+					if (client != null)
+					{
+						try {
+							client.receive(txt);
+							//Remove the client from the failedClients list if we succeed
+							it.remove();
+						} catch (RemoteException e) {
+							if (i < 2)
+							{
+								System.out.println("Attempt " + (i+1) + ": Failed to send message to client " + id);
+							}
+							else
+							{
+								System.out.println("Attempt " + (i+1) + ": Failed to send message to client " + id + ". Giving up!");
+							}
+						}
+					}
+				}				
+				//If there are no more clients that need to receive the message
+				//then we don't need to retry sending the message to clients that failed to receive
+				if (failedClients.isEmpty())
+				{
 					break;
-				} catch (ConnectException e) {
-					if (i < 2)
-					{
-						System.out.println("Attempt " + (i+1) + ": Failed to send message to client " + entry.getKey() + ". Trying again...");
-					}
-					else
-					{
-						System.out.println("Attempt " + (i+1) + ": Failed to send message to client " + entry.getKey() + ". Giving up!");
-					}
-				} catch (Exception e) {
-					System.out.println("ChatImpl err: " + e.getMessage()); 
-					e.printStackTrace(); 
 				}
 			}
 		}
