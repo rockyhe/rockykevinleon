@@ -1,27 +1,31 @@
 Group members:
 Rocky He 	74963091
 Leon Lixing Yu 	75683094
-Hui Tan  52648094
+Hui Tan  	52648094
 
-WHEN WE RUN SERVER IN COMPUTER A and CLIENT IN COMPUTER B,  THE CHAT ROOM IS FULLY FUNCTIONAL. WHEN TWO COMPUTER ARE IN THE SAME NETWORK (UBC WIRELESS)	
+WHEN WE RUN SERVER IN COMPUTER A and CLIENT IN COMPUTER B (e.g. two separate computers),  THE CHAT ROOM IS FULLY FUNCTIONAL, AS LONG AS THE TWO COMPUTERS ARE IN THE SAME NETWORK (e.g. UBC SECURE WIRELESS). We are also able to run multiple client instances on the same machine. 
 
 IF YOU ARE USING JAVA 1.6 OR ABOVE PLEASE USE allAccess.policy file to run client. see HowTo.txt for detailed instructions.
 
 1. Pull vs. push design
-we used push design, detailed remote interface see 2.
+we used push design (i.e. server pushes messages to clients), detailed remote interface see 2.
 
 2. A description of the remote interfaces
-We used a push design, where the server binds the remote object ChatImpl, which implements the Chat remote interface, to the rmiregistry using the passed in "chatroomName" command line argument. The client has a CallbackImpl remote object, which implements the Callback remote interface and extends UnicastRemoteObject (so that the server can remotely invoke the object). Each client gets the reference to the chatroom remote object by looking it up in the rmiregistry, and then invokes the register method (invoked from server interface)  exports its Callback object to the server. The server then maintains a list of each When a client invokes the broadcast method via the Chat interface.
+We have two remote interfaces: 
+ - Chat (for server-side chatroom). Implementation is ChatImpl
+ - Callback (for client-side callback). Implementation is CallbackImpl
 
-3. message format
-the communication between server and client are done by sending a (key, value) pair each time a client checks in with the server, where key is the client ID, and value is the client's remote object 'CallbackImpl' with interface 'Callback'. in order to keep tracking the existing client, we store each (client ID, callbackObj) pair into a HashMap type. With such data structure, it is very easy to track the connection of each client.
+We used a push design, where the server binds the remote object ChatImpl, which implements the Chat remote interface, to the rmiregistry using the passed in "chatroomName" command line argument. The client has a CallbackImpl remote object, which implements the Callback remote interface and extends UnicastRemoteObject (so that the server can remotely invoke the object). Each client gets the reference to the ChatImpl remote object by looking it up in the rmiregistry, and then invokes the register method (invoked from server interface)  exports its Callback object to the server. The server then maintains a list of each of the client's callback, and when a client invokes the broadcast method via the Chat interface, then the server subsequently invokes the receive method via the Callback interface to send the message (i.e. push) to all clients.
 
-When client wants to send a message, we concatenate client's ID and message into one string (ClientID + ">:" + message), and invokes boardcast method from server's remote interface (chatStub). the method will board cast the entire string to each existing client using HashMap (find the Keys, get the client remote object (callbackObj), invoke the GUI print method in the callbackObj). 
+3. Message Format
+The communication between server and client is done by sending a (key, value) pair when a client registers with the server (i.e. joins the chatroom), where key is the client ID, and value is the client's remote object 'CallbackImpl' with interface 'Callback'. In order to keep tracking the existing clients, we store each (clientID, callbackObj) pair into a HashMap type. With such data structure, it is very easy to track the connection of each client.
+
+When client wants to send a message, we concatenate client's ID and message into one string (ClientID + ">:" + message), and invokes the broadcast method via the server's Chat remote interface (on the ChatImpl remote objcet). The broadcast method sends the entire string to each existing client by iterating over the HashMap of (clientID, callbackObj) pairs to get each client remote object (callbackObj)), and then invoke the receive method via the Callback interface. The receive method subsequently invoke the GUI print method in the callbackObj). 
 
 4. Client Failure
-We have a ping() method from each client's remote object that testify the connection. It periodically pings server such that server knows the client is alive, if one client fails, it will stop pinging the server, and server will remove the client from HashMap. If other clients send in message, and server tries to loop thru all clients and board cast the message right before removing a offline client, our (connectException e) will catch the connection failure, and simply not sending the message to that offline client. 
+We have a keepAlive() method on the Chat interface, which each client will periodically invoke (by running a fixed Timer task client-side on a separate thread) to ping/inform the server that the client is alive. The server maintains a list of clients who have invoked the keepAlive method. The server also runs a FlushClient fixed Timer task that periodically checks which clients have invoked the keepAlive method since the last time the task was run. Therefore, if a client fails, it will stop pinging the server, and when the server runs the FlushClient task it will detect the client disconnection and remove the client from HashMap. If a client fails while other clients are sending in messages (i.e. it will fail to receive the message), then the ChatImpl broadcast method will try up to 3 times to resend the message to the client. The broadcast method will loop through all clients and try to send the message once, before attempting to resend to any clients that failed to receive. After failing to resend 3 times, the server will simply not send the message to that offline client (and then the FlushClient task will eventually remove the client). When a client disconnects, the server also broadcasts a message about that client's disconnection to all of the other clients (e.g. "User has disconnected from the chatroom!"). 
 
 5. Server Failure
-To handle server offline issue, we keep pinning checkIn/boardcast method from server remote object (Chat), if we have consecutive 3 connectionExceptions, we assume that server is offline, and terminate the client.
+To handle server offline issue, in each client's timer task for keepAlive, we try to invoke the keepAlive method on the server's ChatImpl remote object (as mentioned in #4) up to 3 times, and if we don't succeed in connecting to the server (e.g. we get a RemoteException when calling keepAlive) after 3 attempts, then we assume that server is offline and terminate the client. We also check whether the server is up when starting a new client, in which case if the server is not running when you start a client, then we simply terminate the client. In all cases we display some informative messages.
 
-6. Since we may want to run server in different hosts from time to time, we decided to make hostname a parameter instead of hard-coded string. Same idea applies to client name and rmi registry name. We choose to use push protocol to ease the client load, and reduce the traffic over the network. 
+6. One thing we added was since we may want to run server in different hosts from time to time, we decided to make hostname a command line parameter instead of a hard-coded string. Same idea applies to client name and rmi registry name for the chatroom (i.e. the ChatImpl object). We choose to use push protocol to ease the client load, and reduce the traffic over the network. There are also small additional things we do such as checking for duplicate client IDs (e.g. we don't allow two clients to join a chatroom with the same username), and broadcasting user joining/leaving the chatroom to other users in the GUI. 

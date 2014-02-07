@@ -5,7 +5,7 @@ HowTo run from .jar file
 server side: 
 	java -jar server.jar <chatroom_name>
 client side:
-	java -jar -Djava.security.policy=dir/to/folder/containing/allAccess.policy client.jar <hostname> <chatroom_name> <leon>
+	java -jar -Djava.security.policy=dir/to/folder/containing/allAccess.policy client.jar <hostname> <chatroom_name> <username>
 
 
 ****************************************************************
@@ -25,5 +25,5 @@ HowTo run from .class package
 	java -cp . -Djava.security.policy=<path to policy file> <client/server class name>
 	
 	For example:
-	java -cp . -Djava.security.policy=com/v3l7/eece411/A2/allAccess.policy com.v3l7.eece411.A2.ServerBootstrap <chatroomName>
-	java -cp . -Djava.security.policy=com/v3l7/eece411/A2/allAccess.policy com.v3l7.eece411.A2.ClientBootstrap <hostname> <chatroomName> <clientName>
+	java -cp . -Djava.security.policy=com/v3l7/eece411/A2/allAccess.policy com.v3l7.eece411.A2.ServerBootstrap <chatroom_name>
+	java -cp . -Djava.security.policy=com/v3l7/eece411/A2/allAccess.policy com.v3l7.eece411.A2.ClientBootstrap <hostname> <chatroom_name> <username>
