@@ -1,0 +1,110 @@
+<html>
+    <head>
+        <!--Load the AJAX API-->
+        <link rel="stylesheet" type="text/css" href="stat_o_matic.css">
+        <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+        <script type="text/javascript" src="jquery.min.js"></script>
+        <script type="text/javascript">
+
+            var core_data = $.ajax({
+                url: "results.txt",
+                datatype: "json",
+                type: "GET",
+                async: false,
+            }).responseText;
+	    //alert(core_data);
+            var core_json = jQuery.parseJSON(core_data);
+
+            // Load the Visualization API and the piechart package.
+            google.load('visualization', '1', {'packages':['corechart']});
+    
+            // Set a callback to run when the Google Visualization API is loaded.
+            google.setOnLoadCallback(drawChart);
+            
+            function drawChart() {
+	   	 
+       	        $("#time").html("data retrived at "+core_json.time);	
+ 		
+		//drawing disk usage chart using column chart
+		var disk_data = new google.visualization.DataTable(jQuery.parseJSON(core_json.disk_usage_json)); 
+                var disk_options = {
+                    title: "Disk Usage Chart",
+                    width: $(window).width(),
+                    height:$(window).width()/3,
+                    hAxis: {title: 'all available nodes'},
+                    vAxis: {title: 'disk usage for all nodes (GB)'}
+                };
+                var disk_chart = new google.visualization.ColumnChart(document.getElementById('disk_chart_div'));
+                disk_chart.draw(disk_data, disk_options);       
+
+ 		//drawing disk usage chart using column chart
+		var disk_data_free = new google.visualization.DataTable(jQuery.parseJSON(core_json.disk_free_json)); 
+                var disk_options_free = {
+                    title: "Disk free Chart",
+                    width: $(window).width(),
+                    height:$(window).width()/3,
+                    hAxis: {title: 'all available nodes'},
+                    vAxis: {title: 'disk available for all nodes (GB)'}
+                };
+                var disk_chart_free = new google.visualization.ColumnChart(document.getElementById('disk_chart_free_div'));
+                disk_chart_free.draw(disk_data_free, disk_options_free);       
+
+
+	   }	
+
+	    google.load('visualization', '1', {packages:['table']});
+      	    google.setOnLoadCallback(drawTable);
+
+	    function drawTable() {
+		//drawing process  usage column chart
+                var fail_data = new google.visualization.DataTable(jQuery.parseJSON(core_json.node_fail_json));
+                var fail_options = {
+                    title: "Failed Connection",
+                    width: $(window).width()/2,
+                    height:$(window).width()/3,
+                }
+                var fail_table = new google.visualization.Table(document.getElementById('fail_table_div'));
+                fail_table.draw(fail_data, fail_options)
+	    }
+		//drawing process  usage column chart
+/*
+                var proc_mem_data = new google.visualization.DataTable(jQuery.parseJSON(core_json.proc_mem_json));
+                var proc_mem_options = {
+                    title: "process memory usage (percentage)",
+                    width: $(window).width(),
+                    height:$(window).width()/2,
+                }
+                var proc_mem_chart = new google.visualization.ColumnChart(document.getElementById('proc_mem_chart_div'));
+                proc_mem_chart.draw(proc_mem_data, proc_mem_options)
+            }
+*/
+            // jQuery function, called when page load is complete
+            $(document).ready(function() {
+                // when the window is resized, redraw the graph to the new size
+                $(window).bind("resize", function(event) {
+                    drawChart();
+		    drawTable();
+                }); 
+            })
+        </script>
+    </head>
+    <body>
+	    <center>
+		    <title>cluster stats</title>
+		    <h1><div id="time"></div></h1>
+		    <h2>scroll down to see offline nodes</h2>
+	    </center>
+        <p>
+	    <center>
+                <hr width="95%">
+		<h2>Storage Report</h2>
+		<div id="disk_chart_div"></div>
+	    	<div id="disk_chart_free_div"></div>
+		<h2>Nodes Failures</h1>
+		<div id="fail_table_div"></div>
+	    </center>
+	</p>
+    </body>
+</html>
+
+
