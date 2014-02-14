@@ -27,28 +27,48 @@
  		
 		//drawing disk usage chart using column chart
 		var disk_data = new google.visualization.DataTable(jQuery.parseJSON(core_json.disk_usage_json)); 
-                var disk_options = {
+                //alert(core_json.disk_usage_json);
+		//alert(disk_data);
+		var disk_options = {
                     title: "Disk Usage Chart",
-                    width: $(window).width(),
+                    width: $(window).width()*1.1,
                     height:$(window).width()/3,
                     hAxis: {title: 'all available nodes'},
+		    legend: { position: "none" },
+		    colors: ['#98AFC7'],
                     vAxis: {title: 'disk usage for all nodes (GB)'}
                 };
-                var disk_chart = new google.visualization.ColumnChart(document.getElementById('disk_chart_div'));
+                var disk_chart = new google.visualization.AreaChart(document.getElementById('disk_chart_div'));
                 disk_chart.draw(disk_data, disk_options);       
+                //drawing node uptime chart using column chart
+                var uptime_data = new google.visualization.DataTable(jQuery.parseJSON(core_json.uptime_data_json));  
+		//alert(core_json.uptime_data_json);
+		//alert(uptime_data);
+		var uptime_option = {
+                    title: "Nodes uptime",
+                    width: $(window).width()*1.1,
+                    height:$(window).width()/3,
+                    legend: {position: "none"},
+                    hAxis: {title: 'all available nodes'},
+                    colors:['#FFA500'],
+                    vAxis: {title: 'uptime for all nodes (hours)'}
+                };
+                var uptime_chart = new google.visualization.AreaChart(document.getElementById('uptime_chart_div'));
+                uptime_chart.draw(uptime_data, uptime_option);   
 
  		//drawing disk usage chart using column chart
 		var disk_data_free = new google.visualization.DataTable(jQuery.parseJSON(core_json.disk_free_json)); 
                 var disk_options_free = {
                     title: "Disk free Chart",
-                    width: $(window).width(),
+                    width: $(window).width()*1.1,
                     height:$(window).width()/3,
+		    legend: {position: "none"},
                     hAxis: {title: 'all available nodes'},
+		    colors:['#6CBB3C'],
                     vAxis: {title: 'disk available for all nodes (GB)'}
                 };
-                var disk_chart_free = new google.visualization.ColumnChart(document.getElementById('disk_chart_free_div'));
+                var disk_chart_free = new google.visualization.AreaChart(document.getElementById('disk_chart_free_div'));
                 disk_chart_free.draw(disk_data_free, disk_options_free);       
-
 
 	   }	
 
@@ -60,11 +80,11 @@
                 var fail_data = new google.visualization.DataTable(jQuery.parseJSON(core_json.node_fail_json));
                 var fail_options = {
                     title: "Failed Connection",
-                    width: $(window).width()/2,
-                    height:$(window).width()/3,
-                }
+                    width: $(window).width()/3,
+                    height:$(window).width()/2,
+		}
                 var fail_table = new google.visualization.Table(document.getElementById('fail_table_div'));
-                fail_table.draw(fail_data, fail_options)
+		fail_table.draw(fail_data, fail_options)
 	    }
 		//drawing process  usage column chart
 /*
@@ -100,6 +120,8 @@
 		<h2>Storage Report</h2>
 		<div id="disk_chart_div"></div>
 	    	<div id="disk_chart_free_div"></div>
+		<h2>Uptime Report</h2>
+		<div id="uptime_chart_div"></div>
 		<h2>Nodes Failures</h1>
 		<div id="fail_table_div"></div>
 	    </center>

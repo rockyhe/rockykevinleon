@@ -1,11 +1,1 @@
-datacomngn.cnu.ac.kr
-pl1.tailab.eu
-ricepl-5.cs.rice.edu
-planet-lab4.uba.ar
-aguila2.lsi.upc.edu
-planck249ple.test.iminds.be
-earth.cs.brown.edu
-planetlab1.cs.pitt.edu
-planetlab2.cis.upenn.edu
-planetlab1.postel.org
-planetlab2.postel.org
+planetlab-01.kusa.ac.jp
