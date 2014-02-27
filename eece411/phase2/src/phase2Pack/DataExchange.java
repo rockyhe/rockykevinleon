@@ -91,25 +91,31 @@ public class DataExchange implements Runnable {
 				System.out.println("byte stream received:");
 				System.out.println(Arrays.toString(recvBuffer));
 				
-				//split byte stream
-				key = Arrays.copyOfRange(recvBuffer, 1,32);
-				value = Arrays.copyOfRange(recvBuffer, 33, recvBuffer.length);
-				
-				keyStr = Arrays.toString(key).replaceAll("(^\\[|\\]$)", "").replace(", ", "_");	
-				System.out.println("convert key bytes to string:");
-	
-				System.out.println(keyStr);
-				//Parse the first byte to get the command
+				//Split byte stream				
+				//Get the command byte
 				int cmd = ByteOrder.leb2int(recvBuffer, 0, 1);
-				switch (cmd)
+
+				//Get the key bytes
+				key = Arrays.copyOfRange(recvBuffer, 1,32);
+				System.out.println("convert key bytes to string:");
+				keyStr = Arrays.toString(key).replaceAll("(^\\[|\\]$)", "").replace(", ", "_");
+				System.out.println(keyStr);
+				
+				//1 - put operation
+				switch(cmd)
 				{
 				case 1:
+					//Get the value bytes
+					//Only do this if the command is put
+					value = Arrays.copyOfRange(recvBuffer, 33, recvBuffer.length);
 					put(keyStr, value);
 					break;
 				case 2:
+					//2 - get operation
 					get(keyStr);
 					break;
 				case 3:
+					//3 - remove operation
 					remove(keyStr);
 					break;
 				}
