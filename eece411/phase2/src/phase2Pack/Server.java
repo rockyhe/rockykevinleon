@@ -26,7 +26,7 @@ public class Server {
 			Socket clntSock;
 			store = new ConcurrentHashMap<String,byte[]>();
         	int recvMsgSize;   // Size of received message
-        	int threadcnt = 0;	
+        	int threadcnt = 0;
         	System.out.println("listening...");
        		
     		for (;;)

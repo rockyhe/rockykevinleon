@@ -23,7 +23,7 @@ public class Client {
         	
         	String server = (args.length == 3) ? args[0] : "Rocky-PC"; // Server name or IP address
             int servPort = (args.length == 3) ? Integer.parseInt(args[1]) : 7;
-		    int cmd = (args.length == 3) ? Integer.parseInt(args[2]) : 1; //1: put, 2: get, 3: remove 
+		    int cmd = (args.length == 3) ? Integer.parseInt(args[2]) : 1; //1: put, 2: get, 3: remove
 		    //int key = Integer.parseInt(args[3]);
 		    //int value = Integer.parseInt(args[4]);
 	
