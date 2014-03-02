@@ -1,104 +1,114 @@
 package phase2Pack;
- 
+
 import java.io.*;
 import java.net.*;
 import java.util.*;
-//import com.lixingyu.eece411.A1.*;
 
 import com.matei.eece411.util.*;
 
 public class Client {
-    private static Socket socket;
-    private static final int BUFSIZE = 1057;   
-    private static final int INTSIZE = 1057; //bytes
-    
-    public static void main(String[] args)
-    {
-        try {
-        	if (args.length != 3)
-    		{
-    			System.out.println("USAGE: Server " + "<hostname/IP> <port> <command>");
-    			System.exit(0);
-    		}
-        	
-        	String server = (args.length == 3) ? args[0] : "Rocky-PC"; // Server name or IP address
-            int servPort = (args.length == 3) ? Integer.parseInt(args[1]) : 7;
-		    int cmd = (args.length == 3) ? Integer.parseInt(args[2]) : 1; //1: put, 2: get, 3: remove
-		    //int key = Integer.parseInt(args[3]);
-		    //int value = Integer.parseInt(args[4]);
-	
-		    byte[] byteBuffer = new byte[INTSIZE];
-		    byte[] recvBuffer = new byte[BUFSIZE];
-	
-		    ByteOrder.int2leb(cmd, byteBuffer, 0); 	//Command byte - 1 byte
-		    ByteOrder.int2leb(1, byteBuffer, 1); 	//Key bytes - 32 bytes
-		    ByteOrder.int2leb(1, byteBuffer, 33); 	//Value bytes - 1024 bytes
-		    
-		    // Create socket that is connected to server on specified port
-            //byteBuffer[0] = (byte)1;
-		    System.out.println(Arrays.toString(byteBuffer));
-		    socket = new Socket(server, servPort);
-            System.out.println("Connected to server...");
-	 	
-		    //Send the message to the server
-            OutputStream os = socket.getOutputStream();
-		    os.write(byteBuffer);  // Send the encoded string to the server	
- 
-            //Get the return message from the server
-            InputStream is = socket.getInputStream();
-	
-		    int totalBytesRcvd = 0;  // Total bytes received so far
-            int bytesRcvd;           // Bytes received in last read
+	private static Socket socket;
+	private static final int CMD_SIZE = 1;
+	private static final int KEY_SIZE = 32;
+	private static final int VALUE_SIZE = 1024;
+	private static final int ERR_SIZE = 1;
+	private static final int REQUEST_BUFFSIZE = CMD_SIZE + KEY_SIZE + VALUE_SIZE; //Size of request message
+	private static final int REPLY_BUFFSIZE = ERR_SIZE + VALUE_SIZE; //Size of reply message
 
-            while (totalBytesRcvd < byteBuffer.length)
-            {
-            	if ((bytesRcvd = is.read(recvBuffer, totalBytesRcvd,  
-            			recvBuffer.length - totalBytesRcvd)) != -1)
+	public static void main(String[] args)
+	{
+		try {
+			if (args.length < 4 || args.length > 5)
+			{
+				System.out.println("USAGE: Client " + "<hostname/IP> <port> <command> <key> <(optional) value>");
+				System.out.println("Commands: Put = 1, Get = 2, Remove = 3");
+				System.exit(0);
+			}
+
+			String server = args[0]; //Server name or IP address
+			int servPort = Integer.parseInt(args[1]); //Server port
+			int cmd = Integer.parseInt(args[2]); //Command
+			int key = Integer.parseInt(args[3]); //Key
+
+			int value = 0; //Value for put command
+			if (cmd == 1)
+			{
+				//If command is put, make sure a value parameter is given
+				if (args.length != 5)
+				{
+					System.out.println("Please specify a value to map the key to for the put command!");
+					return;
+				}
+				value = Integer.parseInt(args[4]);
+			}
+
+			//Create socket that is connected to server on specified port
+			socket = new Socket(server, servPort);
+			System.out.println("Connected to server: " + socket.getInetAddress().toString());
+
+			//Send the message to the server
+			OutputStream os = socket.getOutputStream();
+			byte[] requestBuffer = new byte[REQUEST_BUFFSIZE];
+			ByteOrder.int2leb(cmd, requestBuffer, 0); 	//Command byte - 1 byte
+			ByteOrder.int2leb(key, requestBuffer, 1); 	//Key bytes - 32 bytes
+			if (cmd == 1)
+			{
+				ByteOrder.int2leb(value, requestBuffer, 33); 	//Value bytes - 1024 bytes
+			}
+
+			//Send the encoded string to the server
+			os.write(requestBuffer);
+			System.out.println("Sending request:");
+			System.out.println(StringUtils.byteArrayToHexString(requestBuffer));
+
+			//Get the return message from the server
+			InputStream is = socket.getInputStream();
+			int totalBytesRcvd = 0;  // Total bytes received so far
+			int bytesRcvd;           // Bytes received in last read
+			byte[] replyBuffer = new byte[REPLY_BUFFSIZE];
+
+			while (totalBytesRcvd < replyBuffer.length)
+			{
+				if ((bytesRcvd = is.read(replyBuffer, totalBytesRcvd,
+						replyBuffer.length - totalBytesRcvd)) != -1)
 				{
 					totalBytesRcvd += bytesRcvd;
 				}
-		        StdLog(recvBuffer);
-		    }
-	
-        } catch (Exception exception) {
-        	exception.printStackTrace();
-        } finally {
-            //Closing the socket
-            try {
-                socket.close();
-            } catch(Exception e) {
-                e.printStackTrace();
-            }
-        }
-    }
+			}
+			System.out.println("Reply received:");
+			printReply(replyBuffer, cmd);
 
-    private static void StdLog(byte[] msg)
-    {	   	
-		//declare subset byte[]
-		byte[] msgLenByte = new byte[INTSIZE];	
-		byte[] codeLenByte = new byte[INTSIZE];
-		byte[] secret = new byte[msg.length-12];
-		
-		//split byte stream
-		msgLenByte = Arrays.copyOfRange(msg,0,4);
-		codeLenByte = Arrays.copyOfRange(msg, 8,12);
-		secret = Arrays.copyOfRange(msg, 12, msg.length);
-		
-		//little endian to int
-		int msgLength = ByteOrder.leb2int(msgLenByte,0);
-		int codeLength = ByteOrder.leb2int(codeLenByte,0);
-	
-		//print out
-		if (codeLength != 0)
+		} catch (Exception exception) {
+			exception.printStackTrace();
+		} finally {
+			//Closing the socket
+			try {
+				if (socket != null)
+				{
+					socket.close();
+				}
+			} catch(Exception e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
+	private static void printReply(byte[] reply, int command)
+	{
+		if (reply.length > 0)
 		{
-			//sanity check
-       		System.out.println("Byte Message Received: " + StringUtils.byteArrayToHexString(msg));
-			
-			//print result to console
-			System.out.println("Message Length: " + msgLength);
-			System.out.println("Code Length: " + codeLength);
-			System.out.println("Secret Received: " + StringUtils.byteArrayToHexString(secret));	
-    	} 
-    }
+			//Print the message corresponding to the error code (for debugging purposes)
+			byte errorCode = reply[0];
+			System.out.println("Error Code: " + KVStore.errorMessage(errorCode));
+
+			//If command was "get", then also print the value returned
+			if (command == 2)
+			{
+				byte[] value = new byte[1024];
+				value = Arrays.copyOfRange(reply, 1, reply.length -1);
+				System.out.println("Value: " + StringUtils.byteArrayToHexString(value));
+			}
+		}
+	}
 }
 
