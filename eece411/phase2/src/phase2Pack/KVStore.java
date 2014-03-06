@@ -162,7 +162,7 @@ public class KVStore implements Runnable {
 			clntSock.close();
 			System.out.println("--------------------");
 		} catch(Exception e) {
-			//If any exception happens
+			//If any exception happens, return internal KVStore error
 			errCode = 0x04;
 			System.out.println("errCode: " + errorMessage(errCode));
 		}
