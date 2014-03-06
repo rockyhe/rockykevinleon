@@ -17,7 +17,7 @@ public class KVStore implements Runnable {
 	//Private members
 	private Socket clntSock;
 	private ConcurrentHashMap<String, byte[]> store;
-	private byte[] errCode = new byte[]{0x00}; //Set default errCode to 0x00, so we can assume that operation is successful unless errCode is explicitly changed
+	private byte errCode = 0x00; //Set default errCode to 0x00, so we can assume that operation is successful unless errCode is explicitly changed
 
 	//Constructor
 	KVStore(Socket clientSocket, ConcurrentHashMap<String,byte[]> KVstore)
@@ -44,7 +44,7 @@ public class KVStore implements Runnable {
 		byte[] result = new byte[VALUE_SIZE];
 		if (!store.containsKey(key))
 		{
-			errCode[0] = 0x01;
+			errCode = 0x01;
 			return null;
 		}
 		else
@@ -62,7 +62,7 @@ public class KVStore implements Runnable {
 	{
 		if (!store.containsKey(key))
 		{
-			errCode[0] = 0x01;
+			errCode = 0x01;
 		}
 		else
 		{
@@ -77,7 +77,7 @@ public class KVStore implements Runnable {
 			InputStream in = clntSock.getInputStream();
 			int totalRequestBytesRcvd = 0;
 			int requestBytesRcvd = 0;
-			byte[] requestBuffer = new byte[MIN_REQUEST_BUFFSIZE]; //Get the minimum
+			byte[] requestBuffer = new byte[MIN_REQUEST_BUFFSIZE]; //Get the minimum bytes
 			while (totalRequestBytesRcvd < requestBuffer.length)
 			{
 				if ((requestBytesRcvd = in.read(requestBuffer, totalRequestBytesRcvd, requestBuffer.length - totalRequestBytesRcvd)) != -1)
@@ -106,26 +106,31 @@ public class KVStore implements Runnable {
 			keyStr = StringUtils.byteArrayToHexString(key);//Arrays.toString(key).replaceAll("(^\\[|\\]$)", "").replace(", ", "_");
 			System.out.println("key: " + keyStr);
 
-			byte[] putValue = new byte[VALUE_SIZE];
-			byte[] getValue = new byte[VALUE_SIZE];
+			byte[] value = new byte[VALUE_SIZE];
 			switch(cmd)
 			{
 			case 1: //Put command
 				//Get the value bytes (only do this if the command is put)
-				putValue = Arrays.copyOfRange(requestBuffer, offset, offset + VALUE_SIZE);
-				offset += VALUE_SIZE;
-				System.out.println("put value: " + StringUtils.byteArrayToHexString(putValue));
-
-				put(keyStr, putValue);
+				int totalValueBytesRcvd = 0;
+				int valueBytesRcvd = 0;
+				while (totalValueBytesRcvd < value.length)
+				{
+					if ((valueBytesRcvd = in.read(value, totalValueBytesRcvd, value.length - totalValueBytesRcvd)) != -1)
+					{
+						totalValueBytesRcvd += valueBytesRcvd;
+					}
+				}
+				System.out.println("value: " + StringUtils.byteArrayToHexString(value));
+				put(keyStr, value);
 				break;
 			case 2: //Get command
-				getValue = get(keyStr);
+				value = get(keyStr); //Store into value byte array
 				break;
 			case 3: //Remove command
 				remove(keyStr);
 				break;
 			default: //Unrecognized command
-				errCode[0] = 0x05;
+				errCode = 0x05;
 				break;
 			}
 
@@ -134,18 +139,17 @@ public class KVStore implements Runnable {
 			OutputStream out = clntSock.getOutputStream();
 			byte[] replyBuffer = new byte[MIN_REPLY_BUFFSIZE];
 
-			//Copy errCode into the reply buffer array
-			System.arraycopy(errCode, 0, replyBuffer, 0, ERR_SIZE);
-			System.out.println("errCode: " + StringUtils.byteArrayToHexString(errCode) + " - " + errorMessage(errCode[0]));
-			//If command is get and the value returned from get isn't null, copy it into the reply buffer
-			if (cmd == 2 && getValue != null)
-			{
-				System.arraycopy(getValue, 0, replyBuffer, ERR_SIZE, getValue.length);
-				System.out.println("getValue: " + StringUtils.byteArrayToHexString(getValue));
-			}
-
-			System.out.println("replyBuffer: " + StringUtils.byteArrayToHexString(replyBuffer));
+			//Send errCode to client
+			System.arraycopy(new byte[] {errCode}, 0, replyBuffer, 0, ERR_SIZE);
+			System.out.println("errCode: " + StringUtils.byteArrayToHexString(replyBuffer) + " - " + errorMessage(errCode));
 			out.write(replyBuffer);
+			
+			//Send value to client if command is get and the value returned from get isn't null
+			if (cmd == 2 && value != null)
+			{
+				System.out.println("value: " + StringUtils.byteArrayToHexString(value));
+				out.write(value);
+			}
 			clntSock.close();
 			System.out.println("--------------------");
 		} catch(IOException ioe) {

@@ -10,8 +10,8 @@ public class Client {
 	private static final int KEY_SIZE = 32;
 	private static final int VALUE_SIZE = 1024;
 	private static final int ERR_SIZE = 1;
-	private static final int REQUEST_BUFFSIZE = CMD_SIZE + KEY_SIZE + VALUE_SIZE; //Size of request message
-	private static final int REPLY_BUFFSIZE = ERR_SIZE + VALUE_SIZE; //Size of reply message
+	private static final int MIN_REQUEST_BUFFSIZE = CMD_SIZE + KEY_SIZE; //Min size of request message
+	private static final int MIN_REPLY_BUFFSIZE = ERR_SIZE; //Min size of reply message
 
 	public static void main(String[] args)
 	{
@@ -46,7 +46,8 @@ public class Client {
 
 			//Send the message to the server
 			OutputStream os = socket.getOutputStream();
-			byte[] requestBuffer = new byte[REQUEST_BUFFSIZE];
+			//If command is put, then increase request buffer size to include value bytes
+			byte[] requestBuffer = (cmd == 1) ? new byte[MIN_REQUEST_BUFFSIZE + VALUE_SIZE] : new byte[MIN_REQUEST_BUFFSIZE];
 			ByteOrder.int2leb(cmd, requestBuffer, 0); 	//Command byte - 1 byte
 			ByteOrder.int2leb(key, requestBuffer, 1); 	//Key bytes - 32 bytes
 			if (cmd == 1)
@@ -63,8 +64,7 @@ public class Client {
 			InputStream is = socket.getInputStream();
 			int totalBytesRcvd = 0;  // Total bytes received so far
 			int bytesRcvd;           // Bytes received in last read
-			byte[] replyBuffer = new byte[REPLY_BUFFSIZE];
-
+			byte[] replyBuffer = new byte[MIN_REPLY_BUFFSIZE];
 			while (totalBytesRcvd < replyBuffer.length)
 			{
 				if ((bytesRcvd = is.read(replyBuffer, totalBytesRcvd,
@@ -73,9 +73,28 @@ public class Client {
 					totalBytesRcvd += bytesRcvd;
 				}
 			}
-			System.out.println("Reply received:");
-			printReply(replyBuffer, cmd);
-
+			
+			byte errCode = replyBuffer[0];
+			System.out.println("Reply received:" + StringUtils.byteArrayToHexString(replyBuffer));
+			System.out.println("Error Code: " + KVStore.errorMessage(errCode));
+			
+			//If command was get and ran successfully, then get the value bytes
+			boolean cmdSuccessful = errCode == 0x00;
+			byte[] getValue = new byte[VALUE_SIZE];
+			if (cmd == 2 && cmdSuccessful)
+			{
+				int totalValueBytesRcvd = 0;  // Total bytes received so far
+				int valueBytesRcvd;
+				while (totalValueBytesRcvd < getValue.length)
+				{
+					if ((valueBytesRcvd = is.read(getValue, totalValueBytesRcvd,
+							getValue.length - totalValueBytesRcvd)) != -1)
+					{
+						totalValueBytesRcvd += valueBytesRcvd;
+					}
+				}
+				System.out.println("Value: " + StringUtils.byteArrayToHexString(getValue));
+			}
 		} catch (Exception exception) {
 			exception.printStackTrace();
 		} finally {
@@ -87,24 +106,6 @@ public class Client {
 				}
 			} catch(Exception e) {
 				e.printStackTrace();
-			}
-		}
-	}
-
-	private static void printReply(byte[] reply, int command)
-	{
-		if (reply.length > 0)
-		{
-			//Print the message corresponding to the error code (for debugging purposes)
-			byte errorCode = reply[0];
-			System.out.println("Error Code: " + KVStore.errorMessage(errorCode));
-
-			//If command was "get", then also print the value returned
-			if (command == 2)
-			{
-				byte[] value = new byte[1024];
-				value = Arrays.copyOfRange(reply, 1, reply.length -1);
-				System.out.println("Value: " + StringUtils.byteArrayToHexString(value));
 			}
 		}
 	}
