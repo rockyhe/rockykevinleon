@@ -13,6 +13,7 @@ public class KVStore implements Runnable {
 	private static final int ERR_SIZE = 1;
 	private static final int MIN_REQUEST_BUFFSIZE = CMD_SIZE + KEY_SIZE; //Min size of request message
 	private static final int MIN_REPLY_BUFFSIZE = ERR_SIZE; //Min size of reply message
+	private static final int KVSTORE_SIZE = 40000;
 
 	//Private members
 	private Socket clntSock;
@@ -29,10 +30,18 @@ public class KVStore implements Runnable {
 	/**
 	 * Puts the given value into the store, mapped to the given key.
 	 * If there is already a value corresponding to the key, then the value is overwritten.
+	 * If the number of key-value pairs is KVSTORE_SIZE, the store returns out of space error.
 	 */
 	private void put(String key, byte[] value)
 	{
-		store.put(key, value);
+		if (store.size() < KVSTORE_SIZE)
+		{
+			store.put(key, value);
+		}
+		else
+		{
+			errCode = 0x02;
+		}
 	}
 
 	/**
@@ -152,8 +161,10 @@ public class KVStore implements Runnable {
 			}
 			clntSock.close();
 			System.out.println("--------------------");
-		} catch(IOException ioe) {
-			System.out.println("IOException!!!");
+		} catch(Exception e) {
+			//If any exception happens
+			errCode = 0x04;
+			System.out.println("errCode: " + errorMessage(errCode));
 		}
 	}
 

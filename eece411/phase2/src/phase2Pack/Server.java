@@ -6,14 +6,16 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class Server {
-	private static int port=5000;
+	private static final int PORT = 5000;
+	private static final int CLIENT_BACKLOG_SIZE = 30;
 	private static ConcurrentHashMap<String, byte[]> store;
 
 	public static void main(String[] args)
 	{
 		try {
 			//Create a server socket to accept client connection requests
-			ServerSocket servSock = new ServerSocket(port);
+			//Set the connection backlog size so if connection queue exceeds it, a system overload error is thrown
+			ServerSocket servSock = new ServerSocket(PORT, CLIENT_BACKLOG_SIZE);
 			Socket clntSock;
 			store = new ConcurrentHashMap<String,byte[]>();
 			int threadcnt = 0;
@@ -32,8 +34,8 @@ public class Server {
 				System.out.println("Thread #"+ threadcnt);
 				System.out.println("--------------------");
 			}
-		} catch(IOException e) {
-			System.out.println("IOException on socket listen");
+		} catch(Exception e) {
+			System.out.println("Internal Server Error!");
 		}
 	}
 }
