@@ -5,16 +5,14 @@ import java.net.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.matei.eece411.util.*;
-
 public class KVStore implements Runnable {
 	//Constants
 	private static final int CMD_SIZE = 1;
 	private static final int KEY_SIZE = 32;
 	private static final int VALUE_SIZE = 1024;
 	private static final int ERR_SIZE = 1;
-	private static final int REQUEST_BUFFSIZE = CMD_SIZE + KEY_SIZE + VALUE_SIZE; //Size of request message
-	private static final int REPLY_BUFFSIZE = ERR_SIZE + VALUE_SIZE; //Size of reply message
+	private static final int MIN_REQUEST_BUFFSIZE = CMD_SIZE + KEY_SIZE; //Min size of request message
+	private static final int MIN_REPLY_BUFFSIZE = ERR_SIZE; //Min size of reply message
 
 	//Private members
 	private Socket clntSock;
@@ -43,7 +41,7 @@ public class KVStore implements Runnable {
 	 */
 	private byte[] get(String key)
 	{
-		byte[] result;
+		byte[] result = new byte[VALUE_SIZE];
 		if (!store.containsKey(key))
 		{
 			errCode[0] = 0x01;
@@ -51,7 +49,6 @@ public class KVStore implements Runnable {
 		}
 		else
 		{
-			result = new byte[REPLY_BUFFSIZE];
 			result = store.get(key);
 		}
 		return result;
@@ -78,9 +75,9 @@ public class KVStore implements Runnable {
 		try {
 			//Get the request message from the client
 			InputStream in = clntSock.getInputStream();
-			int totalRequestBytesRcvd = 0; //TODO: Do we want to explicitly check correct message size depending on the command?
+			int totalRequestBytesRcvd = 0;
 			int requestBytesRcvd = 0;
-			byte[] requestBuffer = new byte[REQUEST_BUFFSIZE];
+			byte[] requestBuffer = new byte[MIN_REQUEST_BUFFSIZE]; //Get the minimum
 			while (totalRequestBytesRcvd < requestBuffer.length)
 			{
 				if ((requestBytesRcvd = in.read(requestBuffer, totalRequestBytesRcvd, requestBuffer.length - totalRequestBytesRcvd)) != -1)
@@ -135,7 +132,7 @@ public class KVStore implements Runnable {
 			//Send the reply message to the client
 			System.out.println("Sending reply:");
 			OutputStream out = clntSock.getOutputStream();
-			byte[] replyBuffer = new byte[REPLY_BUFFSIZE];
+			byte[] replyBuffer = new byte[MIN_REPLY_BUFFSIZE];
 
 			//Copy errCode into the reply buffer array
 			System.arraycopy(errCode, 0, replyBuffer, 0, ERR_SIZE);

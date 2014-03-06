@@ -4,8 +4,6 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
-import com.matei.eece411.util.*;
-
 public class Client {
 	private static Socket socket;
 	private static final int CMD_SIZE = 1;
