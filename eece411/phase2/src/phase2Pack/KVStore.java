@@ -159,28 +159,59 @@ public class KVStore implements Runnable {
 			}
 			
 			//Send the reply message to the client
-			System.out.println("Sending reply:");
-			OutputStream out = clntSock.getOutputStream();
-			byte[] replyBuffer = new byte[MIN_REPLY_BUFFSIZE];
-
-			//Send errCode to client
-			System.arraycopy(new byte[] {errCode}, 0, replyBuffer, 0, ERR_SIZE);
-			System.out.println("errCode: " + StringUtils.byteArrayToHexString(replyBuffer) + " - " + errorMessage(errCode));
-			out.write(replyBuffer);
-			
-			//Send value to client, only if command is get and the value returned from get isn't null
-			if (cmd == 2 && value != null)
-			{
-				System.out.println("value: " + StringUtils.byteArrayToHexString(value));
-				out.write(value);
-			}
-			clntSock.close();
-			clientCnt.getAndDecrement();
+			sendReply(cmd, value);			
 			System.out.println("--------------------");
-		} catch(Exception e) {
+		} catch (Exception e) {
 			//If any exception happens, return internal KVStore error
 			errCode = 0x04;
 			System.out.println("errCode: " + errorMessage(errCode));
+			try {
+				sendReply();
+			} catch (Exception e2) {} //If we get another exception trying to send reply for internal error then do nothing
+		} finally {
+			//Close the socket
+			try {
+				if (clntSock != null)
+				{
+					clntSock.close();
+					clientCnt.getAndDecrement();
+				}
+			} catch (Exception e) {
+				//If any exception happens, return internal KVStore error
+				errCode = 0x04;
+				System.out.println("errCode: " + errorMessage(errCode));
+			}
+		}
+	}
+	
+	private void sendReply() throws IOException
+	{
+		System.out.println("Sending reply:");
+		OutputStream out = clntSock.getOutputStream();
+		byte[] replyBuffer = new byte[MIN_REPLY_BUFFSIZE];
+
+		//Send errCode to client
+		System.arraycopy(new byte[] {errCode}, 0, replyBuffer, 0, ERR_SIZE);
+		System.out.println("errCode: " + StringUtils.byteArrayToHexString(replyBuffer) + " - " + errorMessage(errCode));
+		out.write(replyBuffer);
+	}
+	
+	private void sendReply(int cmd, byte[] value) throws IOException
+	{
+		System.out.println("Sending reply:");
+		OutputStream out = clntSock.getOutputStream();
+		byte[] replyBuffer = new byte[MIN_REPLY_BUFFSIZE];
+
+		//Send errCode to client
+		System.arraycopy(new byte[] {errCode}, 0, replyBuffer, 0, ERR_SIZE);
+		System.out.println("errCode: " + StringUtils.byteArrayToHexString(replyBuffer) + " - " + errorMessage(errCode));
+		out.write(replyBuffer);
+		
+		//Send value to client, only if command is get and the value returned from get isn't null
+		if (cmd == 2 && value != null)
+		{
+			System.out.println("value: " + StringUtils.byteArrayToHexString(value));
+			out.write(value);
 		}
 	}
 
