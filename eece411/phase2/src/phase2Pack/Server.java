@@ -4,6 +4,7 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.*;
 
 public class Server {
 	private static final int PORT = 5000;
@@ -18,20 +19,21 @@ public class Server {
 			ServerSocket servSock = new ServerSocket(PORT, CLIENT_BACKLOG_SIZE);
 			Socket clntSock;
 			store = new ConcurrentHashMap<String,byte[]>();
-			int threadcnt = 0;
 			System.out.println("Server is ready...");
 
+			AtomicInteger clientCount = new AtomicInteger(0);
 			for (;;)
 			{
 				//Run forever, accepting and servicing connections
 				clntSock = servSock.accept();     // Get client connection
+				clientCount.getAndIncrement();
 				System.out.println("New client connection.");
-				KVStore connection = new KVStore(clntSock, store);
+				KVStore connection = new KVStore(clntSock, store, clientCount);
 				//Create a new thread for each client connection
 				Thread t = new Thread(connection);
 				t.start();
-				threadcnt++;
-				System.out.println("Thread #"+ threadcnt);
+				
+				System.out.println("# of clients: " + clientCount.get());
 				System.out.println("--------------------");
 			}
 		} catch(Exception e) {
