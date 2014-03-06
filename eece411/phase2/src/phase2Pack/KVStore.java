@@ -174,7 +174,6 @@ public class KVStore implements Runnable {
 				System.out.println("value: " + StringUtils.byteArrayToHexString(value));
 				out.write(value);
 			}
-			Thread.sleep(5000);
 			clntSock.close();
 			clientCnt.getAndDecrement();
 			System.out.println("--------------------");
