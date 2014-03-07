@@ -15,7 +15,7 @@ public class KVStore implements Runnable {
 	private static final int MIN_REQUEST_BUFFSIZE = CMD_SIZE + KEY_SIZE; //Min size of request message
 	private static final int MIN_REPLY_BUFFSIZE = ERR_SIZE; //Min size of reply message
 	private static final int KVSTORE_SIZE = 40000;
-	private static final int MAX_NUM_CLIENTS = 30;
+	private static final int MAX_NUM_CLIENTS = 90;
 
 	//Private members
 	private Socket clntSock;
@@ -126,7 +126,7 @@ public class KVStore implements Runnable {
 	
 				//Convert key bytes to string
 				String keyStr;
-				keyStr = StringUtils.byteArrayToHexString(key);//Arrays.toString(key).replaceAll("(^\\[|\\]$)", "").replace(", ", "_");
+				keyStr = StringUtils.byteArrayToHexString(key);//Arrays.toString(key).replaceAll("(^\\[|\\]$)", "").replace(", ", "");
 				System.out.println("key: " + keyStr);
 	
 				value = new byte[VALUE_SIZE];

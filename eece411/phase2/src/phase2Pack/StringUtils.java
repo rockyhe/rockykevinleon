@@ -21,6 +21,6 @@ public class StringUtils {
                 str = "0" + str;
             buf.append( str );
         }
-        return buf.toString().toUpperCase();
+        return buf.toString();
     }
 }
