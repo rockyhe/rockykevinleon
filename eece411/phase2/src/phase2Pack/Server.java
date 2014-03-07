@@ -25,14 +25,14 @@ public class Server {
 				//Run forever, accepting and servicing connections
 				clntSock = servSock.accept();     // Get client connection
 				clientCount.getAndIncrement();
-				System.out.println("New client connection.");
+				//System.out.println("New client connection.");
 				KVStore connection = new KVStore(clntSock, store, clientCount);
 				//Create a new thread for each client connection
 				Thread t = new Thread(connection);
 				t.start();
 				
-				System.out.println("# of clients: " + clientCount.get());
-				System.out.println("--------------------");
+				//System.out.println("# of clients: " + clientCount.get());
+				//System.out.println("--------------------");
 			}
 		} catch(Exception e) {
 			System.out.println("Internal Server Error!");

@@ -15,7 +15,7 @@ public class KVStore implements Runnable {
 	private static final int MIN_REQUEST_BUFFSIZE = CMD_SIZE + KEY_SIZE; //Min size of request message
 	private static final int MIN_REPLY_BUFFSIZE = ERR_SIZE; //Min size of reply message
 	private static final int KVSTORE_SIZE = 40000;
-	private static final int MAX_NUM_CLIENTS = 90;
+	private static final int MAX_NUM_CLIENTS = 50;
 
 	//Private members
 	private Socket clntSock;
@@ -108,15 +108,15 @@ public class KVStore implements Runnable {
 						totalRequestBytesRcvd += requestBytesRcvd;
 					}
 				}
-				System.out.println("Request received:");
-				System.out.println("requestBuffer: " + StringUtils.byteArrayToHexString(requestBuffer));
+				//System.out.println("Request received:");
+				//System.out.println("requestBuffer: " + StringUtils.byteArrayToHexString(requestBuffer));
 	
 				//Track offset position for splitting byte stream
 				int offset = 0;
 				//Get the command byte
 				cmd = ByteOrder.leb2int(requestBuffer, offset, offset + CMD_SIZE);
 				offset += CMD_SIZE;
-				System.out.println("cmd: " + cmd);
+				//System.out.println("cmd: " + cmd);
 	
 				//Get the key bytes
 				//NOTE: As stated by Matei in class, assume that client is responsible for providing hashed keys so no need to perform re-hashing here.
@@ -127,7 +127,7 @@ public class KVStore implements Runnable {
 				//Convert key bytes to string
 				String keyStr;
 				keyStr = StringUtils.byteArrayToHexString(key);//Arrays.toString(key).replaceAll("(^\\[|\\]$)", "").replace(", ", "");
-				System.out.println("key: " + keyStr);
+				//System.out.println("key: " + keyStr);
 	
 				value = new byte[VALUE_SIZE];
 				switch(cmd)
@@ -143,7 +143,7 @@ public class KVStore implements Runnable {
 							totalValueBytesRcvd += valueBytesRcvd;
 						}
 					}
-					System.out.println("value: " + StringUtils.byteArrayToHexString(value));
+					//System.out.println("value: " + StringUtils.byteArrayToHexString(value));
 					put(keyStr, value);
 					break;
 				case 2: //Get command
@@ -160,11 +160,11 @@ public class KVStore implements Runnable {
 			
 			//Send the reply message to the client
 			sendReply(cmd, value);			
-			System.out.println("--------------------");
+			//System.out.println("--------------------");
 		} catch (Exception e) {
 			//If any exception happens, return internal KVStore error
 			errCode = 0x04;
-			System.out.println("errCode: " + errorMessage(errCode));
+			//System.out.println("errCode: " + errorMessage(errCode));
 			try {
 				sendReply();
 			} catch (Exception e2) {} //If we get another exception trying to send reply for internal error then do nothing
@@ -179,38 +179,38 @@ public class KVStore implements Runnable {
 			} catch (Exception e) {
 				//If any exception happens, return internal KVStore error
 				errCode = 0x04;
-				System.out.println("errCode: " + errorMessage(errCode));
+				//System.out.println("errCode: " + errorMessage(errCode));
 			}
 		}
 	}
 	
 	private void sendReply() throws IOException
 	{
-		System.out.println("Sending reply:");
+		//System.out.println("Sending reply:");
 		OutputStream out = clntSock.getOutputStream();
 		byte[] replyBuffer = new byte[MIN_REPLY_BUFFSIZE];
 
 		//Send errCode to client
 		System.arraycopy(new byte[] {errCode}, 0, replyBuffer, 0, ERR_SIZE);
-		System.out.println("errCode: " + StringUtils.byteArrayToHexString(replyBuffer) + " - " + errorMessage(errCode));
+		//System.out.println("errCode: " + StringUtils.byteArrayToHexString(replyBuffer) + " - " + errorMessage(errCode));
 		out.write(replyBuffer);
 	}
 	
 	private void sendReply(int cmd, byte[] value) throws IOException
 	{
-		System.out.println("Sending reply:");
+		//System.out.println("Sending reply:");
 		OutputStream out = clntSock.getOutputStream();
 		byte[] replyBuffer = new byte[MIN_REPLY_BUFFSIZE];
 
 		//Send errCode to client
 		System.arraycopy(new byte[] {errCode}, 0, replyBuffer, 0, ERR_SIZE);
-		System.out.println("errCode: " + StringUtils.byteArrayToHexString(replyBuffer) + " - " + errorMessage(errCode));
+		//System.out.println("errCode: " + StringUtils.byteArrayToHexString(replyBuffer) + " - " + errorMessage(errCode));
 		out.write(replyBuffer);
 		
 		//Send value to client, only if command is get and the value returned from get isn't null
 		if (cmd == 2 && value != null)
 		{
-			System.out.println("value: " + StringUtils.byteArrayToHexString(value));
+			//System.out.println("value: " + StringUtils.byteArrayToHexString(value));
 			out.write(value);
 		}
 	}
