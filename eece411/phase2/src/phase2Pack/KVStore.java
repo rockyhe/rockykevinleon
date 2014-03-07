@@ -23,7 +23,7 @@ public class KVStore implements Runnable {
 	private byte errCode = 0x00; //Set default errCode to 0x00, so we can assume that operation is successful unless errCode is explicitly changed
 
 	private AtomicInteger clientCnt;
-	
+
 	//Constructor
 	KVStore(Socket clientSocket, ConcurrentHashMap<String,byte[]> KVstore, AtomicInteger clientCount)
 	{
@@ -55,7 +55,6 @@ public class KVStore implements Runnable {
 	 */
 	private byte[] get(String key)
 	{
-		byte[] result = new byte[VALUE_SIZE];
 		if (!store.containsKey(key))
 		{
 			errCode = 0x01;
@@ -63,9 +62,8 @@ public class KVStore implements Runnable {
 		}
 		else
 		{
-			result = store.get(key);
+			return store.get(key);
 		}
-		return result;
 	}
 
 	/**
@@ -86,13 +84,12 @@ public class KVStore implements Runnable {
 
 	public void run()
 	{
-		try {			
-			int cmd = 0;
-			byte[] value = null;
+		try {
 			//If number of clients is greater than MAX_NUM_CLIENTS, then return system overload error
 			if (clientCnt.get() >= MAX_NUM_CLIENTS)
 			{
 				errCode = 0x03;
+				sendErrCode();
 			}
 			else
 			{
@@ -110,26 +107,22 @@ public class KVStore implements Runnable {
 				}
 				//System.out.println("Request received:");
 				//System.out.println("requestBuffer: " + StringUtils.byteArrayToHexString(requestBuffer));
-	
-				//Track offset position for splitting byte stream
-				int offset = 0;
+
+				//Track offset position for splitting byte stream0
 				//Get the command byte
-				cmd = ByteOrder.leb2int(requestBuffer, offset, offset + CMD_SIZE);
-				offset += CMD_SIZE;
+				int cmd = ByteOrder.leb2int(requestBuffer, 0, CMD_SIZE);
 				//System.out.println("cmd: " + cmd);
-	
+
 				//Get the key bytes
 				//NOTE: As stated by Matei in class, assume that client is responsible for providing hashed keys so no need to perform re-hashing here.
 				byte[] key = new byte[KEY_SIZE];
-				key = Arrays.copyOfRange(requestBuffer, offset, offset + KEY_SIZE);
-				offset += KEY_SIZE;
-	
+				System.arraycopy(requestBuffer, CMD_SIZE, key, 0, KEY_SIZE); //Use System.arraycopy for better performance instead of Arrays.copyOfRange
+
 				//Convert key bytes to string
-				String keyStr;
-				keyStr = StringUtils.byteArrayToHexString(key);//Arrays.toString(key).replaceAll("(^\\[|\\]$)", "").replace(", ", "");
+				String keyStr = StringUtils.byteArrayToHexString(key);//Arrays.toString(key).replaceAll("(^\\[|\\]$)", "").replace(", ", "");
 				//System.out.println("key: " + keyStr);
-	
-				value = new byte[VALUE_SIZE];
+
+				byte[] value = new byte[VALUE_SIZE];
 				switch(cmd)
 				{
 				case 1: //Put command
@@ -156,18 +149,25 @@ public class KVStore implements Runnable {
 					errCode = 0x05;
 					break;
 				}
+
+				//Send the reply message to the client
+				//Only send value if command was get and value returned wasn't null
+				if (cmd == 2 && value != null)
+				{
+					sendErrCodeAndValue(value);
+				}
+				else
+				{
+					sendErrCode();
+				}
 			}
-			
-			//Send the reply message to the client
-			sendReply(cmd, value);			
 			//System.out.println("--------------------");
 		} catch (Exception e) {
 			//If any exception happens, return internal KVStore error
 			errCode = 0x04;
-			//System.out.println("errCode: " + errorMessage(errCode));
 			try {
-				sendReply();
-			} catch (Exception e2) {} //If we get another exception trying to send reply for internal error then do nothing
+				sendErrCode();
+			} catch (Exception e2) { } //If we get an exception trying to send reply for internal error then do nothing
 		} finally {
 			//Close the socket
 			try {
@@ -179,36 +179,33 @@ public class KVStore implements Runnable {
 			} catch (Exception e) {
 				//If any exception happens, return internal KVStore error
 				errCode = 0x04;
-				//System.out.println("errCode: " + errorMessage(errCode));
+				try {
+					sendErrCode();
+				} catch (Exception e2) { } //If we get an exception trying to send reply for internal error then do nothing
 			}
 		}
 	}
-	
-	private void sendReply() throws IOException
+
+	private void sendErrCode() throws IOException
 	{
+		//System.out.println("errCode: " + errorMessage(errCode));
+		//Send errCode to client
 		//System.out.println("Sending reply:");
 		OutputStream out = clntSock.getOutputStream();
-		byte[] replyBuffer = new byte[MIN_REPLY_BUFFSIZE];
-
-		//Send errCode to client
-		System.arraycopy(new byte[] {errCode}, 0, replyBuffer, 0, ERR_SIZE);
 		//System.out.println("errCode: " + StringUtils.byteArrayToHexString(replyBuffer) + " - " + errorMessage(errCode));
-		out.write(replyBuffer);
+		out.write(new byte[] {errCode});
 	}
-	
-	private void sendReply(int cmd, byte[] value) throws IOException
+
+	private void sendErrCodeAndValue(byte[] value) throws IOException
 	{
+		//Send errCode to client
 		//System.out.println("Sending reply:");
 		OutputStream out = clntSock.getOutputStream();
-		byte[] replyBuffer = new byte[MIN_REPLY_BUFFSIZE];
-
-		//Send errCode to client
-		System.arraycopy(new byte[] {errCode}, 0, replyBuffer, 0, ERR_SIZE);
 		//System.out.println("errCode: " + StringUtils.byteArrayToHexString(replyBuffer) + " - " + errorMessage(errCode));
-		out.write(replyBuffer);
-		
-		//Send value to client, only if command is get and the value returned from get isn't null
-		if (cmd == 2 && value != null)
+		out.write(new byte[] {errCode});
+
+		//Send value to client
+		if (value != null)
 		{
 			//System.out.println("value: " + StringUtils.byteArrayToHexString(value));
 			out.write(value);
