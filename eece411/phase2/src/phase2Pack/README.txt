@@ -11,28 +11,40 @@ cs-planetlab4.cs.surrey.sfu.ca:5000
 cs-planetlab3.cs.surrey.sfu.ca:5000
 ------------------------------------
 Implementations
-Client Server connection:
+2 Classes - KVStore.java and Server.java (which holds an instance of KVStore)
+Assumption: As stated by Matei in class, we work with the assumption that the client provides an already hashed key. 
+
+Client-Server connection:
 	Used: socket programming
-	We use socket programming used in assignment 1 for the communication at port 5000. 
+	We use socket programming, similar to assignment 1, for communication between the client and server on port 5000. 
 
-multitreaded server:
+Multitreaded server:
 	Class: Thread
-	We use java class Thread to implement the multithreading server, each thread is created for a client connection, the thread terminates once the client disconnects from the server. While server keeps a KVStore, each thread references to the server KVStore and do operations in the store. 
+	We use Java's Thread class to implement a multithreaded server, where a new thread is created for each client connection and the thread terminates once the client disconnects from the server. The server keeps a KVStore instance, and each thread has a reference to the server's KVStore and performs operations on it.
 
-Separation of RecvBuffer
-	The receive buffer in Server is separated into value buffer and key+command buffer for faster and efficient data parsing. Ex: we dont  read the value buffer if the command is get or delete. 
+Separation of receive buffer:
+	The receive buffer when processing the client request in the KVStore class is separated into a command+key buffer and a value buffer for faster and efficient data parsing, i.e. we only read the value buffer bytes if the command is put.
 
 Concurrent put/get/delete:
 	Class: ConcurrentHashMap
-	KVStore is created using ConcurrentHashMap. Since there are at most 50 clients will be operating get/put/delete at the same time, we use ConncurrentHashMap to deal with concurrency issue.
+	The KVStore class is implemented using a ConcurrentHashMap. Since there are at most 50 clients that will be operating get/put/delete at the same time, we use ConncurrentHashMap to deal with concurrency issues.
 
-Tracking & limiting total number of Client connected:
-	Class: atomicInteger
-	We use this class to create a client count variable. This is an int for which we can pass around by its reference. This class also features mutual exclusion ability, meaning the concurrent increament/decrement can be handled by the class. Therefore, it is worry free and can be refrenced from multiple threads, we set client limit to 50 as per requirement, if exceedingthe limit, we throw error 0x03.  
+General Error Handling:
+	By default we set the error code variable to 0x00, so that we can assume operations complete successfully unless the error code value is explicitly changed by error handling code.
+
+Inexistent Key Error:
+	We check if the KVStore contains the key for the get/remove operations in the get/remove methods using a simple conditional statement, and thrown error 0x01 if the key doesn't exist. 
+
+Unrecognized Command Error:
+	We use a switch statement on the command value to easily handle unrecognized commands in the "default" case and throw error 0x05 (i.e. Unrecognized command).
+	
+Tracking & limiting total number of clients connected:
+	Class: AtomicInteger
+	We use Java's AtomicInteger class to create a client count variable, which we pass to each client thread to increment (when connected) and decrement (once operation is done and socket is closed). We use it because it is thread safe and can be incremented/decremented concurrently and be referenced from multiple threads. We set the client limit to 50 as per the project requirements, and if the value of the AtomicInteger exceeds the limit, we throw error 0x03 (i.e. System Overload).
 
 KVStore Internal Error:
 	Class: general Java Exception handler
-	We use a general expcetion handler to throw error code 0x04, this shows that as long as there is an issue with any of the KVStore get/put/delete operation, it throws 0x04 error, can all of these is catagorized as KVStore internal error
+	We use a general exception handler (i.e. catch Exception) to throw error code 0x04 (i.e. Internal KVStore error), since this shows that as long as there is an unhandled issue that occurs in the KVStore, it throws the 0x04 error.
 
 KVStore Size:
-	we can only do put operation if the store size is less than 40000 as per request. otherwise, we throw a error 0x02. 
+	we can only do the put operation if the store size is less than 40000 as per the project requirements. Otherwise, we throw error 0x02 (i.e. Out of space).
