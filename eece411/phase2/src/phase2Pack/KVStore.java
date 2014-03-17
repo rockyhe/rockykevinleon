@@ -11,11 +11,8 @@ public class KVStore implements Runnable {
 	private static final int CMD_SIZE = 1;
 	private static final int KEY_SIZE = 32;
 	private static final int VALUE_SIZE = 1024;
-	private static final int ERR_SIZE = 1;
 	private static final int MIN_REQUEST_BUFFSIZE = CMD_SIZE + KEY_SIZE; //Min size of request message
-	private static final int MIN_REPLY_BUFFSIZE = ERR_SIZE; //Min size of reply message
 	private static final int KVSTORE_SIZE = 40000;
-	private static final int MAX_NUM_CLIENTS = 50;
 
 	//Private members
 	private Socket clntSock;
@@ -25,11 +22,11 @@ public class KVStore implements Runnable {
 	private AtomicInteger clientCnt;
 
 	//Constructor
-	KVStore(Socket clientSocket, ConcurrentHashMap<String,byte[]> KVstore, AtomicInteger clientCount)
+	KVStore(Socket clientSocket, ConcurrentHashMap<String,byte[]> KVstore, AtomicInteger concurrentClientCount)
 	{
 		this.clntSock = clientSocket;
 		this.store = KVstore;
-		this.clientCnt = clientCount;
+		this.clientCnt = concurrentClientCount;
 	}
 
 	/**
@@ -85,81 +82,73 @@ public class KVStore implements Runnable {
 	public void run()
 	{
 		try {
-			//If number of clients is greater than MAX_NUM_CLIENTS, then return system overload error
-			if (clientCnt.get() >= MAX_NUM_CLIENTS)
+			clientCnt.getAndIncrement();
+			//Get the request message from the client
+			InputStream in = clntSock.getInputStream();
+			int totalRequestBytesRcvd = 0;
+			int requestBytesRcvd = 0;
+			byte[] requestBuffer = new byte[MIN_REQUEST_BUFFSIZE]; //Get the minimum bytes
+			while (totalRequestBytesRcvd < requestBuffer.length)
 			{
-				errCode = 0x03;
-				sendErrCode();
+				if ((requestBytesRcvd = in.read(requestBuffer, totalRequestBytesRcvd, requestBuffer.length - totalRequestBytesRcvd)) != -1)
+				{
+					totalRequestBytesRcvd += requestBytesRcvd;
+				}
+			}
+			//System.out.println("Request received:");
+			//System.out.println("requestBuffer: " + StringUtils.byteArrayToHexString(requestBuffer));
+
+			//Track offset position for splitting byte stream0
+			//Get the command byte
+			int cmd = ByteOrder.leb2int(requestBuffer, 0, CMD_SIZE);
+			//System.out.println("cmd: " + cmd);
+
+			//Get the key bytes
+			//NOTE: As stated by Matei in class, assume that client is responsible for providing hashed keys so no need to perform re-hashing here.
+			byte[] key = new byte[KEY_SIZE];
+			System.arraycopy(requestBuffer, CMD_SIZE, key, 0, KEY_SIZE); //Use System.arraycopy for better performance instead of Arrays.copyOfRange
+
+			//Convert key bytes to string
+			String keyStr = StringUtils.byteArrayToHexString(key);//Arrays.toString(key).replaceAll("(^\\[|\\]$)", "").replace(", ", "");
+			//System.out.println("key: " + keyStr);
+
+			byte[] value = new byte[VALUE_SIZE];
+			switch(cmd)
+			{
+			case 1: //Put command
+				//Get the value bytes (only do this if the command is put)
+				int totalValueBytesRcvd = 0;
+				int valueBytesRcvd = 0;
+				while (totalValueBytesRcvd < value.length)
+				{
+					if ((valueBytesRcvd = in.read(value, totalValueBytesRcvd, value.length - totalValueBytesRcvd)) != -1)
+					{
+						totalValueBytesRcvd += valueBytesRcvd;
+					}
+				}
+				//System.out.println("value: " + StringUtils.byteArrayToHexString(value));
+				put(keyStr, value);
+				break;
+			case 2: //Get command
+				value = get(keyStr); //Store into value byte array
+				break;
+			case 3: //Remove command
+				remove(keyStr);
+				break;
+			default: //Unrecognized command
+				errCode = 0x05;
+				break;
+			}
+
+			//Send the reply message to the client
+			//Only send value if command was get and value returned wasn't null
+			if (cmd == 2 && value != null)
+			{
+				sendErrCodeAndValue(value);
 			}
 			else
 			{
-				//Get the request message from the client
-				InputStream in = clntSock.getInputStream();
-				int totalRequestBytesRcvd = 0;
-				int requestBytesRcvd = 0;
-				byte[] requestBuffer = new byte[MIN_REQUEST_BUFFSIZE]; //Get the minimum bytes
-				while (totalRequestBytesRcvd < requestBuffer.length)
-				{
-					if ((requestBytesRcvd = in.read(requestBuffer, totalRequestBytesRcvd, requestBuffer.length - totalRequestBytesRcvd)) != -1)
-					{
-						totalRequestBytesRcvd += requestBytesRcvd;
-					}
-				}
-				//System.out.println("Request received:");
-				//System.out.println("requestBuffer: " + StringUtils.byteArrayToHexString(requestBuffer));
-
-				//Track offset position for splitting byte stream0
-				//Get the command byte
-				int cmd = ByteOrder.leb2int(requestBuffer, 0, CMD_SIZE);
-				//System.out.println("cmd: " + cmd);
-
-				//Get the key bytes
-				//NOTE: As stated by Matei in class, assume that client is responsible for providing hashed keys so no need to perform re-hashing here.
-				byte[] key = new byte[KEY_SIZE];
-				System.arraycopy(requestBuffer, CMD_SIZE, key, 0, KEY_SIZE); //Use System.arraycopy for better performance instead of Arrays.copyOfRange
-
-				//Convert key bytes to string
-				String keyStr = StringUtils.byteArrayToHexString(key);//Arrays.toString(key).replaceAll("(^\\[|\\]$)", "").replace(", ", "");
-				//System.out.println("key: " + keyStr);
-
-				byte[] value = new byte[VALUE_SIZE];
-				switch(cmd)
-				{
-				case 1: //Put command
-					//Get the value bytes (only do this if the command is put)
-					int totalValueBytesRcvd = 0;
-					int valueBytesRcvd = 0;
-					while (totalValueBytesRcvd < value.length)
-					{
-						if ((valueBytesRcvd = in.read(value, totalValueBytesRcvd, value.length - totalValueBytesRcvd)) != -1)
-						{
-							totalValueBytesRcvd += valueBytesRcvd;
-						}
-					}
-					//System.out.println("value: " + StringUtils.byteArrayToHexString(value));
-					put(keyStr, value);
-					break;
-				case 2: //Get command
-					value = get(keyStr); //Store into value byte array
-					break;
-				case 3: //Remove command
-					remove(keyStr);
-					break;
-				default: //Unrecognized command
-					errCode = 0x05;
-					break;
-				}
-
-				//Send the reply message to the client
-				//Only send value if command was get and value returned wasn't null
-				if (cmd == 2 && value != null)
-				{
-					sendErrCodeAndValue(value);
-				}
-				else
-				{
-					sendErrCode();
-				}
+				sendErrCode();
 			}
 			//System.out.println("--------------------");
 		} catch (Exception e) {
