@@ -19,7 +19,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.charset.*;
 import java.nio.CharBuffer;
 
-public class Server {
+public class ServerNIO {
 	private static final int PORT = 8000;
 	private static ConcurrentHashMap<String, byte[]> store;
 	private static final long TIMEOUT = 10000;
