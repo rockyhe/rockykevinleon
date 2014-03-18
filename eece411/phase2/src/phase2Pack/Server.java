@@ -2,6 +2,7 @@ package phase2Pack;
 
 import java.io.*;
 import java.net.*;
+import java.security.MessageDigest;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -14,6 +15,7 @@ public class Server {
 	private static final int PORT = 5000;
 	private static final int MAX_NUM_CLIENTS = 50;
 	private static final int BACKLOG_SIZE = 50;
+	private static final String NODE_LIST_FILE = "nodeList.txt";
 
 	//Private members
 	private static ServerSocket servSock;
@@ -21,6 +23,21 @@ public class Server {
 	private static Queue<Socket> backlog;
 	private static AtomicInteger concurrentClientCount;
 	private static ExecutorService threadPool;
+
+	private static SortedMap<String, InetSocketAddress> nodes;
+
+	private static String getHash(String msg)
+	{
+		String result = null;
+		try {
+			MessageDigest md = MessageDigest.getInstance("MD5");
+			byte[] hash = md.digest(msg.getBytes("UTF-8"));
+			result = StringUtils.byteArrayToHexString(hash);
+		} catch (Exception e) {
+			System.out.println("Error trying to get hash of string: " + msg);
+		}
+		return result;
+	}
 
 	public static void main(String[] args)
 	{
@@ -32,6 +49,24 @@ public class Server {
 			concurrentClientCount = new AtomicInteger(0);
 			//Create a fixed thread pool since we'll have at most MAX_NUM_CLIENTS concurrent threads
 			threadPool = Executors.newFixedThreadPool(MAX_NUM_CLIENTS);
+
+			try {
+				Scanner s = new Scanner(new File("./phase2Pack/" + NODE_LIST_FILE));
+				nodes = new TreeMap<String, InetSocketAddress>();
+				while (s.hasNext())
+				{
+					String node = s.next();
+					nodes.put(getHash(node), new InetSocketAddress(node, PORT));
+				}
+				s.close();
+			} catch (FileNotFoundException e) {
+				System.out.println("Cannot find node list file!");
+			} catch (Exception e) {
+				System.out.println("Error loading node list!");
+			}
+
+			DisplayNodeList();
+
 			System.out.println("Server is ready...");
 
 			//Create a new Producer thread for accepting client connections and adding them to the queue
@@ -43,6 +78,16 @@ public class Server {
 			consumer.start();
 		} catch (Exception e) {
 			System.out.println("Internal Server Error!");
+		}
+	}
+
+	private static void DisplayNodeList()
+	{
+		for (Map.Entry<String, InetSocketAddress> entry : nodes.entrySet())
+		{
+			String key = entry.getKey();
+			InetSocketAddress value = entry.getValue();
+			System.out.println(key + " => " + value.toString());
 		}
 	}
 
