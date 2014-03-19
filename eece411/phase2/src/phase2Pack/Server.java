@@ -2,7 +2,6 @@ package phase2Pack;
 
 import java.io.*;
 import java.net.*;
-import java.security.MessageDigest;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;

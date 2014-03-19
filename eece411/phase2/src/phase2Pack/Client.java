@@ -42,12 +42,6 @@ public class Client {
 			}
 			value = Integer.parseInt(args[4]);
 		}
-
-		for (int i=0; i < MAX_NUM_CLIENTS * 4; i++)
-		{
-			Thread client = new Thread(new ClientThread());
-			client.start();
-		}
 	}
 
 	private static class ClientThread implements Runnable
