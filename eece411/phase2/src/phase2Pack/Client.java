@@ -42,6 +42,9 @@ public class Client {
 			}
 			value = Integer.parseInt(args[4]);
 		}
+
+		Thread client = new Thread(new ClientThread());
+		client.start();
 	}
 
 	private static class ClientThread implements Runnable
