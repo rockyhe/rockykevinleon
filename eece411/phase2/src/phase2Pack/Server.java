@@ -23,6 +23,7 @@ public class Server {
 	private static ConcurrentHashMap<String, byte[]> store;
 	private static Queue<Socket> backlog;
 	private static AtomicInteger concurrentClientCount;
+	private static AtomicInteger shutdownFlag;
 	private static ExecutorService threadPool;
 
 	private static ConcurrentSkipListMap<String, KVStore.Node> nodes;
@@ -35,6 +36,8 @@ public class Server {
 			store = new ConcurrentHashMap<String,byte[]>();
 			backlog = new ArrayBlockingQueue<Socket>(BACKLOG_SIZE);
 			concurrentClientCount = new AtomicInteger(0);
+			shutdownFlag = new AtomicInteger(0);
+
 			//Create a fixed thread pool since we'll have at most MAX_NUM_CLIENTS concurrent threads
 			threadPool = Executors.newFixedThreadPool(MAX_NUM_CLIENTS);
 
@@ -124,12 +127,21 @@ public class Server {
 				{
 					//If current number of concurrent clients hasn't reached MAX_NUM_CLIENTS
 					//then service client at the head of queue
-					if (concurrentClientCount.get() < MAX_NUM_CLIENTS && (clntSock = backlog.poll()) != null)
+					if (shutdownFlag.get() == 0)
 					{
-						KVStore connection = new KVStore(clntSock, store, concurrentClientCount, nodes);
-						//Create a new thread for each client connection
-						threadPool.execute(connection);
-						//System.out.println("New client executing.");
+						if (concurrentClientCount.get() < MAX_NUM_CLIENTS && (clntSock = backlog.poll()) != null)
+						{
+							KVStore connection = new KVStore(clntSock, store, nodes, concurrentClientCount, shutdownFlag);
+							//Create a new thread for each client connection
+							threadPool.execute(connection);
+							//System.out.println("New client executing.");
+						}
+					}
+					else
+					{
+						//FIXME proporgate it to somewhere
+						System.out.println("closing down server!");
+						System.exit(0);
 					}
 
 					//					if (concurrentClientCount.get() > 0)
