@@ -9,8 +9,6 @@ public class Client {
 	private static final int KEY_SIZE = 32;
 	private static final int VALUE_SIZE = 1024;
 	private static final int ERR_SIZE = 1;
-	private static final int MIN_REQUEST_BUFFSIZE = CMD_SIZE + KEY_SIZE; //Min size of request message
-	private static final int MIN_REPLY_BUFFSIZE = ERR_SIZE; //Min size of reply message
 	private static final int MAX_NUM_CLIENTS = 50;
 
 	private static String server;
@@ -65,9 +63,9 @@ public class Client {
 				//Send the message to the server
 				OutputStream os = socket.getOutputStream();
 				//If command is put, then increase request buffer size to include value bytes
-				byte[] requestBuffer = (cmd == 1) ? new byte[MIN_REQUEST_BUFFSIZE + VALUE_SIZE] : new byte[MIN_REQUEST_BUFFSIZE];
-				ByteOrder.int2leb(cmd, requestBuffer, 0); 	//Command byte - 1 byte
-				ByteOrder.int2leb(key, requestBuffer, 1); 	//Key bytes - 32 bytes
+				byte[] requestBuffer = (cmd == 1) ? new byte[CMD_SIZE + KEY_SIZE + VALUE_SIZE] : new byte[CMD_SIZE + KEY_SIZE];
+				ByteOrder.int2leb(cmd, requestBuffer, 0); 			//Command byte - 1 byte
+				ByteOrder.int2leb(key, requestBuffer, CMD_SIZE); 	//Key bytes - 32 bytes
 				if (cmd == 1)
 				{
 					ByteOrder.int2leb(value, requestBuffer, 33); 	//Value bytes - 1024 bytes
@@ -82,7 +80,7 @@ public class Client {
 				InputStream is = socket.getInputStream();
 				int totalBytesRcvd = 0;  // Total bytes received so far
 				int bytesRcvd;           // Bytes received in last read
-				byte[] replyBuffer = new byte[MIN_REPLY_BUFFSIZE];
+				byte[] replyBuffer = new byte[ERR_SIZE];
 				while (totalBytesRcvd < replyBuffer.length)
 				{
 					if ((bytesRcvd = is.read(replyBuffer, totalBytesRcvd,

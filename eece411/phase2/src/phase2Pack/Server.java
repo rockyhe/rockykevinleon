@@ -5,6 +5,7 @@ import java.net.*;
 import java.security.MessageDigest;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.*;
@@ -24,20 +25,7 @@ public class Server {
 	private static AtomicInteger concurrentClientCount;
 	private static ExecutorService threadPool;
 
-	private static SortedMap<String, InetSocketAddress> nodes;
-
-	private static String getHash(String msg)
-	{
-		String result = null;
-		try {
-			MessageDigest md = MessageDigest.getInstance("MD5");
-			byte[] hash = md.digest(msg.getBytes("UTF-8"));
-			result = StringUtils.byteArrayToHexString(hash);
-		} catch (Exception e) {
-			System.out.println("Error trying to get hash of string: " + msg);
-		}
-		return result;
-	}
+	private static ConcurrentSkipListMap<String, KVStore.Node> nodes;
 
 	public static void main(String[] args)
 	{
@@ -51,12 +39,12 @@ public class Server {
 			threadPool = Executors.newFixedThreadPool(MAX_NUM_CLIENTS);
 
 			try {
-				Scanner s = new Scanner(new File("./phase2Pack/" + NODE_LIST_FILE));
-				nodes = new TreeMap<String, InetSocketAddress>();
+				Scanner s = new Scanner(new File(NODE_LIST_FILE));
+				nodes = new ConcurrentSkipListMap<String, KVStore.Node>();
 				while (s.hasNext())
 				{
 					String node = s.next();
-					nodes.put(getHash(node), new InetSocketAddress(node, PORT));
+					nodes.put(KVStore.getHash(node), new KVStore.Node(new InetSocketAddress(node, PORT), true));
 				}
 				s.close();
 			} catch (FileNotFoundException e) {
@@ -83,11 +71,11 @@ public class Server {
 
 	private static void DisplayNodeList()
 	{
-		for (Map.Entry<String, InetSocketAddress> entry : nodes.entrySet())
+		for (Map.Entry<String, KVStore.Node> entry : nodes.entrySet())
 		{
 			String key = entry.getKey();
-			InetSocketAddress value = entry.getValue();
-			System.out.println(key + " => " + value.toString());
+			InetSocketAddress addr = entry.getValue().address;
+			System.out.println(key + " => " + addr.toString());
 		}
 	}
 
@@ -138,7 +126,7 @@ public class Server {
 					//then service client at the head of queue
 					if (concurrentClientCount.get() < MAX_NUM_CLIENTS && (clntSock = backlog.poll()) != null)
 					{
-						KVStore connection = new KVStore(clntSock, store, concurrentClientCount);
+						KVStore connection = new KVStore(clntSock, store, concurrentClientCount, nodes);
 						//Create a new thread for each client connection
 						threadPool.execute(connection);
 						//System.out.println("New client executing.");
