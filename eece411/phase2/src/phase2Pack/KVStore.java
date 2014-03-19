@@ -20,13 +20,15 @@ public class KVStore implements Runnable {
 	private byte errCode = 0x00; //Set default errCode to 0x00, so we can assume that operation is successful unless errCode is explicitly changed
 
 	private AtomicInteger clientCnt;
+	private AtomicInteger shutdown;
 
 	//Constructor
-	KVStore(Socket clientSocket, ConcurrentHashMap<String,byte[]> KVstore, AtomicInteger concurrentClientCount)
+	KVStore(Socket clientSocket, ConcurrentHashMap<String,byte[]> KVstore, AtomicInteger concurrentClientCount, AtomicInteger shutdownFlag)
 	{
 		this.clntSock = clientSocket;
 		this.store = KVstore;
 		this.clientCnt = concurrentClientCount;
+		this.shutdown = shutdownFlag;
 	}
 
 	/**
@@ -79,6 +81,20 @@ public class KVStore implements Runnable {
 		}
 	}
 
+	private void shutdown()
+	{
+		//make a flag for shutdown command
+		//refuse all incomes
+		shutdown.getAndIncrement();
+		//check if current thread is 0
+		//System.out.println("Shut");
+		while(true){
+			if(clientCnt.get() == 1){
+				System.exit(0);
+			}
+		}
+		//once it reaches 0, shutdown the program	
+	}
 	public void run()
 	{
 		try {
@@ -134,6 +150,9 @@ public class KVStore implements Runnable {
 				break;
 			case 3: //Remove command
 				remove(keyStr);
+				break;
+			case 4: //shutdown command
+				shutdown();
 				break;
 			default: //Unrecognized command
 				errCode = 0x05;
