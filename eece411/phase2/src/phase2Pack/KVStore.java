@@ -269,14 +269,10 @@ public class KVStore implements Runnable {
     private void gossip()
     {
         for (Node node : onlineNodeList){
-            System.out.println("node.address: "+node.address.getHostName().toString());
             System.out.println("client sock: "+clntSock.getInetAddress().getHostName().toString());
             if(node.address.getHostName().equals(clntSock.getInetAddress().getHostName())){
-                System.out.println("1");
                 onlineNodeList.get(onlineNodeList.indexOf(node)).online = true;
-                System.out.println("2");
                 onlineNodeList.get(onlineNodeList.indexOf(node)).t = new Timestamp(new Date().getTime());
-                System.out.println("updating time");
                 System.out.println("timestamp: "+onlineNodeList.get(onlineNodeList.indexOf(node)).t.toString());
             }
         }
