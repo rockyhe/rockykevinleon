@@ -55,7 +55,6 @@ public class Server {
 			
 			//Map the nodes to partitions
 			constructNodeMap();
-
 			displayNodeMap();
 
 			//Initialize members
