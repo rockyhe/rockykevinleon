@@ -199,6 +199,9 @@ public class KVStore implements Runnable {
 	private byte[] forward(Node remoteNode, KVCommands cmd, byte[] key, byte[] value) throws IOException //Propagate the exceptions to main
 	{
 		System.out.println("Forwarding to " + remoteNode.address.toString());
+		System.out.println("cmd: " + cmd.numVal);
+		System.out.println("key: " + StringUtils.byteArrayToHexString(key));
+		System.out.println("value: " + StringUtils.byteArrayToHexString(value));
 		
 		if (!remoteNode.online)
 		{
@@ -228,8 +231,9 @@ public class KVStore implements Runnable {
 		}
 
 		//Send the encoded string to the server
-		sendBytes(socket, requestBuffer);
 		System.out.println("Forwarding request");
+		System.out.println("Request buffer: " + StringUtils.byteArrayToHexString(requestBuffer));
+		sendBytes(socket, requestBuffer);
 
 		//Get the return message from the server
 		//Get the error code byte
