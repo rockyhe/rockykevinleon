@@ -6,7 +6,10 @@ import java.security.MessageDigest;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.*;
+import java.sql.Timestamp;
+import java.util.Date;
 
 public class KVStore implements Runnable {
 	//Class for node info
@@ -14,11 +17,13 @@ public class KVStore implements Runnable {
 	{
 		public InetSocketAddress address;
 		public boolean online;
+        public Timestamp t;
 
 		Node(InetSocketAddress addr, boolean alive)
 		{
 			this.address = addr;
 			this.online = alive;
+            this.t = new Timestamp(new Date().getTime());
 		}
 	}
 
@@ -35,17 +40,19 @@ public class KVStore implements Runnable {
 	private AtomicInteger clientCnt;
 	private AtomicInteger shutdown;
 	private ConcurrentSkipListMap<String, Node> nodes;
+    private CopyOnWriteArrayList<Node> onlineNodeList;
 
 	private byte errCode = 0x00; //Set default errCode to 0x00, so we can assume that operation is successful unless errCode is explicitly changed
 
 	//Constructor
-	KVStore(Socket clientSocket, ConcurrentHashMap<String,byte[]> KVstore, ConcurrentSkipListMap<String, Node> nodes, AtomicInteger concurrentClientCount, AtomicInteger shutdownFlag)
+	KVStore(Socket clientSocket, ConcurrentHashMap<String,byte[]> KVstore, ConcurrentSkipListMap<String, Node> nodes, AtomicInteger concurrentClientCount, AtomicInteger shutdownFlag, CopyOnWriteArrayList<Node> NodesAlive)
 	{
 		this.clntSock = clientSocket;
 		this.store = KVstore;
 		this.nodes = nodes;
 		this.clientCnt = concurrentClientCount;
 		this.shutdown = shutdownFlag;
+        this.onlineNodeList= NodesAlive;
 	}
 
 	/**
@@ -258,6 +265,23 @@ public class KVStore implements Runnable {
 		}
 		//once it reaches 0, shutdown the program
 	}
+
+    private void gossip()
+    {
+        for (Node node : onlineNodeList){
+            System.out.println("node.address: "+node.address.getHostName().toString());
+            System.out.println("client sock: "+clntSock.getInetAddress().getHostName().toString());
+            if(node.address.getHostName().equals(clntSock.getInetAddress().getHostName())){
+                System.out.println("1");
+                onlineNodeList.get(onlineNodeList.indexOf(node)).online = true;
+                System.out.println("2");
+                onlineNodeList.get(onlineNodeList.indexOf(node)).t = new Timestamp(new Date().getTime());
+                System.out.println("updating time");
+                System.out.println("timestamp: "+onlineNodeList.get(onlineNodeList.indexOf(node)).t.toString());
+            }
+        }
+        
+    }
 	public void run()
 	{
 		try {
@@ -304,6 +328,10 @@ public class KVStore implements Runnable {
 			case 4: //shutdown command
 				shutdown();
 				break;
+            case 255:
+                System.out.println("i am here");
+                gossip();
+                break;
 			default: //Unrecognized command
 				errCode = 0x05;
 				break;

@@ -5,6 +5,7 @@ import java.net.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.*;
@@ -30,7 +31,7 @@ public class Server {
 	private static AtomicInteger shutdownFlag;
 	private static ExecutorService threadPool;
 
-	private static List<KVStore.Node> onlineNodeList;
+	private static CopyOnWriteArrayList<KVStore.Node> onlineNodeList;
 	//Sorted map for mapping hashed values to physical nodes
 	private static ConcurrentSkipListMap<String, KVStore.Node> nodes;
 
@@ -40,7 +41,7 @@ public class Server {
 			//Load the list of nodes
 			try {
 				Scanner s = new Scanner(new File(NODE_LIST_FILE));
-				onlineNodeList = new ArrayList<KVStore.Node>();
+				onlineNodeList = new CopyOnWriteArrayList<KVStore.Node>();
 				while (s.hasNext())
 				{
 					String node = s.next();
@@ -55,8 +56,8 @@ public class Server {
 			
 			//Map the nodes to partitions
 			constructNodeMap();
-			displayNodeMap();
-			verifyNodeMap();
+			//displayNodeMap();
+			//verifyNodeMap();
 
 			//Initialize members
 			servSock = new ServerSocket(PORT);
@@ -215,7 +216,7 @@ public class Server {
 					{
 						if (concurrentClientCount.get() < MAX_NUM_CLIENTS && (clntSock = backlog.poll()) != null)
 						{
-							KVStore connection = new KVStore(clntSock, store, nodes, concurrentClientCount, shutdownFlag);
+							KVStore connection = new KVStore(clntSock, store, nodes, concurrentClientCount, shutdownFlag, onlineNodeList);
 							//Create a new thread for each client connection
 							threadPool.execute(connection);
 							//System.out.println("New client executing.");
