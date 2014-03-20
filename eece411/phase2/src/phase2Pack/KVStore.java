@@ -74,7 +74,7 @@ public class KVStore implements Runnable {
 		System.out.println("Entry hash: " + entry.getKey());
 
 		//Check if the node that should contain it is this one, or if we need to do a remote call
-		if (entry.getValue().address.getHostName().equals(clntSock.getInetAddress().getHostName()))
+		if (entry.getValue().address.getHostName().equals(clntSock.getLocalAddress().getHostName()))
 		{
 			if (store.size() < KVSTORE_SIZE)
 			{
@@ -120,7 +120,7 @@ public class KVStore implements Runnable {
 			System.out.println("Entry hash: " + entry.getKey());
 
 			//If the node that should contain it is this, then key doesn't exist
-			if (entry.getValue().address.getHostName().equals(clntSock.getInetAddress().getHostName()))
+			if (entry.getValue().address.getHostName().equals(clntSock.getLocalAddress().getHostName()))
 			{
 				errCode = 0x01;
 				return null;
@@ -159,7 +159,7 @@ public class KVStore implements Runnable {
 			System.out.println("Entry hash: " + entry.getKey());
 
 			//If the node that should contain it is this, then key doesn't exist
-			if (entry.getValue().address.getHostName().equals(clntSock.getInetAddress().getHostName()))
+			if (entry.getValue().address.getHostName().equals(clntSock.getLocalAddress().getHostName()))
 			{
 				errCode = 0x01;
 			}
