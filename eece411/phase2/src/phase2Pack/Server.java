@@ -13,15 +13,15 @@ import java.util.concurrent.ArrayBlockingQueue;
 public class Server {
 	//Constants
 	private static final int PORT = 5000;
-	private static final int MAX_NUM_CLIENTS = 50;
-	private static final int MAX_GOSSIP_MEMBERS = 4;
-	private static final int BACKLOG_SIZE = 50;
+	private static final int MAX_NUM_CLIENTS = 100;
+	private static final int MAX_GOSSIP_MEMBERS = 3;
+	private static final int BACKLOG_SIZE = 100;
 	private static final String NODE_LIST_FILE = "nodeList.txt";
-	
+	private static final int CMD_SIZE = 1;
+    private static final int GOSSIP_MSG = 255;
 	//Make sure this value is larger than number of physical nodes
 	//Since potential max nodes is 100, then use 100 * 100 = 10000
 	private static final int NUM_PARTITIONS = 10000;
-
 	//Private members
 	private static ServerSocket servSock;
 	private static ConcurrentHashMap<String, byte[]> store;
@@ -55,7 +55,7 @@ public class Server {
 			
 			//Map the nodes to partitions
 			constructNodeMap();
-			displayNodeMap();
+			//displayNodeMap();
 
 			//Initialize members
 			servSock = new ServerSocket(PORT);
@@ -107,25 +107,41 @@ public class Server {
 		}
 	}
 
-	private static class GossipClk extends TimerTask {
-	    public void run() {
-	       System.out.println("Hello World!"); 
-	    }
-	}
-	
 	private static class Gossiper implements Runnable {
             public void run() {
                 Socket socket = null;
-                try{
-                    Random randomGenerator = new Random();
-                    int randomInt = randomGenerator.nextInt(MAX_GOSSIP_MEMBERS);
-                    System.out.println("random test: ");
-                    //socket = new Socket(server, servPort);
-                } catch (Exception e) {
-                    System.out.println("Internal Server Error!");
-                }
-            }             
+                while(true){
+                    try{
+                        Random randomGenerator = new Random();
+                        int randomInt = randomGenerator.nextInt(MAX_GOSSIP_MEMBERS);
+                        
+                        while(onlineNodeList.get(randomInt).address.getHostName().equals(java.net.InetAddress.getLocalHost().getHostName())){
+                            randomInt = randomGenerator.nextInt(MAX_GOSSIP_MEMBERS);
+                        }
+                         
+                        System.out.println("gossiping to server: "+onlineNodeList.get(randomInt).address.getHostName());
+                        socket = new Socket(onlineNodeList.get(randomInt).address.getHostName(), PORT);
+                        
+                        //Send the message to the server
+                        OutputStream os = socket.getOutputStream();
+                        byte[] gossipBuffer = new byte[CMD_SIZE];
+                        gossipBuffer[0]=(byte)(GOSSIP_MSG & 0x000000FF);
+                        //Send the encoded string to the server
+                        os.write(gossipBuffer);
+                        System.out.println("Sending request:");
+                        System.out.println(StringUtils.byteArrayToHexString(gossipBuffer));
+                    
+                        Thread.currentThread().sleep(4000);
+                    }catch (Exception e) {
+                        try{
+                            Thread.currentThread().sleep(4000);
+                        }catch(InterruptedException ex){
+                            System.out.println("Gossiping Error!");
+                        }
+                    }
 
+               }
+            }             
 	}
 	private static class Producer implements Runnable
 	{
