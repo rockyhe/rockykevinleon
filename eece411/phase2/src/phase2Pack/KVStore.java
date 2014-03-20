@@ -116,6 +116,10 @@ public class KVStore implements Runnable {
 			}
 
 			//If the node that should contain it is this, then key doesn't exist
+			System.out.println("node entry host name:" + entry.getValue().address.getHostName());
+			System.out.println("server socket inet address host name:" + clntSock.getInetAddress().getHostName());
+			System.out.println("server socket local address host name:" + clntSock.getLocalAddress().getHostName());
+			System.out.println("Forwarding get command!");
 			if (entry.getValue().address.getHostName() == clntSock.getInetAddress().getHostName())
 			{
 				errCode = 0x01;
