@@ -101,14 +101,17 @@ public class KVStore implements Runnable {
 			if (store.size() < KVSTORE_SIZE)
 			{
 				store.put(rehashedKeyStr, value);
+				System.out.println("Put command succeeded!");
 			}
 			else
 			{
 				errCode = 0x02;
+				System.out.println("Error 0x02!");
 			}
 		}
 		else
 		{
+			System.out.println("Forwarding put command!");
 			forward(entry.getValue(), KVCommands.PUT, key, value);
 		}
 	}
@@ -141,10 +144,13 @@ public class KVStore implements Runnable {
 			if (entry.getValue().address.getHostName() == clntSock.getInetAddress().getHostName())
 			{
 				errCode = 0x01;
+				System.out.println("Error 0x01!");
 				return null;
 			}
+			System.out.println("Forwarding get command!");
 			return forward(entry.getValue(), KVCommands.GET, key, null);
 		}
+		System.out.println("Get command succeeded!");
 		return store.get(rehashedKeyStr);
 	}
 
@@ -175,15 +181,18 @@ public class KVStore implements Runnable {
 			if (entry.getValue().address.getHostName() == clntSock.getInetAddress().getHostName())
 			{
 				errCode = 0x01;
+				System.out.println("Error 0x01!");
 			}
 			else
 			{
+				System.out.println("Forwarding remove command!");
 				forward(entry.getValue(), KVCommands.REMOVE, key, null);
 			}
 		}
 		else
 		{
 			store.remove(rehashedKeyStr);
+			System.out.println("Remove command succeeded!");
 		}
 	}
 
@@ -231,12 +240,11 @@ public class KVStore implements Runnable {
 		System.out.println("Error Code: " + errorMessage(errCode));
 
 		//If command was get and ran successfully, then get the value bytes
-		byte[] getValue = null;
 		if (cmd == KVCommands.GET && errCode == 0x00)
 		{
-			getValue = new byte[VALUE_SIZE];
+			byte[] getValue = new byte[VALUE_SIZE];
 			receiveBytes(socket, getValue);
-			System.out.println("Value: " + StringUtils.byteArrayToHexString(getValue));
+			System.out.println("Value for GET: " + StringUtils.byteArrayToHexString(getValue));
 			return getValue;
 		}
 		return null;
