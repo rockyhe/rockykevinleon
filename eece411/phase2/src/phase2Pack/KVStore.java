@@ -186,6 +186,7 @@ public class KVStore implements Runnable {
 		}
 
 		//Open a socket connection to the other server
+		System.out.println("Creating socket");
 		Socket socket = new Socket(remoteNode.address.getHostName(), remoteNode.address.getPort());
 		System.out.println("Connected to server: " + socket.getInetAddress().toString());
 
