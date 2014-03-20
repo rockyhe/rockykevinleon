@@ -71,7 +71,7 @@ public class KVStore implements Runnable {
 		}
 
 		//Check if the node that should contain it is this one, or if we need to do a remote call
-		if (entry.getValue().address.getHostName() == clntSock.getInetAddress().getHostName())
+		if (entry.getValue().address.getHostName().equals(clntSock.getInetAddress().getHostName()))
 		{
 			if (store.size() < KVSTORE_SIZE)
 			{
@@ -120,7 +120,7 @@ public class KVStore implements Runnable {
 			System.out.println("server socket inet address host name:" + clntSock.getInetAddress().getHostName());
 			System.out.println("server socket local address host name:" + clntSock.getLocalAddress().getHostName());
 			System.out.println("Forwarding get command!");
-			if (entry.getValue().address.getHostName() == clntSock.getInetAddress().getHostName())
+			if (entry.getValue().address.getHostName().equals(clntSock.getInetAddress().getHostName()))
 			{
 				errCode = 0x01;
 				System.out.println("Error 0x01!");
@@ -157,7 +157,7 @@ public class KVStore implements Runnable {
 			}
 
 			//If the node that should contain it is this, then key doesn't exist
-			if (entry.getValue().address.getHostName() == clntSock.getInetAddress().getHostName())
+			if (entry.getValue().address.getHostName().equals(clntSock.getInetAddress().getHostName()))
 			{
 				errCode = 0x01;
 				System.out.println("Error 0x01!");
