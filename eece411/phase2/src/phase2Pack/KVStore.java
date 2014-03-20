@@ -22,16 +22,28 @@ public class KVStore implements Runnable {
 		}
 	}
 
-	public enum KVCommands
+	public static enum KVCommands
 	{
 		PUT (0x01),
 		GET (0x02),
-		REMOVE (0x03);
+		REMOVE (0x03),
+		SHUTDOWN (0x04);
 
+		private static KVCommands[] values = null;
 		private final int numVal;
+		
 		KVCommands(int numVal)
 		{
 			this.numVal = numVal;
+		}
+		
+		public static KVCommands fromInt(int i)
+		{
+			if (KVCommands.values == null)
+			{
+				KVCommands.values = KVCommands.values();
+			}
+			return KVCommands.values[i];
 		}
 	}
 
@@ -177,6 +189,8 @@ public class KVStore implements Runnable {
 
 	private byte[] forward(Node remoteNode, KVCommands cmd, byte[] key, byte[] value) throws IOException //Propagate the exceptions to main
 	{
+		System.out.println("Forwarding to " + remoteNode.address.toString());
+		
 		if (!remoteNode.online)
 		{
 			errCode = 0x21;
@@ -206,14 +220,15 @@ public class KVStore implements Runnable {
 
 		//Send the encoded string to the server
 		sendBytes(socket, requestBuffer);
-		//System.out.println("Sending request");
+		System.out.println("Forwarding request");
 
 		//Get the return message from the server
 		//Get the error code byte
 		byte[] errorCode = new byte[ERR_SIZE];
 		receiveBytes(socket, errorCode);
+		System.out.println("Received reply from forwarded request");
 		errCode = errorCode[0];
-		//System.out.println("Error Code: " + errorMessage(errCode));
+		System.out.println("Error Code: " + errorMessage(errCode));
 
 		//If command was get and ran successfully, then get the value bytes
 		byte[] getValue = null;
@@ -221,7 +236,7 @@ public class KVStore implements Runnable {
 		{
 			getValue = new byte[VALUE_SIZE];
 			receiveBytes(socket, getValue);
-			//System.out.println("Value: " + StringUtils.byteArrayToHexString(getValue));
+			System.out.println("Value: " + StringUtils.byteArrayToHexString(getValue));
 			return getValue;
 		}
 		return null;
@@ -254,7 +269,7 @@ public class KVStore implements Runnable {
 			//Get the command byte
 			byte[] command = new byte[CMD_SIZE];
 			receiveBytes(clntSock, command);
-			int cmd = ByteOrder.leb2int(command, 0, CMD_SIZE);
+			KVCommands cmd = KVCommands.fromInt(ByteOrder.leb2int(command, 0, CMD_SIZE)); //Cast command int to enum
 			//System.out.println("cmd: " + cmd);
 
 			//NOTE: As stated by Matei in class, assume that client is responsible for providing hashed keys so not necessary to perform re-hashing.
@@ -262,7 +277,7 @@ public class KVStore implements Runnable {
 			byte[] value = null;
 			switch (cmd)
 			{
-			case 1: //Put command
+			case PUT: //Put command
 				//Get the key bytes
 				key = new byte[KEY_SIZE];
 				receiveBytes(clntSock, key);
@@ -272,7 +287,7 @@ public class KVStore implements Runnable {
 				//System.out.println("value: " + StringUtils.byteArrayToHexString(value));
 				put(key, value);
 				break;
-			case 2: //Get command
+			case GET: //Get command
 				//Get the key bytes
 				key = new byte[KEY_SIZE];
 				receiveBytes(clntSock, key);
@@ -280,13 +295,13 @@ public class KVStore implements Runnable {
 				value = new byte[VALUE_SIZE];
 				value = get(key);
 				break;
-			case 3: //Remove command
+			case REMOVE: //Remove command
 				//Get the key bytes
 				key = new byte[KEY_SIZE];
 				receiveBytes(clntSock, key);
 				remove(key);
 				break;
-			case 4: //shutdown command
+			case SHUTDOWN: //shutdown command
 				shutdown();
 				break;
 			default: //Unrecognized command
@@ -296,7 +311,7 @@ public class KVStore implements Runnable {
 
 			//Send the reply message to the client
 			//Only send value if command was get and value returned wasn't null
-			if (cmd == KVCommands.GET.numVal && value != null)
+			if (cmd == KVCommands.GET && value != null)
 			{
 				byte[] combined = new byte[ERR_SIZE + VALUE_SIZE];
 				System.arraycopy(new byte[] {errCode}, 0, combined, 0, ERR_SIZE);
@@ -381,6 +396,8 @@ public class KVStore implements Runnable {
 			return "Internal KVStore Failure";
 		case 0x05:
 			return "Unrecognized command";
+		case 0x21:
+			return "Node is offline";
 		default:
 			return "Error code not handled";
 		}
