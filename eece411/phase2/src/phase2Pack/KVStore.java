@@ -180,6 +180,7 @@ public class KVStore implements Runnable {
 		
 		if (!remoteNode.online)
 		{
+			System.out.println("Node is offline!");
 			errCode = 0x21;
 			return null;
 		}

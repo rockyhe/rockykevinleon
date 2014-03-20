@@ -77,7 +77,7 @@ public class Server {
 		{
 			String key = entry.getKey();
 			InetSocketAddress addr = entry.getValue().address;
-			System.out.println(key + " => " + addr.toString());
+			System.out.println(key + " => " + addr.toString() + " => " + entry.getValue().online);
 		}
 	}
 
