@@ -22,31 +22,6 @@ public class KVStore implements Runnable {
 		}
 	}
 
-	public static enum KVCommands
-	{
-		PUT (0x01),
-		GET (0x02),
-		REMOVE (0x03),
-		SHUTDOWN (0x04);
-
-		private static KVCommands[] values = null;
-		private final int numVal;
-		
-		KVCommands(int numVal)
-		{
-			this.numVal = numVal;
-		}
-		
-		public static KVCommands fromInt(int i)
-		{
-			if (KVCommands.values == null)
-			{
-				KVCommands.values = KVCommands.values();
-			}
-			return KVCommands.values[i];
-		}
-	}
-
 	//Constants
 	private static final int CMD_SIZE = 1;
 	private static final int KEY_SIZE = 32;
@@ -112,7 +87,7 @@ public class KVStore implements Runnable {
 		else
 		{
 			System.out.println("Forwarding put command!");
-			forward(entry.getValue(), KVCommands.PUT, key, value);
+			forward(entry.getValue(), 1, key, value);
 		}
 	}
 
@@ -148,7 +123,7 @@ public class KVStore implements Runnable {
 				return null;
 			}
 			System.out.println("Forwarding get command!");
-			return forward(entry.getValue(), KVCommands.GET, key, null);
+			return forward(entry.getValue(), 2, key, null);
 		}
 		System.out.println("Get command succeeded!");
 		return store.get(rehashedKeyStr);
@@ -186,7 +161,7 @@ public class KVStore implements Runnable {
 			else
 			{
 				System.out.println("Forwarding remove command!");
-				forward(entry.getValue(), KVCommands.REMOVE, key, null);
+				forward(entry.getValue(), 3, key, null);
 			}
 		}
 		else
@@ -196,10 +171,10 @@ public class KVStore implements Runnable {
 		}
 	}
 
-	private byte[] forward(Node remoteNode, KVCommands cmd, byte[] key, byte[] value) throws IOException //Propagate the exceptions to main
+	private byte[] forward(Node remoteNode, int cmd, byte[] key, byte[] value) throws IOException //Propagate the exceptions to main
 	{
 		System.out.println("Forwarding to " + remoteNode.address.toString());
-		System.out.println("cmd: " + cmd.numVal);
+		System.out.println("cmd: " + cmd);
 		System.out.println("key: " + StringUtils.byteArrayToHexString(key));
 		System.out.println("value: " + StringUtils.byteArrayToHexString(value));
 		
@@ -216,17 +191,17 @@ public class KVStore implements Runnable {
 		//Route the message
 		//If command is put, then increase request buffer size to include value bytes
 		byte[] requestBuffer;
-		if (cmd == KVCommands.PUT)
+		if (cmd == 1)
 		{
 			requestBuffer = new byte[CMD_SIZE + KEY_SIZE + VALUE_SIZE];
-			ByteOrder.int2leb(cmd.numVal, requestBuffer, 0); 	//Command byte - 1 byte
+			ByteOrder.int2leb(cmd, requestBuffer, 0); 	//Command byte - 1 byte
 			System.arraycopy(key, 0, requestBuffer, CMD_SIZE, KEY_SIZE); //Key bytes - 32 bytes
 			System.arraycopy(value, 0, requestBuffer, CMD_SIZE + KEY_SIZE, VALUE_SIZE); //Value bytes - 1024 bytes
 		}
 		else
 		{
 			requestBuffer = new byte[CMD_SIZE + KEY_SIZE];
-			ByteOrder.int2leb(cmd.numVal, requestBuffer, 0); 	//Command byte - 1 byte
+			ByteOrder.int2leb(cmd, requestBuffer, 0); 	//Command byte - 1 byte
 			System.arraycopy(key, 0, requestBuffer, CMD_SIZE, KEY_SIZE); //Key bytes - 32 bytes
 		}
 
@@ -244,7 +219,7 @@ public class KVStore implements Runnable {
 		System.out.println("Error Code: " + errorMessage(errCode));
 
 		//If command was get and ran successfully, then get the value bytes
-		if (cmd == KVCommands.GET && errCode == 0x00)
+		if (cmd == 2 && errCode == 0x00)
 		{
 			byte[] getValue = new byte[VALUE_SIZE];
 			receiveBytes(socket, getValue);
@@ -281,7 +256,7 @@ public class KVStore implements Runnable {
 			//Get the command byte
 			byte[] command = new byte[CMD_SIZE];
 			receiveBytes(clntSock, command);
-			KVCommands cmd = KVCommands.fromInt(ByteOrder.leb2int(command, 0, CMD_SIZE)); //Cast command int to enum
+			int cmd = ByteOrder.leb2int(command, 0, CMD_SIZE);
 			//System.out.println("cmd: " + cmd);
 
 			//NOTE: As stated by Matei in class, assume that client is responsible for providing hashed keys so not necessary to perform re-hashing.
@@ -289,7 +264,7 @@ public class KVStore implements Runnable {
 			byte[] value = null;
 			switch (cmd)
 			{
-			case PUT: //Put command
+			case 1: //Put command
 				//Get the key bytes
 				key = new byte[KEY_SIZE];
 				receiveBytes(clntSock, key);
@@ -299,7 +274,7 @@ public class KVStore implements Runnable {
 				//System.out.println("value: " + StringUtils.byteArrayToHexString(value));
 				put(key, value);
 				break;
-			case GET: //Get command
+			case 2: //Get command
 				//Get the key bytes
 				key = new byte[KEY_SIZE];
 				receiveBytes(clntSock, key);
@@ -307,13 +282,13 @@ public class KVStore implements Runnable {
 				value = new byte[VALUE_SIZE];
 				value = get(key);
 				break;
-			case REMOVE: //Remove command
+			case 3: //Remove command
 				//Get the key bytes
 				key = new byte[KEY_SIZE];
 				receiveBytes(clntSock, key);
 				remove(key);
 				break;
-			case SHUTDOWN: //shutdown command
+			case 4: //shutdown command
 				shutdown();
 				break;
 			default: //Unrecognized command
@@ -323,7 +298,7 @@ public class KVStore implements Runnable {
 
 			//Send the reply message to the client
 			//Only send value if command was get and value returned wasn't null
-			if (cmd == KVCommands.GET && value != null)
+			if (cmd == 2 && value != null)
 			{
 				byte[] combined = new byte[ERR_SIZE + VALUE_SIZE];
 				System.arraycopy(new byte[] {errCode}, 0, combined, 0, ERR_SIZE);
