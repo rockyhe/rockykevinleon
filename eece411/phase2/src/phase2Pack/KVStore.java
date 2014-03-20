@@ -257,7 +257,7 @@ public class KVStore implements Runnable {
 			byte[] command = new byte[CMD_SIZE];
 			receiveBytes(clntSock, command);
 			int cmd = ByteOrder.leb2int(command, 0, CMD_SIZE);
-			//System.out.println("cmd: " + cmd);
+			System.out.println("cmd: " + cmd);
 
 			//NOTE: As stated by Matei in class, assume that client is responsible for providing hashed keys so not necessary to perform re-hashing.
 			byte[] key = null;
