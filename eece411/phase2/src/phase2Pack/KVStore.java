@@ -63,12 +63,15 @@ public class KVStore implements Runnable {
 
 		//Get the node with hashed value that is greater than or equal to the key
 		//since each node stores keys up to its hashed value
+		System.out.println("Rehashed key string: " + rehashedKeyStr);
 		Map.Entry<String, Node> entry = nodes.ceilingEntry(rehashedKeyStr);
 		//If ceiling entry is null, then we've wrapped around the entire node ring, so set to first node
 		if (entry == null)
 		{
+			System.out.println("Setting entry to first entry");
 			entry = nodes.firstEntry();
 		}
+		System.out.println("Entry hash: " + entry.getKey());
 
 		//Check if the node that should contain it is this one, or if we need to do a remote call
 		if (entry.getValue().address.getHostName().equals(clntSock.getInetAddress().getHostName()))
@@ -76,12 +79,10 @@ public class KVStore implements Runnable {
 			if (store.size() < KVSTORE_SIZE)
 			{
 				store.put(rehashedKeyStr, value);
-				System.out.println("Put command succeeded!");
 			}
 			else
 			{
 				errCode = 0x02;
-				System.out.println("Error 0x02!");
 			}
 		}
 		else
@@ -108,22 +109,20 @@ public class KVStore implements Runnable {
 		{
 			//Get the node with hashed value that is greater than or equal to the key
 			//since each node stores keys up to its hashed value
+			System.out.println("Rehashed key string: " + rehashedKeyStr);
 			Map.Entry<String, Node> entry = nodes.ceilingEntry(rehashedKeyStr);
 			//If ceiling entry is null, then we've wrapped around the entire node ring, so set to first node
 			if (entry == null)
 			{
+				System.out.println("Setting entry to first entry");
 				entry = nodes.firstEntry();
 			}
+			System.out.println("Entry hash: " + entry.getKey());
 
 			//If the node that should contain it is this, then key doesn't exist
-			System.out.println("node entry host name:" + entry.getValue().address.getHostName());
-			System.out.println("server socket inet address host name:" + clntSock.getInetAddress().getHostName());
-			System.out.println("server socket local address host name:" + clntSock.getLocalAddress().getHostName());
-			System.out.println("Forwarding get command!");
 			if (entry.getValue().address.getHostName().equals(clntSock.getInetAddress().getHostName()))
 			{
 				errCode = 0x01;
-				System.out.println("Error 0x01!");
 				return null;
 			}
 			System.out.println("Forwarding get command!");
@@ -149,18 +148,20 @@ public class KVStore implements Runnable {
 		{
 			//Get the node with hashed value that is greater than or equal to the key
 			//since each node stores keys up to its hashed value
+			System.out.println("Rehashed key string: " + rehashedKeyStr);
 			Map.Entry<String, Node> entry = nodes.ceilingEntry(rehashedKeyStr);
 			//If ceiling entry is null, then we've wrapped around the entire node ring, so set to first node
 			if (entry == null)
 			{
+				System.out.println("Setting entry to first entry");
 				entry = nodes.firstEntry();
 			}
+			System.out.println("Entry hash: " + entry.getKey());
 
 			//If the node that should contain it is this, then key doesn't exist
 			if (entry.getValue().address.getHostName().equals(clntSock.getInetAddress().getHostName()))
 			{
 				errCode = 0x01;
-				System.out.println("Error 0x01!");
 			}
 			else
 			{
