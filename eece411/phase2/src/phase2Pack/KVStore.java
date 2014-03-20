@@ -61,7 +61,7 @@ public class KVStore implements Runnable {
 		String rehashedKeyStr = getHash(keyStr);
 		//System.out.println("key: " + keyStr);
 
-		//Get the node with hashed value that is greater than or equal to the key
+		//Get the node with first hashed value that is greater than or equal to the key (i.e. clockwise on the ring)
 		//since each node stores keys up to its hashed value
 		System.out.println("Rehashed key string: " + rehashedKeyStr);
 		Map.Entry<String, Node> entry = nodes.ceilingEntry(rehashedKeyStr);
@@ -108,7 +108,7 @@ public class KVStore implements Runnable {
 		//If key doesn't exist on this node's local store, then route to node that should contain it
 		if (!store.containsKey(rehashedKeyStr))
 		{
-			//Get the node with hashed value that is greater than or equal to the key
+			//Get the node with first hashed value that is greater than or equal to the key (i.e. clockwise on the ring)
 			//since each node stores keys up to its hashed value
 			System.out.println("Rehashed key string: " + rehashedKeyStr);
 			Map.Entry<String, Node> entry = nodes.ceilingEntry(rehashedKeyStr);
@@ -148,7 +148,7 @@ public class KVStore implements Runnable {
 
 		if (!store.containsKey(rehashedKeyStr))
 		{
-			//Get the node with hashed value that is greater than or equal to the key
+			//Get the node with first hashed value that is greater than or equal to the key (i.e. clockwise on the ring)
 			//since each node stores keys up to its hashed value
 			System.out.println("Rehashed key string: " + rehashedKeyStr);
 			Map.Entry<String, Node> entry = nodes.ceilingEntry(rehashedKeyStr);
@@ -371,7 +371,9 @@ public class KVStore implements Runnable {
 	{
 		String result = null;
 		try {
-			MessageDigest md = MessageDigest.getInstance("MD5");
+			//Hash the id using SHA-256 to get a 32 byte hash
+			//since the ring space is from 0 to (2^256)-1
+			MessageDigest md = MessageDigest.getInstance("SHA-256");
 			byte[] hash = md.digest(msg.getBytes("UTF-8"));
 			result = StringUtils.byteArrayToHexString(hash);
 		} catch (Exception e) {
