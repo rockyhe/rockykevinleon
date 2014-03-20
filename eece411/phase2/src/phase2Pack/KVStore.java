@@ -176,7 +176,10 @@ public class KVStore implements Runnable {
 		System.out.println("Forwarding to " + remoteNode.address.toString());
 		System.out.println("cmd: " + cmd);
 		System.out.println("key: " + StringUtils.byteArrayToHexString(key));
-		System.out.println("value: " + StringUtils.byteArrayToHexString(value));
+		if (value != null)
+		{
+			System.out.println("value: " + StringUtils.byteArrayToHexString(value));
+		}
 		
 		if (!remoteNode.online)
 		{
