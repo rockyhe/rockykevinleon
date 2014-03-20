@@ -56,6 +56,7 @@ public class Server {
 			//Map the nodes to partitions
 			constructNodeMap();
 			displayNodeMap();
+			verifyNodeMap();
 
 			//Initialize members
 			servSock = new ServerSocket(PORT);
@@ -96,6 +97,27 @@ public class Server {
 			}
 		}
 	}
+	
+	private static void verifyNodeMap()
+	{
+		Map<KVStore.Node, Integer> distribution = new HashMap<KVStore.Node, Integer>();
+		for (KVStore.Node node : onlineNodeList)
+		{
+			distribution.put(node, 0);
+		}
+		
+		for (Map.Entry<String, KVStore.Node> entry : nodes.entrySet())
+		{
+			KVStore.Node node = entry.getValue();
+			Integer count = distribution.get(node);
+			distribution.put(node, count + 1);
+		}
+		
+		for (Map.Entry<KVStore.Node, Integer> node : distribution.entrySet())
+		{
+			System.out.println(node.getKey().address.getHostName() + " => " + node.getValue().toString());
+		}
+	}
 
 	private static void displayNodeMap()
 	{
@@ -103,7 +125,8 @@ public class Server {
 		{
 			String key = entry.getKey();
 			InetSocketAddress addr = entry.getValue().address;
-			System.out.println(key + " => " + addr.toString() + " => " + entry.getValue().online);
+			//System.out.println(key + " => " + addr.toString() + " => " + entry.getValue().online);
+			System.out.println(key + " => " + onlineNodeList.indexOf(entry.getValue()));
 		}
 	}
 
