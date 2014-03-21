@@ -25,7 +25,7 @@ public class Server {
 	//Make sure this value is larger than number of physical nodes
 	//Since potential max nodes is 100, then use 100 * 100 = 10000
 	private static final int NUM_PARTITIONS = 10000;
-	private static final int OFFLINE_THRES = 10; //10 seconds
+	private static final int OFFLINE_THRES = 10000; //10 seconds
     //Private members
 	private static ServerSocket servSock;
 	private static ConcurrentHashMap<String, byte[]> store;
@@ -77,8 +77,11 @@ public class Server {
 			Thread producer = new Thread(new Producer());
 			producer.start();
 
-			Thread gossiper = new Thread(new Gossiper());
+            //randomly grab 2 nodes concurrently
+            Thread gossiper = new Thread(new Gossiper());
 			gossiper.start();
+            Thread gossiper2 = new Thread(new Gossiper());
+            gossiper2.start();
 			//Create a new Consumer thread for servicing clients in the queue
 			Thread consumer = new Thread(new Consumer());
 			consumer.start();
@@ -169,20 +172,20 @@ public class Server {
 	private static class Gossiper implements Runnable {
             public void run() {
                 Socket socket = null;
-                Random randomGenerator = new Random();
+                Random randomGenerator;
                 int randomInt;
                 byte[] gossipBuffer = new byte[CMD_SIZE];
                 gossipBuffer[0]=(byte)(GOSSIP_MSG & 0x000000FF);
                 
                 while(true){
                     try{
+                        randomGenerator = new Random();
                         //Random randomGenerator = new Random();
                         //randomly select a node to gossip 
                         while(true){
                             randomInt = randomGenerator.nextInt(MAX_GOSSIP_MEMBERS);
                             if(!(onlineNodeList.get(randomInt).address.getHostName().equals(java.net.InetAddress.getLocalHost().getHostName()))){
-                                if(onlineNodeList.get(randomInt).online){
-                                       
+                                if(onlineNodeList.get(randomInt).online){ 
                                     break;
                                 }
                             }
