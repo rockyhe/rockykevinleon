@@ -17,7 +17,7 @@ public class Server {
 	//Constants
 	private static final int PORT = 5000;
 	private static final int MAX_NUM_CLIENTS = 100;
-	private static final int MAX_GOSSIP_MEMBERS = 3;
+	private static final int MAX_GOSSIP_MEMBERS = 4;
 	private static final int BACKLOG_SIZE = 100;
 	private static final String NODE_LIST_FILE = "nodeList.txt";
 	private static final int CMD_SIZE = 1;
@@ -25,8 +25,8 @@ public class Server {
 	//Make sure this value is larger than number of physical nodes
 	//Since potential max nodes is 100, then use 100 * 100 = 10000
 	private static final int NUM_PARTITIONS = 10000;
-	private static final int OFFLINE_THRES = 10000; //10 seconds
-    private static final int SLEEP_TIME = 4000; //4 seconds
+    private static final int SLEEP_TIME = 2000; //4 seconds
+    private static final int OFFLINE_THRES = 10000; //10 seconds
     //Private members
 	private static ServerSocket servSock;
 	private static ConcurrentHashMap<String, byte[]> store;
@@ -134,18 +134,34 @@ public class Server {
     {
         //get the node that is offline now
         //foreach nodes in the nodeList
+        int j;
         for (KVStore.Node node : onlineNodeList){
             //foreach partition in each node
             for (int i=0; i<partitionsPerNode; ++i){
+                j=0;
                 //if current partition's hash key's value (node) is the offline node
                 if(nodes.get(KVStore.getHash(node.address.getHostName() + i)).address.getHostName().equals(
                     onlineNodeList.get(idx).address.getHostName())){
                     //replace it with the next node, or the first node
                     System.out.println("hash key for offline node: "+KVStore.getHash(node.address.getHostName() + i).toString());
-                    if(idx<(onlineNodeList.size()-1)){
-                        nodes.replace(KVStore.getHash(node.address.getHostName() + i),onlineNodeList.get(idx+1));
+                    
+                    if(j < (onlineNodeList.size()-1)){
+                        j=idx+1;
                     }else{
-                        nodes.replace(KVStore.getHash(node.address.getHostName() + i),onlineNodeList.get(0));
+                        j=0;
+                    }
+
+                    while(true){
+                        if(onlineNodeList.get(j).online){
+                            nodes.replace(KVStore.getHash(node.address.getHostName() + i),onlineNodeList.get(j));
+                            break;
+                        }
+
+                        if(j == (onlineNodeList.size()-1)){
+                            j=0;
+                        }else{
+                            j++;
+                        }
                     }
                 }
             }
