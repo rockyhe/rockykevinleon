@@ -16,9 +16,9 @@ import java.util.Date;
 public class Server {
 	//Constants
 	private static final int PORT = 5000;
-	private static final int MAX_NUM_CLIENTS = 100;
 	private static final int MAX_GOSSIP_MEMBERS = 4;
-	private static final int BACKLOG_SIZE = 100;
+	private static final int MAX_NUM_CLIENTS = 250;
+	private static final int BACKLOG_SIZE = 50;
 	private static final String NODE_LIST_FILE = "nodeList.txt";
 	private static final int CMD_SIZE = 1;
     private static final int GOSSIP_MSG = 255;
@@ -116,11 +116,14 @@ public class Server {
     {
         //get the node that is offline now
         //foreach nodes in the nodeList
-        for (KVStore.Node node : onlineNodeList){
+        for (KVStore.Node node : onlineNodeList)
+        {
             //foreach partition in each node
-            for (int i=0; i<partitionsPerNode; ++i){
+            for (int i=0; i<partitionsPerNode; ++i)
+            {
                 //if current partition's hash key's value (node) is the rejoin node
-                if(node.address.getHostName().equals(onlineNodeList.get(idx).address.getHostName())){
+                if(node.address.getHostName().equals(onlineNodeList.get(idx).address.getHostName()))
+                {
                     //replace it with the next node, or the first node
                     System.out.println("hash key for rejoin node: "+KVStore.getHash(node.address.getHostName() + i).toString());
                     
@@ -141,7 +144,8 @@ public class Server {
                 j=0;
                 //if current partition's hash key's value (node) is the offline node
                 if(nodes.get(KVStore.getHash(node.address.getHostName() + i)).address.getHostName().equals(
-                    onlineNodeList.get(idx).address.getHostName())){
+                    onlineNodeList.get(idx).address.getHostName()))
+                {
                     //replace it with the next node, or the first node
                     System.out.println("hash key for offline node: "+KVStore.getHash(node.address.getHostName() + i).toString());
                     
@@ -286,25 +290,39 @@ public class Server {
 				//Run forever, listening for and accepting client connections
 				while (true)
 				{
-					Socket clntSock = servSock.accept(); // Get client connection
-					//If backlog isn't full, add client to it
-					if (backlog.size() < BACKLOG_SIZE)
+					//If shutdown flag is set to true, then stop accepting any more connections
+					if (shutdownFlag.get() == 0)
 					{
-						backlog.add(clntSock);
-						//System.out.println("Adding client to backlog.");
+						Socket clntSock = servSock.accept(); // Get client connection
+						//If backlog isn't full, add client to it
+						if (backlog.size() < BACKLOG_SIZE)
+						{
+							backlog.add(clntSock);
+							//System.out.println("Adding client to backlog.");
+						}
+						//Otherwise return system overload error
+						else
+						{
+							OutputStream out = clntSock.getOutputStream();
+							out.write(new byte[] {0x03});
+							System.out.println("Backlog is full.");
+						}
+	
+						//					if (backlog.size() > 0)
+						//					{
+						//						System.out.println("# of clients in backlog: " + backlog.size());
+						//					}
 					}
-					//Otherwise return system overload error
 					else
 					{
-						OutputStream out = clntSock.getOutputStream();
-						out.write(new byte[] {0x03});
-						System.out.println("Backlog is full.");
+						//FIXME it's better to actively announce it rather than passively waiting for gossip
+						System.out.println("Server has received shutdown command. No longer accepting connections!");
+						//If shutdown flag is set to 2, then we have finished processing existing client requests and it's safe to shutdown
+						if (shutdownFlag.get() == 2)
+						{
+							System.exit(0);
+						}
 					}
-
-					//					if (backlog.size() > 0)
-					//					{
-					//						System.out.println("# of clients in backlog: " + backlog.size());
-					//					}
 				}
 			} catch (Exception e) {
 				System.out.println("Internal Server Error!");
@@ -323,23 +341,13 @@ public class Server {
 				{
 					//If current number of concurrent clients hasn't reached MAX_NUM_CLIENTS
 					//then service client at the head of queue
-					if (shutdownFlag.get() == 0)
+					if (concurrentClientCount.get() < MAX_NUM_CLIENTS && (clntSock = backlog.poll()) != null)
 					{
-						if (concurrentClientCount.get() < MAX_NUM_CLIENTS && (clntSock = backlog.poll()) != null)
-						{
-							KVStore connection = new KVStore(clntSock, store, nodes, concurrentClientCount, shutdownFlag, onlineNodeList);
-							//Create a new thread for each client connection
-							threadPool.execute(connection);
-							//System.out.println("New client executing.");
-						}		
-					}
-					else
-					{
-						//FIXME it's better to actively announce it rather than passively wating for gossip
-						System.out.println("closing down server!");
-						System.exit(0);
-					}
-					
+						KVStore connection = new KVStore(clntSock, store, nodes, concurrentClientCount, shutdownFlag, onlineNodeList);
+						//Create a new thread for each client connection
+						threadPool.execute(connection);
+						//System.out.println("New client executing.");
+					}					
 
 					//					if (concurrentClientCount.get() > 0)
 					//					{

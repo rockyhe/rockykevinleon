@@ -258,12 +258,13 @@ public class KVStore implements Runnable {
 		//System.out.println("Shut");
 		while (true)
 		{
+			//Wait until the only client left is the one initiating the shutdown command
+			//i.e. all other existing client requests have finished
 			if (clientCnt.get() == 1)
 			{
-				System.exit(0);
+				break;
 			}
 		}
-		//once it reaches 0, shutdown the program
 	}
 
     private void gossip()
@@ -348,6 +349,12 @@ public class KVStore implements Runnable {
 			else
 			{
 				sendBytes(clntSock, new byte[] {errCode} );
+				//If command was shutdown, then increment the flag after sending success reply
+				//so that Server knows it's safe to shutdown
+				if (cmd == 4)
+				{
+					shutdown.getAndIncrement();
+				}
 			}
 			//System.out.println("--------------------");
 		} catch (Exception e) {
