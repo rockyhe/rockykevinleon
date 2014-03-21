@@ -17,13 +17,12 @@ public class KVStore implements Runnable {
 	{
 		public InetSocketAddress address;
 		public boolean online;
-        public Timestamp t;
-
-		Node(InetSocketAddress addr, boolean alive)
+        public Timestamp t=new Timestamp(new Date().getTime());;        
+		
+        Node(InetSocketAddress addr, boolean alive)
 		{
 			this.address = addr;
 			this.online = alive;
-            this.t = new Timestamp(new Date().getTime());
 		}
 	}
 

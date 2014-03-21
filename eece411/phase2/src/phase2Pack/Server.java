@@ -141,14 +141,25 @@ public class Server {
 
     private static class TimestampCheck implements Runnable {
         public void run() {
-            int timeDiff = 0;
+            long timeDiff = 0;
             Timestamp currentTime;
             while(true){
+                System.out.println("----------------------------");
                 for (KVStore.Node node : onlineNodeList){
-                    currentTime = new Timestamp(new Date().getTime());
-                    timeDiff=currentTime.compareTo(onlineNodeList.get(onlineNodeList.indexOf(node)).t);
-                    if(timeDiff > OFFLINE_THRES){
-                        onlineNodeList.get(onlineNodeList.indexOf(node)).online=false;
+                    try{
+                        if(!(onlineNodeList.get(onlineNodeList.indexOf(node)).address.getHostName().equals(java.net.InetAddress.getLocalHost().getHostName()))){
+                            Thread.currentThread().sleep(4000);
+                            currentTime = new Timestamp(new Date().getTime());
+                            System.out.println("node: "+onlineNodeList.get(onlineNodeList.indexOf(node)).address.getHostName());
+                            System.out.println("last update: "+onlineNodeList.get(onlineNodeList.indexOf(node)).t.toString());
+                            timeDiff=currentTime.getTime()-(onlineNodeList.get(onlineNodeList.indexOf(node)).t.getTime());
+                            System.out.println("timeDiff: "+timeDiff);
+                            if(timeDiff > OFFLINE_THRES){
+                                onlineNodeList.get(onlineNodeList.indexOf(node)).online=false;
+                            }
+                        }
+                    }catch(Exception e){
+                        System.out.println("what the fuck");
                     }
                 }
             }
@@ -171,6 +182,7 @@ public class Server {
                             randomInt = randomGenerator.nextInt(MAX_GOSSIP_MEMBERS);
                             if(!(onlineNodeList.get(randomInt).address.getHostName().equals(java.net.InetAddress.getLocalHost().getHostName()))){
                                 if(onlineNodeList.get(randomInt).online){
+                                       
                                     break;
                                 }
                             }
