@@ -274,6 +274,7 @@ public class KVStore implements Runnable {
                 onlineNodeList.get(onlineNodeList.indexOf(node)).online = true;
                 onlineNodeList.get(onlineNodeList.indexOf(node)).t = new Timestamp(new Date().getTime());
                 System.out.println("timestamp: "+onlineNodeList.get(onlineNodeList.indexOf(node)).t.toString());
+                break;
             }
         }
         

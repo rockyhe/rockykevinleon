@@ -10,6 +10,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.*;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.sql.Timestamp;
+import java.util.Date;
 
 public class Server {
 	//Constants
@@ -23,7 +25,8 @@ public class Server {
 	//Make sure this value is larger than number of physical nodes
 	//Since potential max nodes is 100, then use 100 * 100 = 10000
 	private static final int NUM_PARTITIONS = 10000;
-	//Private members
+	private static final int OFFLINE_THRES = 10; //10 seconds
+    //Private members
 	private static ServerSocket servSock;
 	private static ConcurrentHashMap<String, byte[]> store;
 	private static Queue<Socket> backlog;
@@ -79,6 +82,11 @@ public class Server {
 			//Create a new Consumer thread for servicing clients in the queue
 			Thread consumer = new Thread(new Consumer());
 			consumer.start();
+
+            //check timestamp from the nodeList
+            Thread timestampCheck = new Thread(new TimestampCheck());
+            timestampCheck.start();
+
 		} catch (Exception e) {
 			System.out.println("Internal Server Error!");
 		}
@@ -131,16 +139,41 @@ public class Server {
 		}
 	}
 
+    private static class TimestampCheck implements Runnable {
+        public void run() {
+            int timeDiff = 0;
+            Timestamp currentTime;
+            while(true){
+                for (KVStore.Node node : onlineNodeList){
+                    currentTime = new Timestamp(new Date().getTime());
+                    timeDiff=currentTime.compareTo(onlineNodeList.get(onlineNodeList.indexOf(node)).t);
+                    if(timeDiff > OFFLINE_THRES){
+                        onlineNodeList.get(onlineNodeList.indexOf(node)).online=false;
+                    }
+                }
+            }
+        }
+    }
+
 	private static class Gossiper implements Runnable {
             public void run() {
                 Socket socket = null;
+                Random randomGenerator = new Random();
+                int randomInt;
+                byte[] gossipBuffer = new byte[CMD_SIZE];
+                gossipBuffer[0]=(byte)(GOSSIP_MSG & 0x000000FF);
+                
                 while(true){
                     try{
-                        Random randomGenerator = new Random();
-                        int randomInt = randomGenerator.nextInt(MAX_GOSSIP_MEMBERS);
-                        
-                        while(onlineNodeList.get(randomInt).address.getHostName().equals(java.net.InetAddress.getLocalHost().getHostName())){
+                        //Random randomGenerator = new Random();
+                        //randomly select a node to gossip 
+                        while(true){
                             randomInt = randomGenerator.nextInt(MAX_GOSSIP_MEMBERS);
+                            if(!(onlineNodeList.get(randomInt).address.getHostName().equals(java.net.InetAddress.getLocalHost().getHostName()))){
+                                if(onlineNodeList.get(randomInt).online){
+                                    break;
+                                }
+                            }
                         }
                          
                         System.out.println("gossiping to server: "+onlineNodeList.get(randomInt).address.getHostName());
@@ -148,13 +181,12 @@ public class Server {
                         
                         //Send the message to the server
                         OutputStream os = socket.getOutputStream();
-                        byte[] gossipBuffer = new byte[CMD_SIZE];
-                        gossipBuffer[0]=(byte)(GOSSIP_MSG & 0x000000FF);
                         //Send the encoded string to the server
                         os.write(gossipBuffer);
                         System.out.println("Sending request:");
                         System.out.println(StringUtils.byteArrayToHexString(gossipBuffer));
-                    
+                        
+                        //sleep
                         Thread.currentThread().sleep(4000);
                     }catch (Exception e) {
                         try{
