@@ -26,6 +26,7 @@ public class Server {
 	//Since potential max nodes is 100, then use 100 * 100 = 10000
 	private static final int NUM_PARTITIONS = 10000;
 	private static final int OFFLINE_THRES = 10000; //10 seconds
+    private static final int SLEEP_TIME = 4000; //4 seconds
     //Private members
 	private static ServerSocket servSock;
 	private static ConcurrentHashMap<String, byte[]> store;
@@ -33,7 +34,7 @@ public class Server {
 	private static AtomicInteger concurrentClientCount;
 	private static AtomicInteger shutdownFlag;
 	private static ExecutorService threadPool;
-
+    private static int partitionsPerNode;
 	private static CopyOnWriteArrayList<KVStore.Node> onlineNodeList;
 	//Sorted map for mapping hashed values to physical nodes
 	private static ConcurrentSkipListMap<String, KVStore.Node> nodes;
@@ -58,6 +59,7 @@ public class Server {
 			}
 			
 			//Map the nodes to partitions
+            partitionsPerNode = NUM_PARTITIONS / onlineNodeList.size();
 			constructNodeMap();
 			//displayNodeMap();
 			//verifyNodeMap();
@@ -100,7 +102,7 @@ public class Server {
 		nodes = new ConcurrentSkipListMap<String, KVStore.Node>();
 		//Divide the hash space into NUM_PARTITIONS partitions
 		//with each physical node responsible for (NUM_PARTITIONS / number of nodes) hash ranges
-		int partitionsPerNode = NUM_PARTITIONS / onlineNodeList.size();
+		//int partitionsPerNode = NUM_PARTITIONS / onlineNodeList.size();
 		for (KVStore.Node node : onlineNodeList)
 		{
 			for (int i=0; i < partitionsPerNode; ++i)
@@ -109,7 +111,47 @@ public class Server {
 			}
 		}
 	}
-	
+
+    private static void returnPartitions(int idx)
+    {
+        //get the node that is offline now
+        //foreach nodes in the nodeList
+        for (KVStore.Node node : onlineNodeList){
+            //foreach partition in each node
+            for (int i=0; i<partitionsPerNode; ++i){
+                //if current partition's hash key's value (node) is the rejoin node
+                if(node.address.getHostName().equals(onlineNodeList.get(idx).address.getHostName())){
+                    //replace it with the next node, or the first node
+                    System.out.println("hash key for rejoin node: "+KVStore.getHash(node.address.getHostName() + i).toString());
+                    
+                    nodes.replace(KVStore.getHash(node.address.getHostName() + i),onlineNodeList.get(idx));
+                }
+            }
+        }
+    }
+    
+    private static void takePartitions(int idx)
+    {
+        //get the node that is offline now
+        //foreach nodes in the nodeList
+        for (KVStore.Node node : onlineNodeList){
+            //foreach partition in each node
+            for (int i=0; i<partitionsPerNode; ++i){
+                //if current partition's hash key's value (node) is the offline node
+                if(nodes.get(KVStore.getHash(node.address.getHostName() + i)).address.getHostName().equals(
+                    onlineNodeList.get(idx).address.getHostName())){
+                    //replace it with the next node, or the first node
+                    System.out.println("hash key for offline node: "+KVStore.getHash(node.address.getHostName() + i).toString());
+                    if(idx<(onlineNodeList.size()-1)){
+                        nodes.replace(KVStore.getHash(node.address.getHostName() + i),onlineNodeList.get(idx+1));
+                    }else{
+                        nodes.replace(KVStore.getHash(node.address.getHostName() + i),onlineNodeList.get(0));
+                    }
+                }
+            }
+        }
+    }
+
 	private static void verifyNodeMap()
 	{
 		Map<KVStore.Node, Integer> distribution = new HashMap<KVStore.Node, Integer>();
@@ -151,7 +193,7 @@ public class Server {
                 for (KVStore.Node node : onlineNodeList){
                     try{
                         if(!(onlineNodeList.get(onlineNodeList.indexOf(node)).address.getHostName().equals(java.net.InetAddress.getLocalHost().getHostName()))){
-                            Thread.currentThread().sleep(4000);
+                            Thread.currentThread().sleep(SLEEP_TIME);
                             currentTime = new Timestamp(new Date().getTime());
                             System.out.println("node: "+onlineNodeList.get(onlineNodeList.indexOf(node)).address.getHostName());
                             System.out.println("last update: "+onlineNodeList.get(onlineNodeList.indexOf(node)).t.toString());
@@ -159,10 +201,11 @@ public class Server {
                             System.out.println("timeDiff: "+timeDiff);
                             if(timeDiff > OFFLINE_THRES){
                                 onlineNodeList.get(onlineNodeList.indexOf(node)).online=false;
+                                takePartitions(onlineNodeList.indexOf(node));
                             }
                         }
                     }catch(Exception e){
-                        System.out.println("what the fuck");
+                        System.out.println("unrecognized node");
                     }
                 }
             }
@@ -190,6 +233,11 @@ public class Server {
                                 }
                             }
                         }
+
+                        if(onlineNodeList.get(randomInt).rejoin){
+                            returnPartitions(randomInt);
+                            onlineNodeList.get(randomInt).rejoin = false;
+                        }
                          
                         System.out.println("gossiping to server: "+onlineNodeList.get(randomInt).address.getHostName());
                         socket = new Socket(onlineNodeList.get(randomInt).address.getHostName(), PORT);
@@ -198,14 +246,14 @@ public class Server {
                         OutputStream os = socket.getOutputStream();
                         //Send the encoded string to the server
                         os.write(gossipBuffer);
-                        System.out.println("Sending request:");
-                        System.out.println(StringUtils.byteArrayToHexString(gossipBuffer));
+                        //System.out.println("Sending request:");
+                        //System.out.println(StringUtils.byteArrayToHexString(gossipBuffer));
                         
                         //sleep
-                        Thread.currentThread().sleep(4000);
+                        Thread.currentThread().sleep(SLEEP_TIME);
                     }catch (Exception e) {
                         try{
-                            Thread.currentThread().sleep(4000);
+                            Thread.currentThread().sleep(SLEEP_TIME);
                         }catch(InterruptedException ex){
                             System.out.println("Gossiping Error!");
                         }
@@ -271,7 +319,7 @@ public class Server {
 					}
 					else
 					{
-						//FIXME proporgate it to somewhere
+						//FIXME it's better to actively announce it rather than passively wating for gossip
 						System.out.println("closing down server!");
 						System.exit(0);
 					}

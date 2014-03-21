@@ -18,7 +18,8 @@ public class KVStore implements Runnable {
 		public InetSocketAddress address;
 		public boolean online;
         public Timestamp t=new Timestamp(new Date().getTime());;        
-		
+		public boolean rejoin=false;
+
         Node(InetSocketAddress addr, boolean alive)
 		{
 			this.address = addr;
@@ -270,9 +271,12 @@ public class KVStore implements Runnable {
         for (Node node : onlineNodeList){
             System.out.println("client sock: "+clntSock.getInetAddress().getHostName().toString());
             if(node.address.getHostName().equals(clntSock.getInetAddress().getHostName())){
+                if(!(onlineNodeList.get(onlineNodeList.indexOf(node)).online)){
+                    onlineNodeList.get(onlineNodeList.indexOf(node)).rejoin=true;
+                }
                 onlineNodeList.get(onlineNodeList.indexOf(node)).online = true;
                 onlineNodeList.get(onlineNodeList.indexOf(node)).t = new Timestamp(new Date().getTime());
-                System.out.println("timestamp: "+onlineNodeList.get(onlineNodeList.indexOf(node)).t.toString());
+                //System.out.println("timestamp: "+onlineNodeList.get(onlineNodeList.indexOf(node)).t.toString());
                 break;
             }
         }
@@ -324,8 +328,7 @@ public class KVStore implements Runnable {
 			case 4: //shutdown command
 				shutdown();
 				break;
-            case 255:
-                System.out.println("i am here");
+            case 255: //gossip signal
                 gossip();
                 break;
 			default: //Unrecognized command
