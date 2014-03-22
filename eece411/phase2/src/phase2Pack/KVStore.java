@@ -17,7 +17,7 @@ public class KVStore implements Runnable {
 	{
 		public InetSocketAddress address;
 		public boolean online;
-        public Timestamp t=new Timestamp(new Date().getTime());;        
+        public Timestamp t=new Timestamp(new Date().getTime());
 		public boolean rejoin=false;
 
         Node(InetSocketAddress addr, boolean alive)
@@ -252,14 +252,19 @@ public class KVStore implements Runnable {
 
 	private void shutdown()
 	{
-		//make a flag for shutdown command
-		//refuse all incomes
+		//Increment the shutdown flag to no longer accept incoming connections
 		shutdown.getAndIncrement();
-		//check if current thread is 0
-		//System.out.println("Shut");
+		
+		//Update online status to false of self node, so it propogates faster
+		int index = onlineNodeList.indexOf(clntSock.getInetAddress().getHostName());
+		if (index >= 0)
+		{
+			Node self = onlineNodeList.get(index);
+			self.online = false;
+		}
+		
 		while (true)
 		{
-            
 			//Wait until the only client left is the one initiating the shutdown command
 			//i.e. all other existing client requests have finished
 			System.out.println("clientcnt: "+clientCnt.get());
@@ -284,9 +289,9 @@ public class KVStore implements Runnable {
                 //System.out.println("timestamp: "+onlineNodeList.get(onlineNodeList.indexOf(node)).t.toString());
                 break;
             }
-        }
-        
+        }        
     }
+    
 	public void run()
 	{
 		try {
@@ -333,6 +338,8 @@ public class KVStore implements Runnable {
 			case 4: //shutdown command
 				shutdown();
 				break;
+			case 254:
+				
             case 255: //gossip signal
                 gossip();
                 break;
