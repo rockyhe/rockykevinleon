@@ -70,20 +70,20 @@ public class KVStore implements Runnable {
 
 		//Get the node with first hashed value that is greater than or equal to the key (i.e. clockwise on the ring)
 		//since each node stores keys up to its hashed value
-		System.out.println("Rehashed key string: " + rehashedKeyStr);
+		//System.out.println("Rehashed key string: " + rehashedKeyStr);
 		Map.Entry<String, Node> entry = nodes.ceilingEntry(rehashedKeyStr);
 		//If ceiling entry is null, then we've wrapped around the entire node ring, so set to first node
 		if (entry == null)
 		{
-			System.out.println("Setting entry to first entry");
+			//System.out.println("Setting entry to first entry");
 			entry = nodes.firstEntry();
 		}
-		System.out.println("Entry hash: " + entry.getKey());
+		//System.out.println("Entry hash: " + entry.getKey());
 
 		//Check if the node that should contain it is this one, or if we need to do a remote call
 		if (entry.getValue().address.getHostName().equals(clntSock.getLocalAddress().getHostName()))
 		{
-			System.out.println("Host name matches");
+			//System.out.println("Host name matches");
 			if (store.size() < KVSTORE_SIZE)
 			{
 				store.put(rehashedKeyStr, value);
@@ -95,7 +95,7 @@ public class KVStore implements Runnable {
 		}
 		else
 		{
-			System.out.println("Forwarding put command!");
+			//System.out.println("Forwarding put command!");
 			forward(entry.getValue(), 1, key, value);
 		}
 	}
@@ -117,27 +117,27 @@ public class KVStore implements Runnable {
 		{
 			//Get the node with first hashed value that is greater than or equal to the key (i.e. clockwise on the ring)
 			//since each node stores keys up to its hashed value
-			System.out.println("Rehashed key string: " + rehashedKeyStr);
+			//System.out.println("Rehashed key string: " + rehashedKeyStr);
 			Map.Entry<String, Node> entry = nodes.ceilingEntry(rehashedKeyStr);
 			//If ceiling entry is null, then we've wrapped around the entire node ring, so set to first node
 			if (entry == null)
 			{
-				System.out.println("Setting entry to first entry");
+				//System.out.println("Setting entry to first entry");
 				entry = nodes.firstEntry();
 			}
-			System.out.println("Entry hash: " + entry.getKey());
+			//System.out.println("Entry hash: " + entry.getKey());
 
 			//If the node that should contain it is this, then key doesn't exist
 			if (entry.getValue().address.getHostName().equals(clntSock.getLocalAddress().getHostName()))
 			{
-				System.out.println("Host name matches");
+				//System.out.println("Host name matches");
 				errCode = 0x01;
 				return null;
 			}
-			System.out.println("Forwarding get command!");
+			//System.out.println("Forwarding get command!");
 			return forward(entry.getValue(), 2, key, null);
 		}
-		System.out.println("Get command succeeded!");
+		//System.out.println("Get command succeeded!");
 		return store.get(rehashedKeyStr);
 	}
 
@@ -157,57 +157,57 @@ public class KVStore implements Runnable {
 		{
 			//Get the node with first hashed value that is greater than or equal to the key (i.e. clockwise on the ring)
 			//since each node stores keys up to its hashed value
-			System.out.println("Rehashed key string: " + rehashedKeyStr);
+			//System.out.println("Rehashed key string: " + rehashedKeyStr);
 			Map.Entry<String, Node> entry = nodes.ceilingEntry(rehashedKeyStr);
 			//If ceiling entry is null, then we've wrapped around the entire node ring, so set to first node
 			if (entry == null)
 			{
-				System.out.println("Setting entry to first entry");
+				//System.out.println("Setting entry to first entry");
 				entry = nodes.firstEntry();
 			}
-			System.out.println("Entry hash: " + entry.getKey());
+			//System.out.println("Entry hash: " + entry.getKey());
 
 			//If the node that should contain it is this, then key doesn't exist
 			if (entry.getValue().address.getHostName().equals(clntSock.getLocalAddress().getHostName()))
 			{
-				System.out.println("Host name matches");
+				//System.out.println("Host name matches");
 				errCode = 0x01;
 			}
 			else
 			{
-				System.out.println("Forwarding remove command!");
+				//System.out.println("Forwarding remove command!");
 				forward(entry.getValue(), 3, key, null);
 			}
 		}
 		else
 		{
 			store.remove(rehashedKeyStr);
-			System.out.println("Remove command succeeded!");
+			//System.out.println("Remove command succeeded!");
 		}
 	}
 
 	private byte[] forward(Node remoteNode, int cmd, byte[] key, byte[] value) throws IOException //Propagate the exceptions to main
 	{
-		System.out.println("Forwarding to " + remoteNode.address.toString());
-		System.out.println("cmd: " + cmd);
-		System.out.println("key: " + StringUtils.byteArrayToHexString(key));
-		if (value != null)
-		{
-			System.out.println("value: " + StringUtils.byteArrayToHexString(value));
-		}
+		//System.out.println("Forwarding to " + remoteNode.address.toString());
+		//System.out.println("cmd: " + cmd);
+		//System.out.println("key: " + StringUtils.byteArrayToHexString(key));
+		//if (value != null)
+		//{
+			//System.out.println("value: " + StringUtils.byteArrayToHexString(value));
+		//}
 		
 		//This should never happen (i.e. by the time we get here, we shouldn't try to forward to an offline node). Otherwise, there's a bug somewhere!
 		if (!remoteNode.online)
 		{
-			System.out.println("Node is offline!");
+			//System.out.println("Node is offline!");
 			errCode = 0x21;
 			return null;
 		}
 
 		//Open a socket connection to the other server
-		System.out.println("Creating socket");
+		//System.out.println("Creating socket");
 		Socket socket = new Socket(remoteNode.address.getHostName(), remoteNode.address.getPort());
-		System.out.println("Connected to server: " + socket.getInetAddress().toString());
+		//System.out.println("Connected to server: " + socket.getInetAddress().toString());
 
 		//Route the message
 		//If command is put, then increase request buffer size to include value bytes
@@ -227,24 +227,24 @@ public class KVStore implements Runnable {
 		}
 
 		//Send the encoded string to the server
-		System.out.println("Forwarding request");
-		System.out.println("Request buffer: " + StringUtils.byteArrayToHexString(requestBuffer));
+		//System.out.println("Forwarding request");
+		//System.out.println("Request buffer: " + StringUtils.byteArrayToHexString(requestBuffer));
 		sendBytes(socket, requestBuffer);
 
 		//Get the return message from the server
 		//Get the error code byte
 		byte[] errorCode = new byte[ERR_SIZE];
 		receiveBytes(socket, errorCode);
-		System.out.println("Received reply from forwarded request");
+		//System.out.println("Received reply from forwarded request");
 		errCode = errorCode[0];
-		System.out.println("Error Code: " + errorMessage(errCode));
+		//System.out.println("Error Code: " + errorMessage(errCode));
 
 		//If command was get and ran successfully, then get the value bytes
 		if (cmd == 2 && errCode == 0x00)
 		{
 			byte[] getValue = new byte[VALUE_SIZE];
 			receiveBytes(socket, getValue);
-			System.out.println("Value for GET: " + StringUtils.byteArrayToHexString(getValue));
+			//System.out.println("Value for GET: " + StringUtils.byteArrayToHexString(getValue));
 			return getValue;
 		}
 		return null;
@@ -262,7 +262,7 @@ public class KVStore implements Runnable {
             
 			//Wait until the only client left is the one initiating the shutdown command
 			//i.e. all other existing client requests have finished
-			System.out.println("clientcnt: "+clientCnt.get());
+			//System.out.println("clientcnt: "+clientCnt.get());
 
             if (clientCnt.get() == 1)
 			{
@@ -274,7 +274,7 @@ public class KVStore implements Runnable {
     private void gossip()
     {
         for (Node node : onlineNodeList){
-            System.out.println("client sock: "+clntSock.getInetAddress().getHostName().toString());
+        //    System.out.println("client sock: "+clntSock.getInetAddress().getHostName().toString());
             if(node.address.getHostName().equals(clntSock.getInetAddress().getHostName())){
                 if(!node.online){
                     node.rejoin=true;
@@ -299,7 +299,7 @@ public class KVStore implements Runnable {
 			byte[] command = new byte[CMD_SIZE];
 			receiveBytes(clntSock, command);
 			int cmd = ByteOrder.leb2int(command, 0, CMD_SIZE);
-			System.out.println("cmd: " + cmd);
+			//System.out.println("cmd: " + cmd);
 
 			//NOTE: As stated by Matei in class, assume that client is responsible for providing hashed keys so not necessary to perform re-hashing.
 			byte[] key = null;

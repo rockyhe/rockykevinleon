@@ -26,7 +26,7 @@ public class Server {
 	//Make sure this value is larger than number of physical nodes
 	//Since potential max nodes is 100, then use 100 * 100 = 10000
 	private static final int NUM_PARTITIONS = 10000;
-    private static final int SLEEP_TIME = 2000; //4 seconds
+    private static final int SLEEP_TIME = 1000; //4 seconds
     private static final int PROP_BUFFER = 2000;
     private static final int OFFLINE_THRES = (int)(Math.log10(MAX_GOSSIP_MEMBERS)/Math.log10(2))*SLEEP_TIME+PROP_BUFFER; //10 seconds log(N)/log(2) * SLEEP_TIME
     //Private members
@@ -117,7 +117,7 @@ public class Server {
     private static void returnPartitions(int idx)
     {
         //foreach nodes in the nodeList
-            System.out.println("<<<<<<<<<<<<<<<<<<<<<<<rejoined node: "+onlineNodeList.get(idx).address.toString());
+            //System.out.println("<<<<<<<<<<<<<<<<<<<<<<<rejoined node: "+onlineNodeList.get(idx).address.toString());
         for (KVStore.Node node : onlineNodeList)
         {
 
@@ -143,7 +143,7 @@ public class Server {
         //foreach nodes in the nodeList
         int j;
         
-        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>offline  node: "+onlineNodeList.get(idx).address.toString());
+        //System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>offline  node: "+onlineNodeList.get(idx).address.toString());
         for (KVStore.Node node : onlineNodeList){
             //foreach partition in each node
             for (int i=0; i<partitionsPerNode; ++i){
@@ -215,16 +215,16 @@ public class Server {
             long timeDiff = 0;
             Timestamp currentTime;
             while(true){
-                System.out.println("----------------------------");
+                //System.out.println("----------------------------");
                 for (KVStore.Node node : onlineNodeList){
                     try{
                         if(!(node.address.getHostName().equals(java.net.InetAddress.getLocalHost().getHostName()))){
                             Thread.currentThread().sleep(SLEEP_TIME);
                             currentTime = new Timestamp(new Date().getTime());
-                            System.out.println("node: "+onlineNodeList.get(onlineNodeList.indexOf(node)).address.getHostName());
-                            System.out.println("last update: "+onlineNodeList.get(onlineNodeList.indexOf(node)).t.toString());
+                            //System.out.println("node: "+onlineNodeList.get(onlineNodeList.indexOf(node)).address.getHostName());
+                            //System.out.println("last update: "+onlineNodeList.get(onlineNodeList.indexOf(node)).t.toString());
                             timeDiff=currentTime.getTime()-node.t.getTime();
-                            System.out.println("timeDiff: "+timeDiff);
+                            //System.out.println("timeDiff: "+timeDiff);
                             if(timeDiff > OFFLINE_THRES){
                                 node.online=false;
                                 takePartitions(onlineNodeList.indexOf(node));
@@ -269,7 +269,7 @@ public class Server {
                             onlineNodeList.get(randomInt).rejoin = false;
                         }
                          
-                        System.out.println("gossiping to server: "+onlineNodeList.get(randomInt).address.getHostName());
+                        //System.out.println("gossiping to server: "+onlineNodeList.get(randomInt).address.getHostName());
                         socket = new Socket(onlineNodeList.get(randomInt).address.getHostName(), PORT);
                         
                         //Send the message to the server
@@ -316,7 +316,7 @@ public class Server {
 						{
 							OutputStream out = clntSock.getOutputStream();
 							out.write(new byte[] {0x03});
-							System.out.println("Backlog is full.");
+							//System.out.println("Backlog is full.");
 						}
 	
 						//					if (backlog.size() > 0)
