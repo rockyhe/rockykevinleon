@@ -12,6 +12,7 @@ import java.util.concurrent.atomic.*;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.sql.Timestamp;
 import java.util.Date;
+import java.lang.Math;
 
 public class Server {
 	//Constants
@@ -26,7 +27,8 @@ public class Server {
 	//Since potential max nodes is 100, then use 100 * 100 = 10000
 	private static final int NUM_PARTITIONS = 10000;
     private static final int SLEEP_TIME = 2000; //4 seconds
-    private static final int OFFLINE_THRES = 10000; //10 seconds
+    private static final int PROP_BUFFER = 2000;
+    private static final int OFFLINE_THRES = (int)(Math.log10(MAX_GOSSIP_MEMBERS)/Math.log10(2))*SLEEP_TIME+PROP_BUFFER; //10 seconds log(N)/log(2) * SLEEP_TIME
     //Private members
 	private static ServerSocket servSock;
 	private static ConcurrentHashMap<String, byte[]> store;
@@ -114,10 +116,11 @@ public class Server {
 
     private static void returnPartitions(int idx)
     {
-        //get the node that is offline now
         //foreach nodes in the nodeList
+            System.out.println("<<<<<<<<<<<<<<<<<<<<<<<rejoined node: "+onlineNodeList.get(idx).address.toString());
         for (KVStore.Node node : onlineNodeList)
         {
+
             //foreach partition in each node
             for (int i=0; i<partitionsPerNode; ++i)
             {
@@ -125,7 +128,8 @@ public class Server {
                 if(node.address.getHostName().equals(onlineNodeList.get(idx).address.getHostName()))
                 {
                     //replace it with the next node, or the first node
-                    System.out.println("hash key for rejoin node: "+KVStore.getHash(node.address.getHostName() + i).toString());
+                    //System.out.println("rejoined node: "+onlineNodeList.get(idx).address.toString());
+                    //System.out.println("hash key for rejoin node: "+KVStore.getHash(node.address.getHostName() + i).toString());
                     
                     nodes.replace(KVStore.getHash(node.address.getHostName() + i),onlineNodeList.get(idx));
                 }
@@ -138,6 +142,8 @@ public class Server {
         //get the node that is offline now
         //foreach nodes in the nodeList
         int j;
+        
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>offline  node: "+onlineNodeList.get(idx).address.toString());
         for (KVStore.Node node : onlineNodeList){
             //foreach partition in each node
             for (int i=0; i<partitionsPerNode; ++i){
@@ -147,9 +153,9 @@ public class Server {
                     onlineNodeList.get(idx).address.getHostName()))
                 {
                     //replace it with the next node, or the first node
-                    System.out.println("hash key for offline node: "+KVStore.getHash(node.address.getHostName() + i).toString());
+                   // System.out.println("hash key for offline node: "+KVStore.getHash(node.address.getHostName() + i).toString());
                     
-                    if(j < (onlineNodeList.size()-1)){
+                    if(idx < (onlineNodeList.size()-1)){
                         j=idx+1;
                     }else{
                         j=0;
@@ -212,15 +218,15 @@ public class Server {
                 System.out.println("----------------------------");
                 for (KVStore.Node node : onlineNodeList){
                     try{
-                        if(!(onlineNodeList.get(onlineNodeList.indexOf(node)).address.getHostName().equals(java.net.InetAddress.getLocalHost().getHostName()))){
+                        if(!(node.address.getHostName().equals(java.net.InetAddress.getLocalHost().getHostName()))){
                             Thread.currentThread().sleep(SLEEP_TIME);
                             currentTime = new Timestamp(new Date().getTime());
                             System.out.println("node: "+onlineNodeList.get(onlineNodeList.indexOf(node)).address.getHostName());
                             System.out.println("last update: "+onlineNodeList.get(onlineNodeList.indexOf(node)).t.toString());
-                            timeDiff=currentTime.getTime()-(onlineNodeList.get(onlineNodeList.indexOf(node)).t.getTime());
+                            timeDiff=currentTime.getTime()-node.t.getTime();
                             System.out.println("timeDiff: "+timeDiff);
                             if(timeDiff > OFFLINE_THRES){
-                                onlineNodeList.get(onlineNodeList.indexOf(node)).online=false;
+                                node.online=false;
                                 takePartitions(onlineNodeList.indexOf(node));
                             }
                         }
@@ -237,16 +243,20 @@ public class Server {
                 Socket socket = null;
                 Random randomGenerator;
                 int randomInt;
+                int lastRandNum=-1;
                 byte[] gossipBuffer = new byte[CMD_SIZE];
                 gossipBuffer[0]=(byte)(GOSSIP_MSG & 0x000000FF);
-                
+               
                 while(true){
                     try{
                         randomGenerator = new Random();
                         //Random randomGenerator = new Random();
                         //randomly select a node to gossip 
                         while(true){
+                            //do{
                             randomInt = randomGenerator.nextInt(MAX_GOSSIP_MEMBERS);
+                            //}while(randomInt == lastRandNum);
+
                             if(!(onlineNodeList.get(randomInt).address.getHostName().equals(java.net.InetAddress.getLocalHost().getHostName()))){
                                 if(onlineNodeList.get(randomInt).online){ 
                                     break;
@@ -269,6 +279,7 @@ public class Server {
                         //System.out.println("Sending request:");
                         //System.out.println(StringUtils.byteArrayToHexString(gossipBuffer));
                         
+                        //lastRandNum = randomInt;
                         //sleep
                         Thread.currentThread().sleep(SLEEP_TIME);
                     }catch (Exception e) {

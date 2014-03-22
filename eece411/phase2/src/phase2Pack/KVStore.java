@@ -259,9 +259,12 @@ public class KVStore implements Runnable {
 		//System.out.println("Shut");
 		while (true)
 		{
+            
 			//Wait until the only client left is the one initiating the shutdown command
 			//i.e. all other existing client requests have finished
-			if (clientCnt.get() == 1)
+			System.out.println("clientcnt: "+clientCnt.get());
+
+            if (clientCnt.get() == 1)
 			{
 				break;
 			}
@@ -273,11 +276,11 @@ public class KVStore implements Runnable {
         for (Node node : onlineNodeList){
             System.out.println("client sock: "+clntSock.getInetAddress().getHostName().toString());
             if(node.address.getHostName().equals(clntSock.getInetAddress().getHostName())){
-                if(!(onlineNodeList.get(onlineNodeList.indexOf(node)).online)){
-                    onlineNodeList.get(onlineNodeList.indexOf(node)).rejoin=true;
+                if(!node.online){
+                    node.rejoin=true;
                 }
-                onlineNodeList.get(onlineNodeList.indexOf(node)).online = true;
-                onlineNodeList.get(onlineNodeList.indexOf(node)).t = new Timestamp(new Date().getTime());
+                node.online = true;
+                node.t = new Timestamp(new Date().getTime());
                 //System.out.println("timestamp: "+onlineNodeList.get(onlineNodeList.indexOf(node)).t.toString());
                 break;
             }
