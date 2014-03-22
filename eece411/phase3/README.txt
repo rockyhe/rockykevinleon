@@ -1,10 +1,11 @@
 Phase 3
 
-Group members:
-Rocky He    74963091
-Leon Lixing Yu  75683094
-Hui Tan     52648094
+Rocky He 	74963091
+Leon Lixing Yu 	75683094
+Hui Tan		52648094
 
+Server is on nodes:
+see nodeList.txt
 
 Gossip protocol
     Major class used: CopyOnWriteList, Timestamp
@@ -19,3 +20,15 @@ Node leave and rejoin
     Major class used: ConcurrentSkipList, CopyOnWriteList
     When a node leaves unannounced, we 1.match the partition's hash key's value (node) with the offline node's. Once we get all the partitions for the offline node, we will see if the offline node is the last in the hash ring or not. If it is not the last in the the hash ring, we re-map the hash keys (belonged to this offline node) to the next online node following the offline one. If none of the next nodes are online, we re-start iteration at 1st node in the ring, until we find the online node. 
     When a node rejoins from failure, we know already which partitions it should take (given the nodes is not new to our node list), but the hash key is not mapped to the rejoined node rejoined nodes. All we need to do is replace the mapping with rejoined node, such that the rejoined node gets the partitions it supposed to get. 
+
+
+
+------------------------------------
+Implementations
+
+Socket Connection Backlog Queue, Multi-threaded Server, and Threadpool
+	
+
+Shutdown
+To process the shutdown command, we just process the 0x04 command in our switch statement. We added an AtomicInteger member to Server.java called shutdownFlag, which is initialized to 0 on bootstrap, so that when we receive a shutdown command, we increment it to 1 to tell the server to stop receiving any more incoming connections. Then we wait in a while loop until all existing connections/requests have been completed (i.e. by checking that the current concurrent client count is 1, since the only client that should still be connected is the one issuing the shutdown command). Once that happens, we break out of the while loop and send a success reply to the client, and increment the shutdownFlag to 2, so that the server knows it is finally safe to shutdown (i.e. using System.exit). Between incrementing the shutdownFlag to 1 and actually shutting down, we also set the timestamp of the server to be 0, so that we can propagate the status of this node earlier to the other nodes (i.e. the gossiping thread will still be running until shutdown, and by setting timestamp to 0, other servers will detect that the node is offline; this saves us time compared to waiting for the node's offline status to be implicitly detected by gossiping).
+>>>>>>> FETCH_HEAD
