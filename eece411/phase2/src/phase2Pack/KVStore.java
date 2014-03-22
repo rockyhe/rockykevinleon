@@ -255,12 +255,13 @@ public class KVStore implements Runnable {
 		//Increment the shutdown flag to no longer accept incoming connections
 		shutdown.getAndIncrement();
 		
-		//Update online status to false of self node, so it propogates faster
+		//Update online status to false and timestamp to 0 of self node, so it propagates faster
 		int index = onlineNodeList.indexOf(clntSock.getInetAddress().getHostName());
 		if (index >= 0)
 		{
 			Node self = onlineNodeList.get(index);
 			self.online = false;
+			self.t = new Timestamp(0);
 		}
 		
 		while (true)
