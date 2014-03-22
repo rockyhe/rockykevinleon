@@ -196,6 +196,7 @@ public class KVStore implements Runnable {
 			System.out.println("value: " + StringUtils.byteArrayToHexString(value));
 		}
 		
+		//This should never happen (i.e. by the time we get here, we shouldn't try to forward to an offline node). Otherwise, there's a bug somewhere!
 		if (!remoteNode.online)
 		{
 			System.out.println("Node is offline!");
