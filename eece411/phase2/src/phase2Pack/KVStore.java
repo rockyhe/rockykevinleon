@@ -189,14 +189,13 @@ public class KVStore implements Runnable {
 
     private void updateBackup(byte[] key, byte[] value) throws IOException{
         //get a list of online nodes that can backup the update
-      System.out.println("Backing Up");
       Socket socket = null;
       byte[] backupBuffer = new byte[CMD_SIZE + KEY_SIZE + VALUE_SIZE];
       for (Node backupNode : onlineNodeList) {
           if(!(backupNode.address.getHostName().equals(java.net.InetAddress.getLocalHost().getHostName()))){
               if(backupNode.online){
                   socket = new Socket(backupNode.address.getHostName(), backupNode.address.getPort());
-                  System.out.println("backup key "+ByteOrder.leb2int(key,0)+"at "+backupNode.address.getHostName());
+                  System.out.println("backup key "+StringUtils.byteArrayToHexString(key)+"at "+backupNode.address.getHostName());
                   ByteOrder.int2leb(100, backupBuffer, 0);   //Command byte - 1 byte
                   System.arraycopy(key, 0, backupBuffer, CMD_SIZE, KEY_SIZE); //Key bytes - 32 bytes
                   System.arraycopy(value, 0, backupBuffer, CMD_SIZE + KEY_SIZE, VALUE_SIZE); //Value bytes - 1024 bytes
@@ -210,9 +209,9 @@ public class KVStore implements Runnable {
 
 	private byte[] forward(Node remoteNode, int cmd, byte[] key, byte[] value) throws IOException //Propagate the exceptions to main
 	{
-		//System.out.println("Forwarding to " + remoteNode.address.toString());
+		System.out.println("Forwarding to " + remoteNode.address.toString());
 		//System.out.println("cmd: " + cmd);
-		//System.out.println("key: " + StringUtils.byteArrayToHexString(key));
+		System.out.println("key: " + StringUtils.byteArrayToHexString(key));
 		//if (value != null)
 		//{
 			//System.out.println("value: " + StringUtils.byteArrayToHexString(value));
@@ -314,7 +313,15 @@ public class KVStore implements Runnable {
             }
         }        
     }
-    
+   
+    private void replica(byte[] key, byte[] value){
+        //Convert key bytes to string
+        String keyStr = StringUtils.byteArrayToHexString(key);//Arrays.toString(key).replaceAll("(^\\[|\\]$)", "").replace(", ", "");
+        //Re-hash the key using our hash function so it's consistent
+        String rehashedKeyStr = getHash(keyStr);
+        store.put(rehashedKeyStr, value);
+    }
+
 	public void run()
 	{
 		try {
@@ -361,11 +368,17 @@ public class KVStore implements Runnable {
 			case 4: //shutdown command
 				shutdown();
 				break;
-			case 254:
+			case 254://FIXME
 				
             case 255: //gossip signal
                 gossip();
                 break;
+            case 100:
+                key = new byte[KEY_SIZE];
+                receiveBytes(clntSock,key);
+                value = new byte[VALUE_SIZE];
+                receiveBytes(clntSock,value);
+                replica(key,value);
 			default: //Unrecognized command
 				errCode = 0x05;
 				break;
