@@ -17,7 +17,7 @@ import java.lang.Math;
 public class Server {
 	//Constants
 	private static final int PORT = 5000;
-	private static final int MAX_GOSSIP_MEMBERS = 4;
+	private static final int MAX_GOSSIP_MEMBERS = 16;
 	private static final int MAX_NUM_CLIENTS = 250;
 	private static final int BACKLOG_SIZE = 50;
 	private static final String NODE_LIST_FILE = "nodeList.txt";
@@ -254,7 +254,7 @@ public class Server {
                         //randomly select a node to gossip 
                         while(true){
                             //do{
-                            randomInt = randomGenerator.nextInt(MAX_GOSSIP_MEMBERS);
+                            randomInt = randomGenerator.nextInt(onlineNodeList.size());
                             //}while(randomInt == lastRandNum);
 
                             if(!(onlineNodeList.get(randomInt).address.getHostName().equals(java.net.InetAddress.getLocalHost().getHostName()))){

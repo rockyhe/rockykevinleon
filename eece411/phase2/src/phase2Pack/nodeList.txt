@@ -1,3 +1,2 @@
 planetlab1.cs.ubc.ca
-cs-planetlab4.cs.surrey.sfu.ca
-cs-planetlab3.cs.surrey.sfu.ca
+planetlab03.cs.washington.edu

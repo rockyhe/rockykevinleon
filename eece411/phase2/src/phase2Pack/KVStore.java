@@ -80,13 +80,14 @@ public class KVStore implements Runnable {
 		}
 		//System.out.println("Entry hash: " + entry.getKey());
 
-		//Check if the node that should contain it is this one, or if we need to do a remote call
+		//Check if the node that should contain the hash key is this one, or if we need to do a remote call
 		if (entry.getValue().address.getHostName().equals(clntSock.getLocalAddress().getHostName()))
 		{
 			//System.out.println("Host name matches");
 			if (store.size() < KVSTORE_SIZE)
 			{
 				store.put(rehashedKeyStr, value);
+                updateBackup(key,value);
 			}
 			else
 			{
@@ -185,6 +186,27 @@ public class KVStore implements Runnable {
 			//System.out.println("Remove command succeeded!");
 		}
 	}
+
+    private void updateBackup(byte[] key, byte[] value) throws IOException{
+        //get a list of online nodes that can backup the update
+      System.out.println("Backing Up");
+      Socket socket = null;
+      byte[] backupBuffer = new byte[CMD_SIZE + KEY_SIZE + VALUE_SIZE];
+      for (Node backupNode : onlineNodeList) {
+          if(!(backupNode.address.getHostName().equals(java.net.InetAddress.getLocalHost().getHostName()))){
+              if(backupNode.online){
+                  socket = new Socket(backupNode.address.getHostName(), backupNode.address.getPort());
+                  System.out.println("backup key "+ByteOrder.leb2int(key,0)+"at "+backupNode.address.getHostName());
+                  ByteOrder.int2leb(100, backupBuffer, 0);   //Command byte - 1 byte
+                  System.arraycopy(key, 0, backupBuffer, CMD_SIZE, KEY_SIZE); //Key bytes - 32 bytes
+                  System.arraycopy(value, 0, backupBuffer, CMD_SIZE + KEY_SIZE, VALUE_SIZE); //Value bytes - 1024 bytes
+                  //Send the message to the server
+                  sendBytes(socket,backupBuffer);
+              }
+          }
+      }
+    }
+
 
 	private byte[] forward(Node remoteNode, int cmd, byte[] key, byte[] value) throws IOException //Propagate the exceptions to main
 	{
