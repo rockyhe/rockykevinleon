@@ -191,17 +191,38 @@ public class KVStore implements Runnable {
         //get a list of online nodes that can backup the update
       Socket socket = null;
       byte[] backupBuffer = new byte[CMD_SIZE + KEY_SIZE + VALUE_SIZE];
-      for (Node backupNode : onlineNodeList) {
-          if(!(backupNode.address.getHostName().equals(java.net.InetAddress.getLocalHost().getHostName()))){
-              if(backupNode.online){
-                  socket = new Socket(backupNode.address.getHostName(), backupNode.address.getPort());
-                  System.out.println("backup key "+StringUtils.byteArrayToHexString(key)+"at "+backupNode.address.getHostName());
-                  ByteOrder.int2leb(100, backupBuffer, 0);   //Command byte - 1 byte
-                  System.arraycopy(key, 0, backupBuffer, CMD_SIZE, KEY_SIZE); //Key bytes - 32 bytes
-                  System.arraycopy(value, 0, backupBuffer, CMD_SIZE + KEY_SIZE, VALUE_SIZE); //Value bytes - 1024 bytes
-                  //Send the message to the server
-                  sendBytes(socket,backupBuffer);
-              }
+      ByteOrder.int2leb(100, backupBuffer, 0);   //Command byte - 1 byte
+      System.arraycopy(key, 0, backupBuffer, CMD_SIZE, KEY_SIZE); //Key bytes - 32 bytes
+      System.arraycopy(value, 0, backupBuffer, CMD_SIZE + KEY_SIZE, VALUE_SIZE); //Value bytes - 1024 bytes
+      int idx = onlineNodeList.indexOf(java.net.InetAddress.getLocalHost().getHostName());
+      System.out.println("idx "+idx);
+      int i=idx+1;
+      int replicaCnt=0;
+      int replicaThres;
+
+      if(onlineNodeList.size()<4){
+          replicaThres=onlineNodeList.size()-1;
+      }else{
+          replicaThres=3;
+      }
+      System.out.println("replicaThres: "+replicaThres);
+
+      while(replicaCnt != replicaThres){
+          System.out.println("i: "+i);
+
+          if(onlineNodeList.get(i).online && i!=idx){
+              replicaCnt++;
+              System.out.println("replicaCnt: "+replicaCnt);
+              socket = new Socket(onlineNodeList.get(i).address.getHostName(), onlineNodeList.get(i).address.getPort());
+              System.out.println("backup key "+StringUtils.byteArrayToHexString(key)+" at "+onlineNodeList.get(i).address.getHostName());
+              //Send the message to the server
+              sendBytes(socket,backupBuffer);
+          }
+            
+          if(i < onlineNodeList.size()-1){
+              i++;
+          }else{
+              i=0;
           }
       }
     }
@@ -315,6 +336,7 @@ public class KVStore implements Runnable {
     }
    
     private void replica(byte[] key, byte[] value){
+        System.out.println("replicating: "+StringUtils.byteArrayToHexString(key));
         //Convert key bytes to string
         String keyStr = StringUtils.byteArrayToHexString(key);//Arrays.toString(key).replaceAll("(^\\[|\\]$)", "").replace(", ", "");
         //Re-hash the key using our hash function so it's consistent
