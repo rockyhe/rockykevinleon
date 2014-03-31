@@ -1,0 +1,5 @@
+1. run "bash toA2M7.sh" password: ecE6371~
+2. ssh a2m7@ssh.ece.ubc.ca
+3. ./prop.py
+
+Note: this deploys on the nodes that is in the nodeList.txt, make sure to update nodeList.txt if to deploy on extra nodes. The propogation of the nodeList.txt is also handled by the script. 

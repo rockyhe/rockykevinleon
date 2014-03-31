@@ -289,11 +289,7 @@ public class Server {
                         //sleep
                         Thread.currentThread().sleep(SLEEP_TIME);
                     }catch (Exception e) {
-                        try{
-                            Thread.currentThread().sleep(SLEEP_TIME);
-                        }catch(InterruptedException ex){
-                            System.out.println("Gossiping Error!");
-                        }
+                        System.out.println("Gossiping Error!");
                     }
 
                }
