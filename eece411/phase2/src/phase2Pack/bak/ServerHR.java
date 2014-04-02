@@ -1,4 +1,4 @@
-package phase2Pack;
+//package phase2Pack;
 
 import java.io.*;
 import java.net.*;
@@ -21,7 +21,11 @@ public class Server {
 	private static final int MAX_NUM_CLIENTS = 250;
 	private static final int BACKLOG_SIZE = 50;
 	private static final String NODE_LIST_FILE = "nodeList.txt";
-	private static final int CMD_SIZE = 1;
+    //Constants
+    private static final int CMD_SIZE = 1;
+    private static final int KEY_SIZE = 32;
+    private static final int VALUE_SIZE = 1024;
+
     private static final int GOSSIP_MSG = 255;
 	//Make sure this value is larger than number of physical nodes
 	//Since potential max nodes is 100, then use 100 * 100 = 10000
@@ -40,6 +44,7 @@ public class Server {
 	private static CopyOnWriteArrayList<KVStore.Node> onlineNodeList;
     //Sorted map for mapping hashed values to physical nodes
 	private static ConcurrentSkipListMap<String, KVStore.Node> nodes;
+    private static AtomicIntegerArray heartRateMonitor;
 
 	public static void main(String[] args)
 	{
@@ -65,20 +70,23 @@ public class Server {
 			} catch (Exception e) {
 				System.out.println("Error loading node list!");
 			}
-			
-			//Map the nodes to partitions
+
+            //Map the nodes to partitions
             partitionsPerNode = NUM_PARTITIONS / onlineNodeList.size();
 			constructNodeMap();
 			//displayNodeMap();
 			//verifyNodeMap();
-
-			//Initialize members
+            
+            //heartRates = new byte[Math.round((double)onlineNodeList.size()/8.0)];
+            //System.out.println("bytes needed: "+Math.round((double)onlineNodeList.size()/8.0));
+            
+            //Initialize members
 			servSock = new ServerSocket(PORT);
 			store = new ConcurrentHashMap<String,byte[]>();
 			backlog = new ArrayBlockingQueue<Socket>(BACKLOG_SIZE);
 			concurrentClientCount = new AtomicInteger(0);
 			shutdownFlag = new AtomicInteger(0);
-
+            heartRateMonitor = new AtomicIntegerArray(8);//8 integers, 32*8 = 8*32
 			//Create a fixed thread pool since we'll have at most MAX_NUM_CLIENTS concurrent threads
 			threadPool = Executors.newFixedThreadPool(MAX_NUM_CLIENTS);
 			System.out.println("Server is ready...");
@@ -100,7 +108,7 @@ public class Server {
             Thread timestampCheck = new Thread(new TimestampCheck());
             timestampCheck.start();
 
-		} catch (Exception e) {
+		} catch (IOException e) {
 			System.out.println("Internal Server Error!");
 		}
 	}
@@ -248,11 +256,38 @@ public class Server {
             public void run() {
                 Socket socket = null;
                 Random randomGenerator;
-                int randomInt=0;
-                int lastRandNum=-1;
-                byte[] gossipBuffer = new byte[CMD_SIZE];
-                gossipBuffer[0]=(byte)(GOSSIP_MSG & 0x000000FF);
-               
+                int randomInt=-1;                
+              
+                //int lastRandNum=-1;
+                byte[] gossipBuffer = new byte[CMD_SIZE+KEY_SIZE];
+                //gossipBuffer[0]=(byte)(GOSSIP_MSG & 0x000000FF);
+                ByteOrder.int2leb(GOSSIP_MSG, gossipBuffer, 0);   //Command byte - 1 byte
+                
+                //init every node's heart rate bit to true
+                //keep this heartRates local, cuz bitSet doesn't have concurrent character
+			    byte[] heartRateBytes;
+                BitSet heartRateBits;
+                int[] heartRateInts;
+                System.out.println("1");
+                heartRateBits = new BitSet(onlineNodeList.size());
+                System.out.println("2");
+                heartRateBits.set(0,onlineNodeList.size());
+                System.out.println("3");
+
+                heartRateBytes = ByteOrder.toByteArray(heartRateBits);
+                System.out.println("4");
+                heartRateInts = ByteOrder.toIntArray(heartRateBytes);
+                for(int i=0; i<heartRateInts.length;i++){
+                    heartRateMonitor.set(i,heartRateInts[i]);
+                }
+                System.out.println("5");
+                System.out.println("bits "+heartRateBits.cardinality());
+            
+                //convert heartRateBits to heartRate byte[]
+                heartRateBytes = ByteOrder.toByteArray(heartRateBits);
+                
+                System.out.println("init heart rates: "+Arrays.toString(heartRateBytes));
+
                 while(true){
                     try{
                         randomGenerator = new Random();
@@ -262,7 +297,7 @@ public class Server {
                             //do{
                             randomInt = randomGenerator.nextInt(onlineNodeList.size());
                             //}while(randomInt == lastRandNum);
-
+                            
                             if(!(onlineNodeList.get(randomInt).address.getHostName().equals(java.net.InetAddress.getLocalHost().getHostName()))){
                                 if(onlineNodeList.get(randomInt).online){ 
                                     break;
@@ -274,8 +309,9 @@ public class Server {
                             returnPartitions(randomInt);
                             onlineNodeList.get(randomInt).rejoin = false;
                         }
-                         
+                        System.out.println("heart rates: "+Arrays.toString(heartRateInts));
                         //System.out.println("gossiping to server: "+onlineNodeList.get(randomInt).address.getHostName());
+                        System.arraycopy(heartRateBytes, 0, gossipBuffer, CMD_SIZE, heartRateBytes.length); //Key bytes - 32 bytes
                         socket = new Socket(onlineNodeList.get(randomInt).address.getHostName(), PORT);
                         
                         //Send the message to the server
@@ -288,10 +324,16 @@ public class Server {
                         //lastRandNum = randomInt;
                         //sleep
                         Thread.currentThread().sleep(SLEEP_TIME);
-                    }catch (Exception e) {
+                    }catch (IOException e) {
+                        //chear offline's heart rate
+                        heartRateBits.clear(randomInt);
+                        heartRateBytes = ByteOrder.toByteArray(heartRateBits);
+
                         onlineNodeList.get(randomInt).online = false;
                         onlineNodeList.get(randomInt).t = new Timestamp(0);
                         System.out.println(onlineNodeList.get(randomInt).address.getHostName().toString()+" left");
+                    }catch (InterruptedException e) {
+                        System.out.println("Sleep error!");
                     }
 
                }

@@ -1,7 +1,7 @@
 from kvclient import KeyValueClient, InvalidKeyError
 
 SERVER = 'planetlab1.cs.ubc.ca:5000'
-KEY = '11'
+KEY = '1'
 VALUE = '1'
 
 client = KeyValueClient(SERVER)

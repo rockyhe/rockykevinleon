@@ -87,7 +87,9 @@ public class KVStore implements Runnable {
 			if (store.size() < KVSTORE_SIZE)
 			{
 				store.put(rehashedKeyStr, value);
+                System.out.println("before backup");
                 updateBackup(key,value);
+                System.out.println("after backup");
 			}
 			else
 			{
@@ -318,7 +320,7 @@ public class KVStore implements Runnable {
 		}
 	}
 
-    private void gossip()
+    private void gossip(byte[] key)
     {
         for (Node node : onlineNodeList){
         //    System.out.println("client sock: "+clntSock.getInetAddress().getHostName().toString());
@@ -392,7 +394,9 @@ public class KVStore implements Runnable {
 			case 254://FIXME
 				
             case 255: //gossip signal
-                gossip();
+                key = new byte[KEY_SIZE];
+                receiveBytes(clntSock, key);
+                gossip(key);
                 break;
             case 100:
                 key = new byte[KEY_SIZE];
