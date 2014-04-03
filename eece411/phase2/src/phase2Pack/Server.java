@@ -7,8 +7,10 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Random;
@@ -37,6 +39,8 @@ public class Server
     private static final int SLEEP_TIME = 1000; // 4 seconds
     private static final int PROP_BUFFER = 2000;
     private static final int OFFLINE_THRES = (int) (Math.log10(MAX_GOSSIP_MEMBERS) / Math.log10(2)) * SLEEP_TIME + PROP_BUFFER; // 10 seconds log(N)/log(2) * SLEEP_TIME
+    private static final int REPLICATION_FACTOR = 3;
+
     // Private members
     private static ServerSocket servSock;
     private static ConcurrentHashMap<String, byte[]> store;
@@ -48,6 +52,8 @@ public class Server
     private static CopyOnWriteArrayList<KVStore.Node> membership;
     // Sorted map for mapping hashed values to physical nodes
     private static ConcurrentSkipListMap<String, KVStore.Node> nodeMap;
+    // List that specifies the successor partitions (since we may skip partitions to ensure only unique physical nodes)
+    private static ConcurrentSkipListMap<String, ArrayList<String>> successorListMap;
 
     public static void main(String[] args)
     {
@@ -126,6 +132,35 @@ public class Server
             {
                 nodeMap.put(KVStore.getHash(node.address.getHostName() + i), node);
             }
+        }
+    }
+
+    private static void constructSuccessorLists()
+    {
+        int numSuccessors = REPLICATION_FACTOR - 1;
+        if (membership.size() <= numSuccessors)
+        {
+            // If the number of participating nodes is not larger than the backups desired,
+            // then just set to number of backups to the number of participating nodes
+            numSuccessors = membership.size() - 1;
+        }
+
+        // For each partition, construct its successor list
+        // Ensure there are no duplicate physical nodes in the successor list
+        ArrayList<String> successors;
+        Iterator<Map.Entry<String, KVStore.Node>> nodeMapIterator = nodeMap.entrySet().iterator();
+        while (nodeMapIterator.hasNext())
+        {
+            Map.Entry<String, KVStore.Node> entry = nodeMapIterator.next();
+            successors = new ArrayList<String>();
+            while (successors.size() < numSuccessors)
+            {
+                if (!successors.contains(entry.getValue()))
+                {
+
+                }
+            }
+            successorListMap.put(entry.getKey(), successors);
         }
     }
 
@@ -396,7 +431,7 @@ public class Server
                     // then service client at the head of queue
                     if (concurrentClientCount.get() < MAX_NUM_CLIENTS && (clntSock = backlog.poll()) != null)
                     {
-                        KVStore connection = new KVStore(clntSock, store, nodeMap, concurrentClientCount, shutdownFlag, membership);
+                        KVStore connection = new KVStore(clntSock, store, nodeMap, concurrentClientCount, shutdownFlag, membership, successorListMap);
                         // Create a new thread for each client connection
                         threadPool.execute(connection);
                         // System.out.println("New client executing.");

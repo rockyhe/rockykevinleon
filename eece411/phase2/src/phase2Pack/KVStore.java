@@ -8,6 +8,7 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.security.MessageDigest;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -68,7 +69,6 @@ public class KVStore implements Runnable
     private static final int VALUE_SIZE = 1024;
     private static final int ERR_SIZE = 1;
     private static final int KVSTORE_SIZE = 40000;
-    private static final int NUM_REPLICAS = 3;
 
     // Private members
     private Socket clntSock;
@@ -77,11 +77,12 @@ public class KVStore implements Runnable
     private AtomicInteger shutdown;
     private ConcurrentSkipListMap<String, Node> nodeMap;
     private CopyOnWriteArrayList<Node> membership;
+    private ConcurrentSkipListMap<String, ArrayList<String>> successorListMap;
 
     private byte errCode = 0x00; // Set default errCode to 0x00, so we can assume that operation is successful unless errCode is explicitly changed
 
     // Constructor
-    KVStore(Socket clientSocket, ConcurrentHashMap<String, byte[]> KVstore, ConcurrentSkipListMap<String, Node> nodeMap, AtomicInteger concurrentClientCount, AtomicInteger shutdownFlag, CopyOnWriteArrayList<Node> membershipList)
+    KVStore(Socket clientSocket, ConcurrentHashMap<String, byte[]> KVstore, ConcurrentSkipListMap<String, Node> nodeMap, AtomicInteger concurrentClientCount, AtomicInteger shutdownFlag, CopyOnWriteArrayList<Node> membershipList, ConcurrentSkipListMap<String, ArrayList<String>> successorListMap)
     {
         this.clntSock = clientSocket;
         this.store = KVstore;
@@ -89,6 +90,7 @@ public class KVStore implements Runnable
         this.clientCnt = concurrentClientCount;
         this.shutdown = shutdownFlag;
         this.membership = membershipList;
+        this.successorListMap = successorListMap;
     }
 
     /**
@@ -104,9 +106,6 @@ public class KVStore implements Runnable
         Map.Entry<String, Node> entry = getNodeEntryForHash(rehashedKeyStr);
 
         // Check if the node that should contain the hash key is this one, or if we need to do a remote call
-        System.out.println("LocalSocketAddress" + clntSock.getLocalSocketAddress());
-        System.out.println("LocalAddress" + clntSock.getLocalAddress());
-
         if (entry.getValue().Equals(clntSock.getLocalAddress()))
         {
             // System.out.println("Host name matches");
@@ -213,19 +212,11 @@ public class KVStore implements Runnable
         String rehashedKeyStr = getHash(StringUtils.byteArrayToHexString(key));
         // System.out.println("hashed key: " + rehashedKeyStr);
 
-        int replicasToUpdate = NUM_REPLICAS;
-        if (membership.size() <= NUM_REPLICAS)
-        {
-            // If the number of participating nodes is less than the number of replicas,
-            // then just set to number of replicas to update to the number of participating nodes
-            replicasToUpdate = membership.size() - 1;
-        }
-
         Socket socket = null;
         // Get the next NUM_REPLICAS partitions on the ring, by getting the tail map starting from the rehashed key
         ConcurrentNavigableMap<String, Node> tailMap = nodeMap.tailMap(rehashedKeyStr, false);
         Map.Entry<String, Node> nextPartition;
-        for (int i = 0; i < replicasToUpdate; i++)
+        for (int i = 0; i < successorListMap.size(); i++)
         {
             // Get the first entry in the tail map, then update the reference point for the tail map for the next entry
             // Make sure the chosen replica node is online and isn't this node
