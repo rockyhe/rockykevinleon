@@ -8,8 +8,10 @@ import java.net.Socket;
 import java.security.MessageDigest;
 import java.sql.Timestamp;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -37,26 +39,27 @@ public class KVStore implements Runnable
     private static final int VALUE_SIZE = 1024;
     private static final int ERR_SIZE = 1;
     private static final int KVSTORE_SIZE = 40000;
+    private static final int NUM_REPLICAS = 3;
 
     // Private members
     private Socket clntSock;
     private ConcurrentHashMap<String, byte[]> store;
     private AtomicInteger clientCnt;
     private AtomicInteger shutdown;
-    private ConcurrentSkipListMap<String, Node> nodes;
-    private CopyOnWriteArrayList<Node> onlineNodeList;
+    private ConcurrentSkipListMap<String, Node> nodeMap;
+    private CopyOnWriteArrayList<Node> membership;
 
     private byte errCode = 0x00; // Set default errCode to 0x00, so we can assume that operation is successful unless errCode is explicitly changed
 
     // Constructor
-    KVStore(Socket clientSocket, ConcurrentHashMap<String, byte[]> KVstore, ConcurrentSkipListMap<String, Node> nodes, AtomicInteger concurrentClientCount, AtomicInteger shutdownFlag, CopyOnWriteArrayList<Node> NodesAlive)
+    KVStore(Socket clientSocket, ConcurrentHashMap<String, byte[]> KVstore, ConcurrentSkipListMap<String, Node> nodeMap, AtomicInteger concurrentClientCount, AtomicInteger shutdownFlag, CopyOnWriteArrayList<Node> membershipList)
     {
         this.clntSock = clientSocket;
         this.store = KVstore;
-        this.nodes = nodes;
+        this.nodeMap = nodeMap;
         this.clientCnt = concurrentClientCount;
         this.shutdown = shutdownFlag;
-        this.onlineNodeList = NodesAlive;
+        this.membership = membershipList;
     }
 
     /**
@@ -64,23 +67,12 @@ public class KVStore implements Runnable
      */
     private void put(byte[] key, byte[] value) throws IOException // Propagate the exceptions to main
     {
-        // Convert key bytes to string
-        String keyStr = StringUtils.byteArrayToHexString(key);// Arrays.toString(key).replaceAll("(^\\[|\\]$)", "").replace(", ", "");
         // Re-hash the key using our hash function so it's consistent
-        String rehashedKeyStr = getHash(keyStr);
-        // System.out.println("key: " + keyStr);
+        String rehashedKeyStr = getHash(StringUtils.byteArrayToHexString(key));
+        // System.out.println("hashed key: " + rehashedKeyStr);
 
-        // Get the node with first hashed value that is greater than or equal to the key (i.e. clockwise on the ring)
-        // since each node stores keys up to its hashed value
-        // System.out.println("Rehashed key string: " + rehashedKeyStr);
-        Map.Entry<String, Node> entry = nodes.ceilingEntry(rehashedKeyStr);
-        // If ceiling entry is null, then we've wrapped around the entire node ring, so set to first node
-        if (entry == null)
-        {
-            // System.out.println("Setting entry to first entry");
-            entry = nodes.firstEntry();
-        }
-        // System.out.println("Entry hash: " + entry.getKey());
+        // Get the node responsible for the partition with first hashed value that is greater than or equal to the key (i.e. clockwise on the ring)
+        Map.Entry<String, Node> entry = getNodeEntryForHash(rehashedKeyStr);
 
         // Check if the node that should contain the hash key is this one, or if we need to do a remote call
         if (entry.getValue().address.getHostName().equals(clntSock.getLocalAddress().getHostName()))
@@ -110,26 +102,15 @@ public class KVStore implements Runnable
      */
     private byte[] get(byte[] key) throws IOException // Propagate the exceptions to main
     {
-        // Convert key bytes to string
-        String keyStr = StringUtils.byteArrayToHexString(key);// Arrays.toString(key).replaceAll("(^\\[|\\]$)", "").replace(", ", "");
         // Re-hash the key using our hash function so it's consistent
-        String rehashedKeyStr = getHash(keyStr);
-        // System.out.println("key: " + keyStr);
+        String rehashedKeyStr = getHash(StringUtils.byteArrayToHexString(key));
+        // System.out.println("hashed key: " + rehashedKeyStr);
 
         // If key doesn't exist on this node's local store, then route to node that should contain it
         if (!store.containsKey(rehashedKeyStr))
         {
-            // Get the node with first hashed value that is greater than or equal to the key (i.e. clockwise on the ring)
-            // since each node stores keys up to its hashed value
-            // System.out.println("Rehashed key string: " + rehashedKeyStr);
-            Map.Entry<String, Node> entry = nodes.ceilingEntry(rehashedKeyStr);
-            // If ceiling entry is null, then we've wrapped around the entire node ring, so set to first node
-            if (entry == null)
-            {
-                // System.out.println("Setting entry to first entry");
-                entry = nodes.firstEntry();
-            }
-            // System.out.println("Entry hash: " + entry.getKey());
+            // Get the node responsible for the partition with first hashed value that is greater than or equal to the key (i.e. clockwise on the ring)
+            Map.Entry<String, Node> entry = getNodeEntryForHash(rehashedKeyStr);
 
             // If the node that should contain it is this, then key doesn't exist
             if (entry.getValue().address.getHostName().equals(clntSock.getLocalAddress().getHostName()))
@@ -150,25 +131,14 @@ public class KVStore implements Runnable
      */
     private void remove(byte[] key) throws IOException // Propagate the exceptions to main
     {
-        // Convert key bytes to string
-        String keyStr = StringUtils.byteArrayToHexString(key);// Arrays.toString(key).replaceAll("(^\\[|\\]$)", "").replace(", ", "");
         // Re-hash the key using our hash function so it's consistent
-        String rehashedKeyStr = getHash(keyStr);
-        // System.out.println("key: " + keyStr);
+        String rehashedKeyStr = getHash(StringUtils.byteArrayToHexString(key));
+        // System.out.println("hashed key: " + rehashedKeyStr);
 
         if (!store.containsKey(rehashedKeyStr))
         {
-            // Get the node with first hashed value that is greater than or equal to the key (i.e. clockwise on the ring)
-            // since each node stores keys up to its hashed value
-            // System.out.println("Rehashed key string: " + rehashedKeyStr);
-            Map.Entry<String, Node> entry = nodes.ceilingEntry(rehashedKeyStr);
-            // If ceiling entry is null, then we've wrapped around the entire node ring, so set to first node
-            if (entry == null)
-            {
-                // System.out.println("Setting entry to first entry");
-                entry = nodes.firstEntry();
-            }
-            // System.out.println("Entry hash: " + entry.getKey());
+            // Get the node responsible for the partition with first hashed value that is greater than or equal to the key (i.e. clockwise on the ring)
+            Map.Entry<String, Node> entry = getNodeEntryForHash(rehashedKeyStr);
 
             // If the node that should contain it is this, then key doesn't exist
             if (entry.getValue().address.getHostName().equals(clntSock.getLocalAddress().getHostName()))
@@ -191,31 +161,59 @@ public class KVStore implements Runnable
 
     private void updateReplicas(byte[] key, byte[] value) throws IOException
     {
-        // get a list of online nodes that can backup the update
+        byte[] sendBuffer = new byte[CMD_SIZE + KEY_SIZE + VALUE_SIZE];
+        ByteOrder.int2leb(100, sendBuffer, 0); // Command byte - 1 byte
+        System.arraycopy(key, 0, sendBuffer, CMD_SIZE, KEY_SIZE); // Key bytes - 32 bytes
+        System.arraycopy(value, 0, sendBuffer, CMD_SIZE + KEY_SIZE, VALUE_SIZE); // Value bytes - 1024 bytes
+
+        // Re-hash the key using our hash function so it's consistent
+        String rehashedKeyStr = getHash(StringUtils.byteArrayToHexString(key));
+        // System.out.println("hashed key: " + rehashedKeyStr);
+
+        int replicasToUpdate = NUM_REPLICAS;
+        if (membership.size() <= NUM_REPLICAS)
+        {
+            // If the number of participating nodes is less than the number of replicas,
+            // then just set to number of replicas to update to the number of participating nodes
+            replicasToUpdate = membership.size() - 1;
+        }
+
         Socket socket = null;
-        byte[] backupBuffer = new byte[CMD_SIZE + KEY_SIZE + VALUE_SIZE];
-        ByteOrder.int2leb(100, backupBuffer, 0); // Command byte - 1 byte
-        System.arraycopy(key, 0, backupBuffer, CMD_SIZE, KEY_SIZE); // Key bytes - 32 bytes
-        System.arraycopy(value, 0, backupBuffer, CMD_SIZE + KEY_SIZE, VALUE_SIZE); // Value bytes - 1024 bytes
-        // int idx = onlineNodeList.indexOf(java.net.InetAddress.getLocalHost().getHostName());
-        // System.out.println("idx "+idx);
+        // Get the next NUM_REPLICAS partitions on the ring, by getting the tail map starting from the rehashed key
+        ConcurrentNavigableMap<String, Node> tailMap = nodeMap.tailMap(rehashedKeyStr, false);
+        Iterator<Map.Entry<String, Node>> tailMapIterator = tailMap.entrySet().iterator();
+        Map.Entry<String, Node> replicaNode;
+        for (int i = 0; i < replicasToUpdate; i++)
+        {
+            if (tailMapIterator.hasNext())
+            {
+                replicaNode = tailMapIterator.next();
+            }
+            else
+            {
+                replicaNode = nodeMap.firstEntry();
+            }
+
+            socket = new Socket(replicaNode.getValue().address.getHostName(), replicaNode.getValue().address.getPort());
+            sendBytes(socket, sendBuffer);
+        }
+
         int i = Global.myIndex + 1;
         int replicaCnt = 0;
         int replicaThres;
 
-        if (onlineNodeList.size() < 4)
+        if (membership.size() < 4)
         {
-            replicaThres = onlineNodeList.size() - 1;
+            replicaThres = membership.size() - 1;
         }
         else
         {
-            replicaThres = 3;
+            replicaThres = NUM_REPLICAS;
         }
 
         while (replicaCnt != replicaThres)
         {
-
-            if (i < onlineNodeList.size() - 1)
+            if (i < membership.size() - 1)
             {
                 i++;
             }
@@ -224,14 +222,14 @@ public class KVStore implements Runnable
                 i = 0;
             }
 
-            if (onlineNodeList.get(i).online && i != Global.myIndex)
+            if (membership.get(i).online && i != Global.myIndex)
             {
                 replicaCnt++;
                 System.out.println("replicaCnt: " + replicaCnt);
-                socket = new Socket(onlineNodeList.get(i).address.getHostName(), onlineNodeList.get(i).address.getPort());
-                System.out.println("backup key " + StringUtils.byteArrayToHexString(key) + " at " + onlineNodeList.get(i).address.getHostName());
+                socket = new Socket(membership.get(i).address.getHostName(), membership.get(i).address.getPort());
+                System.out.println("backup key " + StringUtils.byteArrayToHexString(key) + " at " + membership.get(i).address.getHostName());
                 // Send the message to the server
-                sendBytes(socket, backupBuffer);
+                sendBytes(socket, sendBuffer);
             }
 
         }
@@ -307,10 +305,10 @@ public class KVStore implements Runnable
         shutdown.getAndIncrement();
 
         // Update online status to false and timestamp to 0 of self node, so it propagates faster
-        int index = onlineNodeList.indexOf(clntSock.getInetAddress().getHostName());
+        int index = membership.indexOf(clntSock.getInetAddress().getHostName());
         if (index >= 0)
         {
-            Node self = onlineNodeList.get(index);
+            Node self = membership.get(index);
             self.online = false;
             self.t = new Timestamp(0);
         }
@@ -330,7 +328,7 @@ public class KVStore implements Runnable
 
     private void gossip(byte[] key)
     {
-        for (Node node : onlineNodeList)
+        for (Node node : membership)
         {
             // System.out.println("client sock: "+clntSock.getInetAddress().getHostName().toString());
             if (node.address.getHostName().equals(clntSock.getInetAddress().getHostName()))
@@ -494,6 +492,21 @@ public class KVStore implements Runnable
     {
         OutputStream out = destSock.getOutputStream();
         out.write(src);
+    }
+
+    private Map.Entry<String, Node> getNodeEntryForHash(String hashedKey)
+    {
+        // Get the node responsible for the partition with first hashed value that is greater than or equal to the key (i.e. clockwise on the ring)
+        // System.out.println("Hashed key string: " + hashedKey);
+        Map.Entry<String, Node> entry = nodeMap.ceilingEntry(hashedKey);
+        // If ceiling entry is null, then we've wrapped around the entire node ring, so set to first node
+        if (entry == null)
+        {
+            // System.out.println("Setting entry to first entry");
+            entry = nodeMap.firstEntry();
+        }
+        // System.out.println("Entry hash: " + entry.getKey());
+        return entry;
     }
 
     public static String getHash(String msg)
