@@ -14,7 +14,7 @@ import java.sql.Timestamp;
 import java.util.Date;
 import java.lang.Math;
 
-public class Server {
+public class ServerHR {
 	//Constants
 	private static final int PORT = 5000;
 	private static final int MAX_GOSSIP_MEMBERS = 16;
