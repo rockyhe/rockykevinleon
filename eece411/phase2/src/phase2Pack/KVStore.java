@@ -33,7 +33,7 @@ public class KVStore implements Runnable {
 	private static final int VALUE_SIZE = 1024;
 	private static final int ERR_SIZE = 1;
 	private static final int KVSTORE_SIZE = 40000;
-    private static final int NUM_REPLICA = 3;
+
 	//Private members
 	private Socket clntSock;
 	private ConcurrentHashMap<String, byte[]> store;
@@ -87,9 +87,7 @@ public class KVStore implements Runnable {
 			if (store.size() < KVSTORE_SIZE)
 			{
 				store.put(rehashedKeyStr, value);
-                System.out.println("before backup");
                 updateBackup(key,value);
-                System.out.println("after backup");
 			}
 			else
 			{
@@ -205,7 +203,7 @@ public class KVStore implements Runnable {
       if(onlineNodeList.size()<4){
           replicaThres=onlineNodeList.size()-1;
       }else{
-          replicaThres=NUM_REPLICA;
+          replicaThres=3;
       }
 
       while(replicaCnt != replicaThres){
@@ -320,7 +318,7 @@ public class KVStore implements Runnable {
 		}
 	}
 
-    private void gossip(byte[] key)
+    private void gossip()
     {
         for (Node node : onlineNodeList){
         //    System.out.println("client sock: "+clntSock.getInetAddress().getHostName().toString());
@@ -394,9 +392,7 @@ public class KVStore implements Runnable {
 			case 254://FIXME
 				
             case 255: //gossip signal
-                key = new byte[KEY_SIZE];
-                receiveBytes(clntSock, key);
-                gossip(key);
+                gossip();
                 break;
             case 100:
                 key = new byte[KEY_SIZE];
