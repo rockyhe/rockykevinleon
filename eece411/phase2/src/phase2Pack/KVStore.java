@@ -33,7 +33,7 @@ public class KVStore implements Runnable {
 	private static final int VALUE_SIZE = 1024;
 	private static final int ERR_SIZE = 1;
 	private static final int KVSTORE_SIZE = 40000;
-
+    private static final int NUM_REPLICA = 3;
 	//Private members
 	private Socket clntSock;
 	private ConcurrentHashMap<String, byte[]> store;
@@ -205,7 +205,7 @@ public class KVStore implements Runnable {
       if(onlineNodeList.size()<4){
           replicaThres=onlineNodeList.size()-1;
       }else{
-          replicaThres=3;
+          replicaThres=NUM_REPLICA;
       }
 
       while(replicaCnt != replicaThres){
