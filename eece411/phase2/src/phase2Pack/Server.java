@@ -248,7 +248,7 @@ public class Server {
             public void run() {
                 Socket socket = null;
                 Random randomGenerator;
-                int randomInt;
+                int randomInt=0;
                 int lastRandNum=-1;
                 byte[] gossipBuffer = new byte[CMD_SIZE];
                 gossipBuffer[0]=(byte)(GOSSIP_MSG & 0x000000FF);
@@ -289,7 +289,9 @@ public class Server {
                         //sleep
                         Thread.currentThread().sleep(SLEEP_TIME);
                     }catch (Exception e) {
-                        System.out.println("Gossiping Error!");
+                        onlineNodeList.get(randomInt).online = false;
+                        onlineNodeList.get(randomInt).t=new Timestamp(0);
+                        System.out.println(onlineNodeList.get(randomInt).address.getHostName().toString()+" left");
                     }
 
                }
