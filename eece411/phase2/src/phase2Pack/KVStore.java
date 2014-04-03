@@ -156,15 +156,26 @@ public class KVStore implements Runnable
         {
             store.remove(rehashedKeyStr);
             // System.out.println("Remove command succeeded!");
+            updateReplicas(key, null);
         }
     }
 
     private void updateReplicas(byte[] key, byte[] value) throws IOException
     {
-        byte[] sendBuffer = new byte[CMD_SIZE + KEY_SIZE + VALUE_SIZE];
-        ByteOrder.int2leb(100, sendBuffer, 0); // Command byte - 1 byte
-        System.arraycopy(key, 0, sendBuffer, CMD_SIZE, KEY_SIZE); // Key bytes - 32 bytes
-        System.arraycopy(value, 0, sendBuffer, CMD_SIZE + KEY_SIZE, VALUE_SIZE); // Value bytes - 1024 bytes
+        byte[] sendBuffer;
+        if (value != null)
+        {
+            sendBuffer = new byte[CMD_SIZE + KEY_SIZE + VALUE_SIZE];
+            ByteOrder.int2leb(101, sendBuffer, 0); // Command byte - 1 byte
+            System.arraycopy(key, 0, sendBuffer, CMD_SIZE, KEY_SIZE); // Key bytes - 32 bytes
+            System.arraycopy(value, 0, sendBuffer, CMD_SIZE + KEY_SIZE, VALUE_SIZE); // Value bytes - 1024 bytes
+        }
+        else
+        {
+            sendBuffer = new byte[CMD_SIZE + KEY_SIZE];
+            ByteOrder.int2leb(103, sendBuffer, 0); // Command byte - 1 byte
+            System.arraycopy(key, 0, sendBuffer, CMD_SIZE, KEY_SIZE); // Key bytes - 32 bytes
+        }
 
         // Re-hash the key using our hash function so it's consistent
         String rehashedKeyStr = getHash(StringUtils.byteArrayToHexString(key));
@@ -326,7 +337,7 @@ public class KVStore implements Runnable
         }
     }
 
-    private void gossip(byte[] key)
+    private void gossip()
     {
         for (Node node : membership)
         {
@@ -352,7 +363,14 @@ public class KVStore implements Runnable
         String keyStr = StringUtils.byteArrayToHexString(key);// Arrays.toString(key).replaceAll("(^\\[|\\]$)", "").replace(", ", "");
         // Re-hash the key using our hash function so it's consistent
         String rehashedKeyStr = getHash(keyStr);
-        store.put(rehashedKeyStr, value);
+        if (value != null)
+        {
+            store.put(rehashedKeyStr, value);
+        }
+        else
+        {
+            store.remove(rehashedKeyStr);
+        }
     }
 
     public void run()
@@ -405,16 +423,18 @@ public class KVStore implements Runnable
             case 254:// FIXME
 
             case 255: // gossip signal
-                key = new byte[KEY_SIZE];
-                receiveBytes(clntSock, key);
-                gossip(key);
+                gossip();
                 break;
-            case 100:
+            case 101:
                 key = new byte[KEY_SIZE];
                 receiveBytes(clntSock, key);
                 value = new byte[VALUE_SIZE];
                 receiveBytes(clntSock, value);
                 replica(key, value);
+            case 103:
+                key = new byte[KEY_SIZE];
+                receiveBytes(clntSock, key);
+                replica(key, null);
             default: // Unrecognized command
                 errCode = 0x05;
                 break;
