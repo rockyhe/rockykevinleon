@@ -237,12 +237,9 @@ public class KVStore implements Runnable
                     nextPartition = nodeMap.firstEntry();
                 }
 
-                if (!nextPartition.getValue().Equals(clntSock.getLocalAddress()))
+                if (!nextPartition.getValue().Equals(clntSock.getLocalAddress()) && nextPartition.getValue().online)
                 {
-                    if (nextPartition.getValue().online)
-                    {
-                        break;
-                    }
+                    break;
                 }
                 tailMap = nodeMap.tailMap(nextPartition.getKey(), false);
             }
@@ -571,7 +568,7 @@ public class KVStore implements Runnable
         case 0x05:
             return "Unrecognized command";
         case 0x21:
-            return "Node is offline";
+            return "Attemped to forward to an offline node";
         default:
             return "Error code not handled";
         }
