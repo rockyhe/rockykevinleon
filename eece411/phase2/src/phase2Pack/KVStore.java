@@ -3,12 +3,12 @@ package phase2Pack;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.security.MessageDigest;
 import java.sql.Timestamp;
 import java.util.Date;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentNavigableMap;
@@ -30,6 +30,35 @@ public class KVStore implements Runnable
         {
             this.address = addr;
             this.online = alive;
+        }
+
+        public boolean Equals(InetAddress addr)
+        {
+            if (addr != null)
+            {
+                if (addr.getHostName().equals(this.address.getHostName()))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public boolean Equals(Node node)
+        {
+            if (node != null)
+            {
+                if (this == node)
+                {
+                    return true;
+                }
+
+                if (node.address.getHostName().equals(this.address.getHostName()))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 
@@ -75,7 +104,10 @@ public class KVStore implements Runnable
         Map.Entry<String, Node> entry = getNodeEntryForHash(rehashedKeyStr);
 
         // Check if the node that should contain the hash key is this one, or if we need to do a remote call
-        if (entry.getValue().address.getHostName().equals(clntSock.getLocalAddress().getHostName()))
+        System.out.println("LocalSocketAddress" + clntSock.getLocalSocketAddress());
+        System.out.println("LocalAddress" + clntSock.getLocalAddress());
+
+        if (entry.getValue().Equals(clntSock.getLocalAddress()))
         {
             // System.out.println("Host name matches");
             if (store.size() < KVSTORE_SIZE)
@@ -113,7 +145,7 @@ public class KVStore implements Runnable
             Map.Entry<String, Node> entry = getNodeEntryForHash(rehashedKeyStr);
 
             // If the node that should contain it is this, then key doesn't exist
-            if (entry.getValue().address.getHostName().equals(clntSock.getLocalAddress().getHostName()))
+            if (entry.getValue().Equals(clntSock.getLocalAddress()))
             {
                 // System.out.println("Host name matches");
                 errCode = 0x01;
@@ -141,7 +173,7 @@ public class KVStore implements Runnable
             Map.Entry<String, Node> entry = getNodeEntryForHash(rehashedKeyStr);
 
             // If the node that should contain it is this, then key doesn't exist
-            if (entry.getValue().address.getHostName().equals(clntSock.getLocalAddress().getHostName()))
+            if (entry.getValue().Equals(clntSock.getLocalAddress()))
             {
                 // System.out.println("Host name matches");
                 errCode = 0x01;
@@ -192,57 +224,33 @@ public class KVStore implements Runnable
         Socket socket = null;
         // Get the next NUM_REPLICAS partitions on the ring, by getting the tail map starting from the rehashed key
         ConcurrentNavigableMap<String, Node> tailMap = nodeMap.tailMap(rehashedKeyStr, false);
-        Iterator<Map.Entry<String, Node>> tailMapIterator = tailMap.entrySet().iterator();
-        Map.Entry<String, Node> replicaNode;
+        Map.Entry<String, Node> nextPartition;
         for (int i = 0; i < replicasToUpdate; i++)
         {
-            if (tailMapIterator.hasNext())
+            // Get the first entry in the tail map, then update the reference point for the tail map for the next entry
+            // Make sure the chosen replica node is online and isn't this node
+            while (true)
             {
-                replicaNode = tailMapIterator.next();
-            }
-            else
-            {
-                replicaNode = nodeMap.firstEntry();
+                nextPartition = tailMap.firstEntry();
+                if (nextPartition == null)
+                {
+                    nextPartition = nodeMap.firstEntry();
+                }
+
+                if (!nextPartition.getValue().Equals(clntSock.getLocalAddress()))
+                {
+                    if (nextPartition.getValue().online)
+                    {
+                        break;
+                    }
+                }
+                tailMap = nodeMap.tailMap(nextPartition.getKey(), false);
             }
 
-            socket = new Socket(replicaNode.getValue().address.getHostName(), replicaNode.getValue().address.getPort());
+            socket = new Socket(nextPartition.getValue().address.getHostName(), nextPartition.getValue().address.getPort());
             sendBytes(socket, sendBuffer);
-        }
 
-        int i = Global.myIndex + 1;
-        int replicaCnt = 0;
-        int replicaThres;
-
-        if (membership.size() < 4)
-        {
-            replicaThres = membership.size() - 1;
-        }
-        else
-        {
-            replicaThres = NUM_REPLICAS;
-        }
-
-        while (replicaCnt != replicaThres)
-        {
-            if (i < membership.size() - 1)
-            {
-                i++;
-            }
-            else
-            {
-                i = 0;
-            }
-
-            if (membership.get(i).online && i != Global.myIndex)
-            {
-                replicaCnt++;
-                System.out.println("replicaCnt: " + replicaCnt);
-                socket = new Socket(membership.get(i).address.getHostName(), membership.get(i).address.getPort());
-                System.out.println("backup key " + StringUtils.byteArrayToHexString(key) + " at " + membership.get(i).address.getHostName());
-                // Send the message to the server
-                sendBytes(socket, sendBuffer);
-            }
-
+            tailMap = nodeMap.tailMap(nextPartition.getKey(), false);
         }
     }
 
@@ -342,7 +350,7 @@ public class KVStore implements Runnable
         for (Node node : membership)
         {
             // System.out.println("client sock: "+clntSock.getInetAddress().getHostName().toString());
-            if (node.address.getHostName().equals(clntSock.getInetAddress().getHostName()))
+            if (node.Equals(clntSock.getInetAddress()))
             {
                 if (!node.online)
                 {

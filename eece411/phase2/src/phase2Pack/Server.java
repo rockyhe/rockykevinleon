@@ -64,11 +64,6 @@ public class Server
                     String nodeName = s.next();
                     node = new KVStore.Node(new InetSocketAddress(nodeName, PORT), true);
                     membership.add(node);
-                    if (nodeName.equals(java.net.InetAddress.getLocalHost().getHostName()))
-                    {
-                        Global.myIndex = membership.indexOf(node);
-                        System.out.println("this host's index: " + Global.myIndex);
-                    }
                 }
                 s.close();
             } catch (FileNotFoundException e)
@@ -145,7 +140,7 @@ public class Server
             for (int i = 0; i < partitionsPerNode; ++i)
             {
                 // if current partition's hash key's value (node) is the rejoin node
-                if (node.address.getHostName().equals(membership.get(idx).address.getHostName()))
+                if (node.Equals(membership.get(idx)))
                 {
                     // replace it with the next node, or the first node
                     // System.out.println("rejoined node: "+onlineNodeList.get(idx).address.toString());
@@ -171,7 +166,7 @@ public class Server
             {
                 j = 0;
                 // if current partition's hash key's value (node) is the offline node
-                if (nodeMap.get(KVStore.getHash(node.address.getHostName() + i)).address.getHostName().equals(membership.get(idx).address.getHostName()))
+                if (nodeMap.get(KVStore.getHash(node.address.getHostName() + i)).Equals(membership.get(idx)))
                 {
                     // replace it with the next node, or the first node
                     // System.out.println("hash key for offline node: "+KVStore.getHash(node.address.getHostName() + i).toString());
@@ -252,7 +247,7 @@ public class Server
                 {
                     try
                     {
-                        if (!(node.address.getHostName().equals(java.net.InetAddress.getLocalHost().getHostName())))
+                        if (!(node.Equals(java.net.InetAddress.getLocalHost())))
                         {
                             Thread.currentThread().sleep(SLEEP_TIME);
                             currentTime = new Timestamp(new Date().getTime());
@@ -299,7 +294,7 @@ public class Server
                         randomInt = randomGenerator.nextInt(membership.size());
                         // }while(randomInt == lastRandNum);
 
-                        if (!(membership.get(randomInt).address.getHostName().equals(java.net.InetAddress.getLocalHost().getHostName())))
+                        if (!(membership.get(randomInt).Equals(java.net.InetAddress.getLocalHost())))
                         {
                             if (membership.get(randomInt).online)
                             {
