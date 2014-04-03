@@ -38,7 +38,7 @@ public class Server {
 	private static ExecutorService threadPool;
     private static int partitionsPerNode;
 	private static CopyOnWriteArrayList<KVStore.Node> onlineNodeList;
-    //Sorted map for mapping hashed values to physical nodes
+	//Sorted map for mapping hashed values to physical nodes
 	private static ConcurrentSkipListMap<String, KVStore.Node> nodes;
 
 	public static void main(String[] args)
@@ -47,17 +47,11 @@ public class Server {
 			//Load the list of nodes
 			try {
 				Scanner s = new Scanner(new File(NODE_LIST_FILE));
-                KVStore.Node node;
 				onlineNodeList = new CopyOnWriteArrayList<KVStore.Node>();
 				while (s.hasNext())
 				{
-					String nodeName = s.next();
-                    node = new KVStore.Node(new InetSocketAddress(nodeName, PORT), true);
-					onlineNodeList.add(node);
-                    if(nodeName.equals(java.net.InetAddress.getLocalHost().getHostName())){
-                        Global.myIndex = onlineNodeList.indexOf(node);
-                        System.out.println("this host's index: "+Global.myIndex);
-                    }
+					String node = s.next();
+					onlineNodeList.add(new KVStore.Node(new InetSocketAddress(node, PORT), true));
 				}
 				s.close();
 			} catch (FileNotFoundException e) {
@@ -330,6 +324,7 @@ public class Server {
 					}
 					else
 					{
+						//FIXME it's better to actively announce it rather than passively waiting for gossip
 						System.out.println("Server has received shutdown command. No longer accepting connections!");
 						//If shutdown flag is set to 2, then we have finished processing existing client requests and it's safe to shutdown
 						if (shutdownFlag.get() == 2)

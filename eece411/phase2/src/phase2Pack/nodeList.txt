@@ -1,3 +1,6 @@
 planetlab1.cs.ubc.ca
 planetlab03.cs.washington.edu
+<<<<<<< HEAD
 planetlab4.cs.uoregon.edu
+=======
+>>>>>>> parent of c0c2ba1... replica WORKING! , preppy in progress

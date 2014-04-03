@@ -196,9 +196,9 @@ public class KVStore implements Runnable {
       ByteOrder.int2leb(100, backupBuffer, 0);   //Command byte - 1 byte
       System.arraycopy(key, 0, backupBuffer, CMD_SIZE, KEY_SIZE); //Key bytes - 32 bytes
       System.arraycopy(value, 0, backupBuffer, CMD_SIZE + KEY_SIZE, VALUE_SIZE); //Value bytes - 1024 bytes
-      //int idx = onlineNodeList.indexOf(java.net.InetAddress.getLocalHost().getHostName());
-      //System.out.println("idx "+idx);
-      int i=Global.myIndex+1;
+      int idx = onlineNodeList.indexOf(java.net.InetAddress.getLocalHost().getHostName());
+      System.out.println("idx "+idx);
+      int i=idx+1;
       int replicaCnt=0;
       int replicaThres;
 
@@ -207,16 +207,12 @@ public class KVStore implements Runnable {
       }else{
           replicaThres=NUM_REPLICA;
       }
+      System.out.println("replicaThres: "+replicaThres);
 
       while(replicaCnt != replicaThres){
-          
-          if(i < onlineNodeList.size()-1){
-              i++;
-          }else{
-              i=0;
-          }
+          System.out.println("i: "+i);
 
-          if(onlineNodeList.get(i).online && i != Global.myIndex){
+          if(onlineNodeList.get(i).online && i!=idx){
               replicaCnt++;
               System.out.println("replicaCnt: "+replicaCnt);
               socket = new Socket(onlineNodeList.get(i).address.getHostName(), onlineNodeList.get(i).address.getPort());
@@ -225,6 +221,11 @@ public class KVStore implements Runnable {
               sendBytes(socket,backupBuffer);
           }
             
+          if(i < onlineNodeList.size()-1){
+              i++;
+          }else{
+              i=0;
+          }
       }
     }
 
