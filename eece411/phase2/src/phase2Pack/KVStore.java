@@ -183,17 +183,25 @@ public class KVStore implements Runnable {
 		else
 		{
 			store.remove(rehashedKeyStr);
-			//System.out.println("Remove command succeeded!");
+			updateBackup(key,null);
+            //System.out.println("Remove command succeeded!");
 		}
 	}
 
     private void updateBackup(byte[] key, byte[] value) throws IOException{
         //get a list of online nodes that can backup the update
       Socket socket = null;
-      byte[] backupBuffer = new byte[CMD_SIZE + KEY_SIZE + VALUE_SIZE];
-      ByteOrder.int2leb(100, backupBuffer, 0);   //Command byte - 1 byte
-      System.arraycopy(key, 0, backupBuffer, CMD_SIZE, KEY_SIZE); //Key bytes - 32 bytes
-      System.arraycopy(value, 0, backupBuffer, CMD_SIZE + KEY_SIZE, VALUE_SIZE); //Value bytes - 1024 bytes
+      byte[] backupBuffer;
+      if(value != null){
+          backupBuffer=new byte[CMD_SIZE + KEY_SIZE + VALUE_SIZE];
+          ByteOrder.int2leb(101, backupBuffer, 0);   //Command byte - 1 byte
+          System.arraycopy(key, 0, backupBuffer, CMD_SIZE, KEY_SIZE); //Key bytes - 32 bytes
+          System.arraycopy(value, 0, backupBuffer, CMD_SIZE + KEY_SIZE, VALUE_SIZE); //Value bytes - 1024 bytes
+      }else{
+          backupBuffer=new byte[CMD_SIZE+KEY_SIZE];
+          ByteOrder.int2leb(103, backupBuffer, 0);   //Command byte - 1 byte
+          System.arraycopy(key, 0, backupBuffer, CMD_SIZE, KEY_SIZE); //Key bytes - 32 bytes
+      }
       //int idx = onlineNodeList.indexOf(java.net.InetAddress.getLocalHost().getHostName());
       //System.out.println("idx "+idx);
       int i=Global.myIndex+1;
@@ -340,7 +348,11 @@ public class KVStore implements Runnable {
         String keyStr = StringUtils.byteArrayToHexString(key);//Arrays.toString(key).replaceAll("(^\\[|\\]$)", "").replace(", ", "");
         //Re-hash the key using our hash function so it's consistent
         String rehashedKeyStr = getHash(keyStr);
-        store.put(rehashedKeyStr, value);
+        if(value != null){
+            store.put(rehashedKeyStr, value);
+        }else{
+            store.remove(rehashedKeyStr);
+        }
     }
 
 	public void run()
@@ -394,13 +406,17 @@ public class KVStore implements Runnable {
             case 255: //gossip signal
                 gossip();
                 break;
-            case 100:
+            case 101:
                 key = new byte[KEY_SIZE];
                 receiveBytes(clntSock,key);
                 value = new byte[VALUE_SIZE];
                 receiveBytes(clntSock,value);
                 replica(key,value);
-			default: //Unrecognized command
+			case 103:
+                key = new byte[KEY_SIZE];
+                receiveBytes(clntSock,key);
+                replica(key,null);
+            default: //Unrecognized command
 				errCode = 0x05;
 				break;
 			}
