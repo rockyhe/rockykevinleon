@@ -143,8 +143,8 @@ public class KVStore implements Runnable
 			// Get the node responsible for the partition with first hashed value that is greater than or equal to the key (i.e. clockwise on the ring)
 			Map.Entry<String, Node> primary = getNodeEntryForHash(rehashedKeyStr);
 
-			// If the node that should contain it is this or if the primary is offline, then check its replicas
-			if (!primary.getValue().online || primary.getValue().Equals(clntSock.getLocalAddress()))
+			// If the node that should contain it is this, then check its replicas
+			if (primary.getValue().Equals(clntSock.getLocalAddress()))
 			{
 				// System.out.println("Host name matches");
 				// Check each replica, by getting the successor list belonging to this partition
