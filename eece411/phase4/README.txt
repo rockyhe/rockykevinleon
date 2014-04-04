@@ -1,11 +1,11 @@
-Phase 3
+Phase 4
 
 Group members:
 Rocky He 	74963091
 Leon Lixing Yu 	75683094
 Hui Tan		52648094
 
-Server is on nodes:
+Server is on nodes All is on port 5000
 see attached nodeList.txt file
 
 
@@ -13,6 +13,9 @@ see attached nodeList.txt file
 Implementations
     Socket Connection Backlog Queue, Multi-threaded Server, and Threadpool
 Previously in phase 2, we used a simple AtomicInteger to track the number of concurrent clients and then deny incoming connections after that integer reached a certain value. We now added a backlog queue (size of which is set to 50) for incoming socket connections (i.e. Queue<Socket>) and created a Producer thread and a Consumer thread for the server. The Producer thread simply performs socket.accept() and continuously listens for incoming connections and puts them into the queue, as long as the queue isn't full (otherwise we throw the system overload error). The Consumer thread polls the queue and processes incoming client requests in the queue by creating a new thread instance of KVStore using a threadpool (which we instantiate on bootstrap using newFixedThreadPool(MAX_NUM_CLIENTS) where MAX_NUM_CLIENTS is the maximum number of concurrent clients specified as 250 for this phase).
+
+Replica: Primary-based Remote-Write
+	Replicas are placed on the physical nodes that are currently assigned to the successive partitions, and we may skip partitions to make sure there's no duplicated physical nodes
 
 Gossip protocol
     Major class used: CopyOnWriteList, Timestamp
