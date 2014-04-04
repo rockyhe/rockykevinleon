@@ -1,0 +1,17 @@
+planetlab1.cs.ubc.ca:5000
+planetlab2.cs.purdue.edu:5000
+planetlab02.cs.washington.edu:5000
+planetlab03.cs.washington.edu:5000
+planetlab4.cs.uoregon.edu:5000
+planet3.cs.ucsb.edu:5000
+miranda.planetlab.cs.umd.edu:5000
+planetlab1.uta.edu:5000
+planetlab1.williams.edu:5000
+planetlab01.alucloud.com:5000
+pli1-pa-6.hpl.hp.com:5000
+planetlab4.csee.usf.edu:5000
+planetlab2.poly.edu:5000
+plab1.engr.sjsu.edu:5000
+osiris.planetlab.cs.umd.edu:5000
+pl-node-0.csl.sri.com:5000
+
