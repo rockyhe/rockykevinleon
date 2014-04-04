@@ -103,10 +103,10 @@ public class KVStore implements Runnable
 		// System.out.println("hashed key: " + rehashedKeyStr);
 
 		// Get the node responsible for the partition with first hashed value that is greater than or equal to the key (i.e. clockwise on the ring)
-		Map.Entry<String, Node> entry = getNodeEntryForHash(rehashedKeyStr);
+		Map.Entry<String, Node> primary = getNodeEntryForHash(rehashedKeyStr);
 
 		// Check if the node that is responsible for the primary partition for the hash key is this one, or if we need to do a remote call
-		if (entry.getValue().Equals(clntSock.getLocalAddress()))
+		if (primary.getValue().Equals(clntSock.getLocalAddress()))
 		{
 			// System.out.println("Host name matches");
 			if (store.size() < KVSTORE_SIZE)
@@ -124,7 +124,7 @@ public class KVStore implements Runnable
 		else
 		{
 			// System.out.println("Forwarding put command!");
-			forward(entry.getValue(), 1, key, value);
+			forward(primary.getValue(), 1, key, value);
 		}
 	}
 
@@ -141,15 +141,15 @@ public class KVStore implements Runnable
 		if (!store.containsKey(rehashedKeyStr))
 		{
 			// Get the node responsible for the partition with first hashed value that is greater than or equal to the key (i.e. clockwise on the ring)
-			Map.Entry<String, Node> entry = getNodeEntryForHash(rehashedKeyStr);
+			Map.Entry<String, Node> primary = getNodeEntryForHash(rehashedKeyStr);
 
-			// If the node that should contain it is this, then check its replicas
-			if (entry.getValue().Equals(clntSock.getLocalAddress()))
+			// If the node that should contain it is this or if the primary is offline, then check its replicas
+			if (!primary.getValue().online || primary.getValue().Equals(clntSock.getLocalAddress()))
 			{
 				// System.out.println("Host name matches");
 				// Check each replica, by getting the successor list belonging to this partition
 				System.out.println("Getting successor list...");
-				ArrayList<String> successors = successorListMap.get(entry.getKey());
+				ArrayList<String> successors = successorListMap.get(primary.getKey());
 				byte[] replyFromReplica = new byte[VALUE_SIZE];
 				for (String nextSuccessor : successors)
 				{
@@ -166,7 +166,7 @@ public class KVStore implements Runnable
 				return null;
 			}
 			// System.out.println("Forwarding get command!");
-			return forward(entry.getValue(), 2, key, null);
+			return forward(primary.getValue(), 2, key, null);
 		}
 		// System.out.println("Get command succeeded!");
 		return store.get(rehashedKeyStr);
@@ -182,10 +182,10 @@ public class KVStore implements Runnable
 		// System.out.println("hashed key: " + rehashedKeyStr);
 
 		// Get the node responsible for the partition with first hashed value that is greater than or equal to the key (i.e. clockwise on the ring)
-		Map.Entry<String, Node> entry = getNodeEntryForHash(rehashedKeyStr);
+		Map.Entry<String, Node> primary = getNodeEntryForHash(rehashedKeyStr);
 
 		// Check if the node that is responsible for the primary partition for the hash key is this one, or if we need to do a remote call
-		if (entry.getValue().Equals(clntSock.getLocalAddress()))
+		if (primary.getValue().Equals(clntSock.getLocalAddress()))
 		{
 			// System.out.println("Host name matches");
 			if (!store.containsKey(rehashedKeyStr))
@@ -205,7 +205,7 @@ public class KVStore implements Runnable
 		else
 		{
 			// System.out.println("Forwarding remove command!");
-			forward(entry.getValue(), 3, key, null);
+			forward(primary.getValue(), 3, key, null);
 		}
 	}
 
@@ -243,7 +243,7 @@ public class KVStore implements Runnable
 		}
 	}
 
-	private byte[] forward(Node remoteNode, int cmd, byte[] key, byte[] value) throws IOException // Propagate the exceptions to main
+	private byte[] forward(Node remoteNode, int cmd, byte[] key, byte[] value)
 	{
 		System.out.println("Forwarding to " + remoteNode.address.toString());
 		// System.out.println("cmd: " + cmd);
@@ -253,56 +253,57 @@ public class KVStore implements Runnable
 		// System.out.println("value: " + StringUtils.byteArrayToHexString(value));
 		// }
 
-		// This should never happen (i.e. by the time we get here, we shouldn't try to forward to an offline node). Otherwise, there's a bug somewhere!
-		if (!remoteNode.online)
-		{
-			// System.out.println("Node is offline!");
-			errCode = 0x21;
-			return null;
-		}
-
 		// Open a socket connection to the other server
 		// System.out.println("Creating socket");
-		Socket socket = new Socket(remoteNode.address.getHostName(), remoteNode.address.getPort());
-		// System.out.println("Connected to server: " + socket.getInetAddress().toString());
+		try {
+			Socket socket = new Socket(remoteNode.address.getHostName(), remoteNode.address.getPort());
+			// System.out.println("Connected to server: " + socket.getInetAddress().toString());
 
-		// Route the message
-		// If command is put, then increase request buffer size to include value bytes
-		byte[] requestBuffer;
-		if (cmd == 1)
-		{
-			requestBuffer = new byte[CMD_SIZE + KEY_SIZE + VALUE_SIZE];
-			ByteOrder.int2leb(cmd, requestBuffer, 0); // Command byte - 1 byte
-			System.arraycopy(key, 0, requestBuffer, CMD_SIZE, KEY_SIZE); // Key bytes - 32 bytes
-			System.arraycopy(value, 0, requestBuffer, CMD_SIZE + KEY_SIZE, VALUE_SIZE); // Value bytes - 1024 bytes
-		}
-		else
-		{
-			requestBuffer = new byte[CMD_SIZE + KEY_SIZE];
-			ByteOrder.int2leb(cmd, requestBuffer, 0); // Command byte - 1 byte
-			System.arraycopy(key, 0, requestBuffer, CMD_SIZE, KEY_SIZE); // Key bytes - 32 bytes
-		}
+			// Route the message
+			// If command is put, then increase request buffer size to include value bytes
+			byte[] requestBuffer;
+			if (cmd == 1)
+			{
+				requestBuffer = new byte[CMD_SIZE + KEY_SIZE + VALUE_SIZE];
+				ByteOrder.int2leb(cmd, requestBuffer, 0); // Command byte - 1 byte
+				System.arraycopy(key, 0, requestBuffer, CMD_SIZE, KEY_SIZE); // Key bytes - 32 bytes
+				System.arraycopy(value, 0, requestBuffer, CMD_SIZE + KEY_SIZE, VALUE_SIZE); // Value bytes - 1024 bytes
+			}
+			else
+			{
+				requestBuffer = new byte[CMD_SIZE + KEY_SIZE];
+				ByteOrder.int2leb(cmd, requestBuffer, 0); // Command byte - 1 byte
+				System.arraycopy(key, 0, requestBuffer, CMD_SIZE, KEY_SIZE); // Key bytes - 32 bytes
+			}
 
-		// Send the encoded string to the server
-		// System.out.println("Forwarding request");
-		// System.out.println("Request buffer: " + StringUtils.byteArrayToHexString(requestBuffer));
-		sendBytes(socket, requestBuffer);
+			// Send the encoded string to the server
+			// System.out.println("Forwarding request");
+			// System.out.println("Request buffer: " + StringUtils.byteArrayToHexString(requestBuffer));
+			sendBytes(socket, requestBuffer);
 
-		// Get the return message from the server
-		// Get the error code byte
-		byte[] errorCode = new byte[ERR_SIZE];
-		receiveBytes(socket, errorCode);
-		// System.out.println("Received reply from forwarded request");
-		errCode = errorCode[0];
-		// System.out.println("Error Code: " + errorMessage(errCode));
+			// Get the return message from the server
+			// Get the error code byte
+			byte[] errorCode = new byte[ERR_SIZE];
+			receiveBytes(socket, errorCode);
+			// System.out.println("Received reply from forwarded request");
+			errCode = errorCode[0];
+			// System.out.println("Error Code: " + errorMessage(errCode));
 
-		// If command was get and ran successfully, then get the value bytes
-		if (cmd == 2 && errCode == 0x00)
-		{
-			byte[] getValue = new byte[VALUE_SIZE];
-			receiveBytes(socket, getValue);
-			// System.out.println("Value for GET: " + StringUtils.byteArrayToHexString(getValue));
-			return getValue;
+			// If command was get and ran successfully, then get the value bytes
+			if (cmd == 2 && errCode == 0x00)
+			{
+				byte[] getValue = new byte[VALUE_SIZE];
+				receiveBytes(socket, getValue);
+				// System.out.println("Value for GET: " + StringUtils.byteArrayToHexString(getValue));
+				return getValue;
+			}
+		} catch (Exception e) {
+			// System.out.println("Forwarding to a node that is offline!");
+			errCode = 0x04; //Just set to internal KVStore error if we fail to connect to the node we want to forward to
+			int index = membership.indexOf(remoteNode);
+			membership.get(index).online = false;
+			membership.get(index).t = new Timestamp(0);
+			System.out.println(membership.get(index).address.getHostName().toString() + " left");
 		}
 		return null;
 	}
@@ -353,7 +354,7 @@ public class KVStore implements Runnable
 		}
 	}
 
-	private void replica(byte[] key, byte[] value)
+	private void replicatedWrite(byte[] key, byte[] value)
 	{
 		System.out.println("replicating: " + StringUtils.byteArrayToHexString(key));
 		// Convert key bytes to string
@@ -426,11 +427,11 @@ public class KVStore implements Runnable
 				receiveBytes(clntSock, key);
 				value = new byte[VALUE_SIZE];
 				receiveBytes(clntSock, value);
-				replica(key, value);
+				replicatedWrite(key, value);
 			case 103: // remove from replica
 				key = new byte[KEY_SIZE];
 				receiveBytes(clntSock, key);
-				replica(key, null);
+				replicatedWrite(key, null);
 			default: // Unrecognized command
 				errCode = 0x05;
 				break;
@@ -546,8 +547,6 @@ public class KVStore implements Runnable
 			return "Internal KVStore Failure";
 		case 0x05:
 			return "Unrecognized command";
-		case 0x21:
-			return "Attemped to forward to an offline node";
 		default:
 			return "Error code not handled";
 		}
