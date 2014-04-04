@@ -137,7 +137,7 @@ public class KVStore implements Runnable
 		String rehashedKeyStr = getHash(StringUtils.byteArrayToHexString(key));
 		// System.out.println("hashed key: " + rehashedKeyStr);
 
-		// If key doesn't exist on this node's local store, then route to node that should contain it
+		// If key doesn't exist on this node's local store
 		if (!store.containsKey(rehashedKeyStr))
 		{
 			// Get the node responsible for the partition with first hashed value that is greater than or equal to the key (i.e. clockwise on the ring)
@@ -148,7 +148,6 @@ public class KVStore implements Runnable
 			{
 				// System.out.println("Host name matches");
 				// Check each replica, by getting the successor list belonging to this partition
-				System.out.println("Getting successor list...");
 				ArrayList<String> successors = successorListMap.get(primary.getKey());
 				byte[] replyFromReplica = new byte[VALUE_SIZE];
 				for (String nextSuccessor : successors)
@@ -165,6 +164,7 @@ public class KVStore implements Runnable
 				errCode = 0x01;
 				return null;
 			}
+			// Otherwise route to node that should contain
 			// System.out.println("Forwarding get command!");
 			return forward(primary.getValue(), 2, key, null);
 		}
@@ -190,7 +190,7 @@ public class KVStore implements Runnable
 			// System.out.println("Host name matches");
 			if (!store.containsKey(rehashedKeyStr))
 			{
-				errCode = 0x01; //Key doesn't exist on primary
+				errCode = 0x01; // Key doesn't exist on primary
 			}
 			else
 			{
@@ -209,7 +209,7 @@ public class KVStore implements Runnable
 		}
 	}
 
-	private void updateReplicas(byte[] key, byte[] value) throws IOException
+	private void updateReplicas(byte[] key, byte[] value) throws IOException // Propagate the exceptions to main
 	{
 		byte[] sendBuffer;
 		if (value != null)
@@ -233,7 +233,6 @@ public class KVStore implements Runnable
 
 		Socket socket = null;
 		// Get the successor list of the primary partition so we know where to place the replicas
-		System.out.println("Getting successor list...");
 		ArrayList<String> successors = successorListMap.get(primary.getKey());
 		for (String nextSuccessor : successors)
 		{
@@ -247,7 +246,7 @@ public class KVStore implements Runnable
 	{
 		System.out.println("Forwarding to " + remoteNode.address.toString());
 		// System.out.println("cmd: " + cmd);
-		System.out.println("key: " + StringUtils.byteArrayToHexString(key));
+		//System.out.println("key: " + StringUtils.byteArrayToHexString(key));
 		// if (value != null)
 		// {
 		// System.out.println("value: " + StringUtils.byteArrayToHexString(value));
@@ -304,6 +303,7 @@ public class KVStore implements Runnable
 			membership.get(index).online = false;
 			membership.get(index).t = new Timestamp(0);
 			System.out.println(membership.get(index).address.getHostName().toString() + " left");
+			return null;
 		}
 		return null;
 	}
