@@ -82,15 +82,8 @@ public class KVStore implements Runnable
 	private byte errCode = 0x00; // Set default errCode to 0x00, so we can assume that operation is successful unless errCode is explicitly changed
 
 	// Constructor
-	KVStore(Socket clientSocket,
-			ConcurrentHashMap<String, byte[]> KVstore,
-			ConcurrentSkipListMap<String, Node> nodeMap,
-			AtomicInteger concurrentClientCount,
-			AtomicInteger shutdownFlag,
-			CopyOnWriteArrayList<Node> membershipList,
-			ConcurrentSkipListMap<String,
-			ArrayList<String>> successorListMap)
-			{
+	KVStore(Socket clientSocket, ConcurrentHashMap<String, byte[]> KVstore, ConcurrentSkipListMap<String, Node> nodeMap, AtomicInteger concurrentClientCount, AtomicInteger shutdownFlag, CopyOnWriteArrayList<Node> membershipList, ConcurrentSkipListMap<String, ArrayList<String>> successorListMap)
+	{
 		this.clntSock = clientSocket;
 		this.store = KVstore;
 		this.nodeMap = nodeMap;
@@ -98,7 +91,7 @@ public class KVStore implements Runnable
 		this.shutdown = shutdownFlag;
 		this.membership = membershipList;
 		this.successorListMap = successorListMap;
-			}
+	}
 
 	/**
 	 * Puts the given value into the store, mapped to the given key. If there is already a value corresponding to the key, then the value is overwritten. If the number of key-value pairs is KVSTORE_SIZE, the store returns out of space error.
@@ -154,8 +147,9 @@ public class KVStore implements Runnable
 			if (entry.getValue().Equals(clntSock.getLocalAddress()))
 			{
 				// System.out.println("Host name matches");
-				// Check each replica
-				ArrayList<String> successors = successorListMap.get(rehashedKeyStr);
+				// Check each replica, by getting the successor list belonging to this partition
+				System.out.println("Getting successor list...");
+				ArrayList<String> successors = successorListMap.get(entry.getKey());
 				byte[] replyFromReplica = new byte[VALUE_SIZE];
 				for (String nextSuccessor : successors)
 				{
@@ -231,11 +225,13 @@ public class KVStore implements Runnable
 
 		// Re-hash the key using our hash function so it's consistent
 		String rehashedKeyStr = getHash(StringUtils.byteArrayToHexString(key));
-		// System.out.println("hashed key: " + rehashedKeyStr);
+		// Get the id of the primary partition
+		Map.Entry<String, Node> primary = getNodeEntryForHash(rehashedKeyStr);
 
 		Socket socket = null;
-		// Get the successor list for this partition so we know where to place the replicas
-		ArrayList<String> successors = successorListMap.get(rehashedKeyStr);
+		// Get the successor list of the primary partition so we know where to place the replicas
+		System.out.println("Getting successor list...");
+		ArrayList<String> successors = successorListMap.get(primary.getKey());
 		for (String nextSuccessor : successors)
 		{
 			//NOTE: What happens if we try to connect to a successor that happens to be offline at this time?
@@ -422,13 +418,13 @@ public class KVStore implements Runnable
 			case 255: // gossip signal
 				gossip();
 				break;
-			case 101:
+			case 101: // write to replica
 				key = new byte[KEY_SIZE];
 				receiveBytes(clntSock, key);
 				value = new byte[VALUE_SIZE];
 				receiveBytes(clntSock, value);
 				replica(key, value);
-			case 103:
+			case 103: // remove from replica
 				key = new byte[KEY_SIZE];
 				receiveBytes(clntSock, key);
 				replica(key, null);
