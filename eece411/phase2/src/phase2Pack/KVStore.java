@@ -105,7 +105,7 @@ public class KVStore implements Runnable
 		// Get the node responsible for the partition with first hashed value that is greater than or equal to the key (i.e. clockwise on the ring)
 		Map.Entry<String, Node> entry = getNodeEntryForHash(rehashedKeyStr);
 
-		// Check if the node that should contain the hash key is this one, or if we need to do a remote call
+		// Check if the node that is responsible for the primary partition for the hash key is this one, or if we need to do a remote call
 		if (entry.getValue().Equals(clntSock.getLocalAddress()))
 		{
 			// System.out.println("Host name matches");
@@ -181,28 +181,31 @@ public class KVStore implements Runnable
 		String rehashedKeyStr = getHash(StringUtils.byteArrayToHexString(key));
 		// System.out.println("hashed key: " + rehashedKeyStr);
 
-		if (!store.containsKey(rehashedKeyStr))
-		{
-			// Get the node responsible for the partition with first hashed value that is greater than or equal to the key (i.e. clockwise on the ring)
-			Map.Entry<String, Node> entry = getNodeEntryForHash(rehashedKeyStr);
+		// Get the node responsible for the partition with first hashed value that is greater than or equal to the key (i.e. clockwise on the ring)
+		Map.Entry<String, Node> entry = getNodeEntryForHash(rehashedKeyStr);
 
-			// If the node that should contain it is this, then key doesn't exist
-			if (entry.getValue().Equals(clntSock.getLocalAddress()))
+		// Check if the node that is responsible for the primary partition for the hash key is this one, or if we need to do a remote call
+		if (entry.getValue().Equals(clntSock.getLocalAddress()))
+		{
+			// System.out.println("Host name matches");
+			if (!store.containsKey(rehashedKeyStr))
 			{
-				// System.out.println("Host name matches");
-				errCode = 0x01;
+				errCode = 0x01; //Key doesn't exist on primary
 			}
 			else
 			{
-				// System.out.println("Forwarding remove command!");
-				forward(entry.getValue(), 3, key, null);
+				store.remove(rehashedKeyStr);
+				// System.out.println("Remove command succeeded!");
 			}
+
+			System.out.println("before backup");
+			updateReplicas(key, null);
+			System.out.println("after backup");
 		}
 		else
 		{
-			store.remove(rehashedKeyStr);
-			// System.out.println("Remove command succeeded!");
-			updateReplicas(key, null);
+			// System.out.println("Forwarding remove command!");
+			forward(entry.getValue(), 3, key, null);
 		}
 	}
 
