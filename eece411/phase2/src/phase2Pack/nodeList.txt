@@ -1,3 +1,4 @@
 planetlab1.cs.ubc.ca
 planetlab03.cs.washington.edu
 planetlab4.cs.uoregon.edu
+planet3.cs.ucsb.edu
