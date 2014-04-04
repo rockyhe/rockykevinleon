@@ -19,549 +19,538 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class KVStore implements Runnable
 {
-    // Class for node info
-    public static class Node
-    {
-        public InetSocketAddress address;
-        public boolean online;
-        public Timestamp t = new Timestamp(new Date().getTime());
-        public boolean rejoin = false;
+	// Class for node info
+	public static class Node
+	{
+		public InetSocketAddress address;
+		public boolean online;
+		public Timestamp t = new Timestamp(new Date().getTime());
+		public boolean rejoin = false;
 
-        Node(InetSocketAddress addr, boolean alive)
-        {
-            this.address = addr;
-            this.online = alive;
-        }
+		Node(InetSocketAddress addr, boolean alive)
+		{
+			this.address = addr;
+			this.online = alive;
+		}
 
-        public boolean Equals(InetAddress addr)
-        {
-            if (addr != null)
-            {
-                if (addr.getHostName().equals(this.address.getHostName()))
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
+		public boolean Equals(InetAddress addr)
+		{
+			if (addr != null)
+			{
+				if (addr.getHostName().equals(this.address.getHostName()))
+				{
+					return true;
+				}
+			}
+			return false;
+		}
 
-        public boolean Equals(Node node)
-        {
-            if (node != null)
-            {
-                if (this == node)
-                {
-                    return true;
-                }
+		public boolean Equals(Node node)
+		{
+			if (node != null)
+			{
+				if (this == node)
+				{
+					return true;
+				}
 
-                if (node.address.getHostName().equals(this.address.getHostName()))
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-    }
+				if (node.address.getHostName().equals(this.address.getHostName()))
+				{
+					return true;
+				}
+			}
+			return false;
+		}
+	}
 
-    // Constants
-    private static final int CMD_SIZE = 1;
-    private static final int KEY_SIZE = 32;
-    private static final int VALUE_SIZE = 1024;
-    private static final int ERR_SIZE = 1;
-    private static final int KVSTORE_SIZE = 40000;
+	// Constants
+	private static final int CMD_SIZE = 1;
+	private static final int KEY_SIZE = 32;
+	private static final int VALUE_SIZE = 1024;
+	private static final int ERR_SIZE = 1;
+	private static final int KVSTORE_SIZE = 40000;
 
-    // Private members
-    private Socket clntSock;
-    private ConcurrentHashMap<String, byte[]> store;
-    private AtomicInteger clientCnt;
-    private AtomicInteger shutdown;
-    private ConcurrentSkipListMap<String, Node> nodeMap;
-    private CopyOnWriteArrayList<Node> membership;
-    private ConcurrentSkipListMap<String, ArrayList<String>> successorListMap;
+	// Private members
+	private Socket clntSock;
+	private ConcurrentHashMap<String, byte[]> store;
+	private AtomicInteger clientCnt;
+	private AtomicInteger shutdown;
+	private ConcurrentSkipListMap<String, Node> nodeMap;
+	private CopyOnWriteArrayList<Node> membership;
+	private ConcurrentSkipListMap<String, ArrayList<String>> successorListMap;
 
-    private byte errCode = 0x00; // Set default errCode to 0x00, so we can assume that operation is successful unless errCode is explicitly changed
+	private byte errCode = 0x00; // Set default errCode to 0x00, so we can assume that operation is successful unless errCode is explicitly changed
 
-    // Constructor
-    KVStore(Socket clientSocket, ConcurrentHashMap<String, byte[]> KVstore, ConcurrentSkipListMap<String, Node> nodeMap, AtomicInteger concurrentClientCount, AtomicInteger shutdownFlag, CopyOnWriteArrayList<Node> membershipList, ConcurrentSkipListMap<String, ArrayList<String>> successorListMap)
-    {
-        this.clntSock = clientSocket;
-        this.store = KVstore;
-        this.nodeMap = nodeMap;
-        this.clientCnt = concurrentClientCount;
-        this.shutdown = shutdownFlag;
-        this.membership = membershipList;
-        this.successorListMap = successorListMap;
-    }
+	// Constructor
+	KVStore(Socket clientSocket,
+			ConcurrentHashMap<String, byte[]> KVstore,
+			ConcurrentSkipListMap<String, Node> nodeMap,
+			AtomicInteger concurrentClientCount,
+			AtomicInteger shutdownFlag,
+			CopyOnWriteArrayList<Node> membershipList,
+			ConcurrentSkipListMap<String,
+			ArrayList<String>> successorListMap)
+			{
+		this.clntSock = clientSocket;
+		this.store = KVstore;
+		this.nodeMap = nodeMap;
+		this.clientCnt = concurrentClientCount;
+		this.shutdown = shutdownFlag;
+		this.membership = membershipList;
+		this.successorListMap = successorListMap;
+			}
 
-    /**
-     * Puts the given value into the store, mapped to the given key. If there is already a value corresponding to the key, then the value is overwritten. If the number of key-value pairs is KVSTORE_SIZE, the store returns out of space error.
-     */
-    private void put(byte[] key, byte[] value) throws IOException // Propagate the exceptions to main
-    {
-        // Re-hash the key using our hash function so it's consistent
-        String rehashedKeyStr = getHash(StringUtils.byteArrayToHexString(key));
-        // System.out.println("hashed key: " + rehashedKeyStr);
+	/**
+	 * Puts the given value into the store, mapped to the given key. If there is already a value corresponding to the key, then the value is overwritten. If the number of key-value pairs is KVSTORE_SIZE, the store returns out of space error.
+	 */
+	private void put(byte[] key, byte[] value) throws IOException // Propagate the exceptions to main
+	{
+		// Re-hash the key using our hash function so it's consistent
+		String rehashedKeyStr = getHash(StringUtils.byteArrayToHexString(key));
+		// System.out.println("hashed key: " + rehashedKeyStr);
 
-        // Get the node responsible for the partition with first hashed value that is greater than or equal to the key (i.e. clockwise on the ring)
-        Map.Entry<String, Node> entry = getNodeEntryForHash(rehashedKeyStr);
+		// Get the node responsible for the partition with first hashed value that is greater than or equal to the key (i.e. clockwise on the ring)
+		Map.Entry<String, Node> entry = getNodeEntryForHash(rehashedKeyStr);
 
-        // Check if the node that should contain the hash key is this one, or if we need to do a remote call
-        if (entry.getValue().Equals(clntSock.getLocalAddress()))
-        {
-            // System.out.println("Host name matches");
-            if (store.size() < KVSTORE_SIZE)
-            {
-                store.put(rehashedKeyStr, value);
-                System.out.println("before backup");
-                updateReplicas(key, value);
-                System.out.println("after backup");
-            }
-            else
-            {
-                errCode = 0x02;
-            }
-        }
-        else
-        {
-            // System.out.println("Forwarding put command!");
-            forward(entry.getValue(), 1, key, value);
-        }
-    }
+		// Check if the node that should contain the hash key is this one, or if we need to do a remote call
+		if (entry.getValue().Equals(clntSock.getLocalAddress()))
+		{
+			// System.out.println("Host name matches");
+			if (store.size() < KVSTORE_SIZE)
+			{
+				store.put(rehashedKeyStr, value);
+				System.out.println("before backup");
+				updateReplicas(key, value);
+				System.out.println("after backup");
+			}
+			else
+			{
+				errCode = 0x02;
+			}
+		}
+		else
+		{
+			// System.out.println("Forwarding put command!");
+			forward(entry.getValue(), 1, key, value);
+		}
+	}
 
-    /**
-     * Returns the value associated with the given key. If there is no such key in the store, the store returns key not found error.
-     */
-    private byte[] get(byte[] key) throws IOException // Propagate the exceptions to main
-    {
-        // Re-hash the key using our hash function so it's consistent
-        String rehashedKeyStr = getHash(StringUtils.byteArrayToHexString(key));
-        // System.out.println("hashed key: " + rehashedKeyStr);
+	/**
+	 * Returns the value associated with the given key. If there is no such key in the store, the store returns key not found error.
+	 */
+	private byte[] get(byte[] key) throws IOException // Propagate the exceptions to main
+	{
+		// Re-hash the key using our hash function so it's consistent
+		String rehashedKeyStr = getHash(StringUtils.byteArrayToHexString(key));
+		// System.out.println("hashed key: " + rehashedKeyStr);
 
-        // If key doesn't exist on this node's local store, then route to node that should contain it
-        if (!store.containsKey(rehashedKeyStr))
-        {
-            // Get the node responsible for the partition with first hashed value that is greater than or equal to the key (i.e. clockwise on the ring)
-            Map.Entry<String, Node> entry = getNodeEntryForHash(rehashedKeyStr);
+		// If key doesn't exist on this node's local store, then route to node that should contain it
+		if (!store.containsKey(rehashedKeyStr))
+		{
+			// Get the node responsible for the partition with first hashed value that is greater than or equal to the key (i.e. clockwise on the ring)
+			Map.Entry<String, Node> entry = getNodeEntryForHash(rehashedKeyStr);
 
-            // If the node that should contain it is this, then key doesn't exist
-            if (entry.getValue().Equals(clntSock.getLocalAddress()))
-            {
-                // System.out.println("Host name matches");
-                errCode = 0x01;
-                return null;
-            }
-            // System.out.println("Forwarding get command!");
-            return forward(entry.getValue(), 2, key, null);
-        }
-        // System.out.println("Get command succeeded!");
-        return store.get(rehashedKeyStr);
-    }
+			// If the node that should contain it is this, then check its replicas
+			if (entry.getValue().Equals(clntSock.getLocalAddress()))
+			{
+				// System.out.println("Host name matches");
+				// Check each replica
+				ArrayList<String> successors = successorListMap.get(rehashedKeyStr);
+				byte[] replyFromReplica = new byte[VALUE_SIZE];
+				for (String nextSuccessor : successors)
+				{
+					// If a replica returns a value, then return that as the result
+					replyFromReplica = forward(nodeMap.get(nextSuccessor), 2, key, null);
+					if (replyFromReplica != null)
+					{
+						return replyFromReplica;
+					}
+				}
 
-    /**
-     * Removes the value associated with the given key. If there is no such key in the store, the store returns key not found error.
-     */
-    private void remove(byte[] key) throws IOException // Propagate the exceptions to main
-    {
-        // Re-hash the key using our hash function so it's consistent
-        String rehashedKeyStr = getHash(StringUtils.byteArrayToHexString(key));
-        // System.out.println("hashed key: " + rehashedKeyStr);
+				// If the key doesn't exist of any of the replicas, then key doesn't exist
+				errCode = 0x01;
+				return null;
+			}
+			// System.out.println("Forwarding get command!");
+			return forward(entry.getValue(), 2, key, null);
+		}
+		// System.out.println("Get command succeeded!");
+		return store.get(rehashedKeyStr);
+	}
 
-        if (!store.containsKey(rehashedKeyStr))
-        {
-            // Get the node responsible for the partition with first hashed value that is greater than or equal to the key (i.e. clockwise on the ring)
-            Map.Entry<String, Node> entry = getNodeEntryForHash(rehashedKeyStr);
+	/**
+	 * Removes the value associated with the given key. If there is no such key in the store, the store returns key not found error.
+	 */
+	private void remove(byte[] key) throws IOException // Propagate the exceptions to main
+	{
+		// Re-hash the key using our hash function so it's consistent
+		String rehashedKeyStr = getHash(StringUtils.byteArrayToHexString(key));
+		// System.out.println("hashed key: " + rehashedKeyStr);
 
-            // If the node that should contain it is this, then key doesn't exist
-            if (entry.getValue().Equals(clntSock.getLocalAddress()))
-            {
-                // System.out.println("Host name matches");
-                errCode = 0x01;
-            }
-            else
-            {
-                // System.out.println("Forwarding remove command!");
-                forward(entry.getValue(), 3, key, null);
-            }
-        }
-        else
-        {
-            store.remove(rehashedKeyStr);
-            // System.out.println("Remove command succeeded!");
-            updateReplicas(key, null);
-        }
-    }
+		if (!store.containsKey(rehashedKeyStr))
+		{
+			// Get the node responsible for the partition with first hashed value that is greater than or equal to the key (i.e. clockwise on the ring)
+			Map.Entry<String, Node> entry = getNodeEntryForHash(rehashedKeyStr);
 
-    private void updateReplicas(byte[] key, byte[] value) throws IOException
-    {
-        byte[] sendBuffer;
-        if (value != null)
-        {
-            sendBuffer = new byte[CMD_SIZE + KEY_SIZE + VALUE_SIZE];
-            ByteOrder.int2leb(101, sendBuffer, 0); // Command byte - 1 byte
-            System.arraycopy(key, 0, sendBuffer, CMD_SIZE, KEY_SIZE); // Key bytes - 32 bytes
-            System.arraycopy(value, 0, sendBuffer, CMD_SIZE + KEY_SIZE, VALUE_SIZE); // Value bytes - 1024 bytes
-        }
-        else
-        {
-            sendBuffer = new byte[CMD_SIZE + KEY_SIZE];
-            ByteOrder.int2leb(103, sendBuffer, 0); // Command byte - 1 byte
-            System.arraycopy(key, 0, sendBuffer, CMD_SIZE, KEY_SIZE); // Key bytes - 32 bytes
-        }
+			// If the node that should contain it is this, then key doesn't exist
+			if (entry.getValue().Equals(clntSock.getLocalAddress()))
+			{
+				// System.out.println("Host name matches");
+				errCode = 0x01;
+			}
+			else
+			{
+				// System.out.println("Forwarding remove command!");
+				forward(entry.getValue(), 3, key, null);
+			}
+		}
+		else
+		{
+			store.remove(rehashedKeyStr);
+			// System.out.println("Remove command succeeded!");
+			updateReplicas(key, null);
+		}
+	}
 
-        // Re-hash the key using our hash function so it's consistent
-        String rehashedKeyStr = getHash(StringUtils.byteArrayToHexString(key));
-        // System.out.println("hashed key: " + rehashedKeyStr);
+	private void updateReplicas(byte[] key, byte[] value) throws IOException
+	{
+		byte[] sendBuffer;
+		if (value != null)
+		{
+			sendBuffer = new byte[CMD_SIZE + KEY_SIZE + VALUE_SIZE];
+			ByteOrder.int2leb(101, sendBuffer, 0); // Command byte - 1 byte
+			System.arraycopy(key, 0, sendBuffer, CMD_SIZE, KEY_SIZE); // Key bytes - 32 bytes
+			System.arraycopy(value, 0, sendBuffer, CMD_SIZE + KEY_SIZE, VALUE_SIZE); // Value bytes - 1024 bytes
+		}
+		else
+		{
+			sendBuffer = new byte[CMD_SIZE + KEY_SIZE];
+			ByteOrder.int2leb(103, sendBuffer, 0); // Command byte - 1 byte
+			System.arraycopy(key, 0, sendBuffer, CMD_SIZE, KEY_SIZE); // Key bytes - 32 bytes
+		}
 
-        Socket socket = null;
-        // Get the next NUM_REPLICAS partitions on the ring, by getting the tail map starting from the rehashed key
-        ConcurrentNavigableMap<String, Node> tailMap = nodeMap.tailMap(rehashedKeyStr, false);
-        Map.Entry<String, Node> nextPartition;
-        for (int i = 0; i < successorListMap.size(); i++)
-        {
-            // Get the first entry in the tail map, then update the reference point for the tail map for the next entry
-            // Make sure the chosen replica node is online and isn't this node
-            while (true)
-            {
-                nextPartition = tailMap.firstEntry();
-                if (nextPartition == null)
-                {
-                    nextPartition = nodeMap.firstEntry();
-                }
+		// Re-hash the key using our hash function so it's consistent
+		String rehashedKeyStr = getHash(StringUtils.byteArrayToHexString(key));
+		// System.out.println("hashed key: " + rehashedKeyStr);
 
-                if (!nextPartition.getValue().Equals(clntSock.getLocalAddress()) && nextPartition.getValue().online)
-                {
-                    break;
-                }
-                tailMap = nodeMap.tailMap(nextPartition.getKey(), false);
-            }
+		Socket socket = null;
+		// Get the successor list for this partition so we know where to place the replicas
+		ArrayList<String> successors = successorListMap.get(rehashedKeyStr);
+		for (String nextSuccessor : successors)
+		{
+			//NOTE: What happens if we try to connect to a successor that happens to be offline at this time?
+			socket = new Socket(nodeMap.get(nextSuccessor).address.getHostName(), nodeMap.get(nextSuccessor).address.getPort());
+			sendBytes(socket, sendBuffer);
+		}
+	}
 
-            socket = new Socket(nextPartition.getValue().address.getHostName(), nextPartition.getValue().address.getPort());
-            sendBytes(socket, sendBuffer);
+	private byte[] forward(Node remoteNode, int cmd, byte[] key, byte[] value) throws IOException // Propagate the exceptions to main
+	{
+		System.out.println("Forwarding to " + remoteNode.address.toString());
+		// System.out.println("cmd: " + cmd);
+		System.out.println("key: " + StringUtils.byteArrayToHexString(key));
+		// if (value != null)
+		// {
+		// System.out.println("value: " + StringUtils.byteArrayToHexString(value));
+		// }
 
-            tailMap = nodeMap.tailMap(nextPartition.getKey(), false);
-        }
-    }
+		// This should never happen (i.e. by the time we get here, we shouldn't try to forward to an offline node). Otherwise, there's a bug somewhere!
+		if (!remoteNode.online)
+		{
+			// System.out.println("Node is offline!");
+			errCode = 0x21;
+			return null;
+		}
 
-    private byte[] forward(Node remoteNode, int cmd, byte[] key, byte[] value) throws IOException // Propagate the exceptions to main
-    {
-        System.out.println("Forwarding to " + remoteNode.address.toString());
-        // System.out.println("cmd: " + cmd);
-        System.out.println("key: " + StringUtils.byteArrayToHexString(key));
-        // if (value != null)
-        // {
-        // System.out.println("value: " + StringUtils.byteArrayToHexString(value));
-        // }
+		// Open a socket connection to the other server
+		// System.out.println("Creating socket");
+		Socket socket = new Socket(remoteNode.address.getHostName(), remoteNode.address.getPort());
+		// System.out.println("Connected to server: " + socket.getInetAddress().toString());
 
-        // This should never happen (i.e. by the time we get here, we shouldn't try to forward to an offline node). Otherwise, there's a bug somewhere!
-        if (!remoteNode.online)
-        {
-            // System.out.println("Node is offline!");
-            errCode = 0x21;
-            return null;
-        }
+		// Route the message
+		// If command is put, then increase request buffer size to include value bytes
+		byte[] requestBuffer;
+		if (cmd == 1)
+		{
+			requestBuffer = new byte[CMD_SIZE + KEY_SIZE + VALUE_SIZE];
+			ByteOrder.int2leb(cmd, requestBuffer, 0); // Command byte - 1 byte
+			System.arraycopy(key, 0, requestBuffer, CMD_SIZE, KEY_SIZE); // Key bytes - 32 bytes
+			System.arraycopy(value, 0, requestBuffer, CMD_SIZE + KEY_SIZE, VALUE_SIZE); // Value bytes - 1024 bytes
+		}
+		else
+		{
+			requestBuffer = new byte[CMD_SIZE + KEY_SIZE];
+			ByteOrder.int2leb(cmd, requestBuffer, 0); // Command byte - 1 byte
+			System.arraycopy(key, 0, requestBuffer, CMD_SIZE, KEY_SIZE); // Key bytes - 32 bytes
+		}
 
-        // Open a socket connection to the other server
-        // System.out.println("Creating socket");
-        Socket socket = new Socket(remoteNode.address.getHostName(), remoteNode.address.getPort());
-        // System.out.println("Connected to server: " + socket.getInetAddress().toString());
+		// Send the encoded string to the server
+		// System.out.println("Forwarding request");
+		// System.out.println("Request buffer: " + StringUtils.byteArrayToHexString(requestBuffer));
+		sendBytes(socket, requestBuffer);
 
-        // Route the message
-        // If command is put, then increase request buffer size to include value bytes
-        byte[] requestBuffer;
-        if (cmd == 1)
-        {
-            requestBuffer = new byte[CMD_SIZE + KEY_SIZE + VALUE_SIZE];
-            ByteOrder.int2leb(cmd, requestBuffer, 0); // Command byte - 1 byte
-            System.arraycopy(key, 0, requestBuffer, CMD_SIZE, KEY_SIZE); // Key bytes - 32 bytes
-            System.arraycopy(value, 0, requestBuffer, CMD_SIZE + KEY_SIZE, VALUE_SIZE); // Value bytes - 1024 bytes
-        }
-        else
-        {
-            requestBuffer = new byte[CMD_SIZE + KEY_SIZE];
-            ByteOrder.int2leb(cmd, requestBuffer, 0); // Command byte - 1 byte
-            System.arraycopy(key, 0, requestBuffer, CMD_SIZE, KEY_SIZE); // Key bytes - 32 bytes
-        }
+		// Get the return message from the server
+		// Get the error code byte
+		byte[] errorCode = new byte[ERR_SIZE];
+		receiveBytes(socket, errorCode);
+		// System.out.println("Received reply from forwarded request");
+		errCode = errorCode[0];
+		// System.out.println("Error Code: " + errorMessage(errCode));
 
-        // Send the encoded string to the server
-        // System.out.println("Forwarding request");
-        // System.out.println("Request buffer: " + StringUtils.byteArrayToHexString(requestBuffer));
-        sendBytes(socket, requestBuffer);
+		// If command was get and ran successfully, then get the value bytes
+		if (cmd == 2 && errCode == 0x00)
+		{
+			byte[] getValue = new byte[VALUE_SIZE];
+			receiveBytes(socket, getValue);
+			// System.out.println("Value for GET: " + StringUtils.byteArrayToHexString(getValue));
+			return getValue;
+		}
+		return null;
+	}
 
-        // Get the return message from the server
-        // Get the error code byte
-        byte[] errorCode = new byte[ERR_SIZE];
-        receiveBytes(socket, errorCode);
-        // System.out.println("Received reply from forwarded request");
-        errCode = errorCode[0];
-        // System.out.println("Error Code: " + errorMessage(errCode));
+	private void shutdown()
+	{
+		// Increment the shutdown flag to no longer accept incoming connections
+		shutdown.getAndIncrement();
 
-        // If command was get and ran successfully, then get the value bytes
-        if (cmd == 2 && errCode == 0x00)
-        {
-            byte[] getValue = new byte[VALUE_SIZE];
-            receiveBytes(socket, getValue);
-            // System.out.println("Value for GET: " + StringUtils.byteArrayToHexString(getValue));
-            return getValue;
-        }
-        return null;
-    }
+		// Update online status to false and timestamp to 0 of self node, so it propagates faster
+		int index = membership.indexOf(clntSock.getInetAddress().getHostName());
+		if (index >= 0)
+		{
+			Node self = membership.get(index);
+			self.online = false;
+			self.t = new Timestamp(0);
+		}
 
-    private void shutdown()
-    {
-        // Increment the shutdown flag to no longer accept incoming connections
-        shutdown.getAndIncrement();
+		while (true)
+		{
+			// Wait until the only client left is the one initiating the shutdown command
+			// i.e. all other existing client requests have finished
+			// System.out.println("clientcnt: "+clientCnt.get());
 
-        // Update online status to false and timestamp to 0 of self node, so it propagates faster
-        int index = membership.indexOf(clntSock.getInetAddress().getHostName());
-        if (index >= 0)
-        {
-            Node self = membership.get(index);
-            self.online = false;
-            self.t = new Timestamp(0);
-        }
+			if (clientCnt.get() == 1)
+			{
+				break;
+			}
+		}
+	}
 
-        while (true)
-        {
-            // Wait until the only client left is the one initiating the shutdown command
-            // i.e. all other existing client requests have finished
-            // System.out.println("clientcnt: "+clientCnt.get());
+	private void gossip()
+	{
+		for (Node node : membership)
+		{
+			// System.out.println("client sock: "+clntSock.getInetAddress().getHostName().toString());
+			if (node.Equals(clntSock.getInetAddress()))
+			{
+				if (!node.online)
+				{
+					node.rejoin = true;
+				}
+				node.online = true;
+				node.t = new Timestamp(new Date().getTime());
+				// System.out.println("timestamp: "+onlineNodeList.get(onlineNodeList.indexOf(node)).t.toString());
+				break;
+			}
+		}
+	}
 
-            if (clientCnt.get() == 1)
-            {
-                break;
-            }
-        }
-    }
+	private void replica(byte[] key, byte[] value)
+	{
+		System.out.println("replicating: " + StringUtils.byteArrayToHexString(key));
+		// Convert key bytes to string
+		String keyStr = StringUtils.byteArrayToHexString(key);// Arrays.toString(key).replaceAll("(^\\[|\\]$)", "").replace(", ", "");
+		// Re-hash the key using our hash function so it's consistent
+		String rehashedKeyStr = getHash(keyStr);
+		if (value != null)
+		{
+			store.put(rehashedKeyStr, value);
+		}
+		else
+		{
+			store.remove(rehashedKeyStr);
+		}
+	}
 
-    private void gossip()
-    {
-        for (Node node : membership)
-        {
-            // System.out.println("client sock: "+clntSock.getInetAddress().getHostName().toString());
-            if (node.Equals(clntSock.getInetAddress()))
-            {
-                if (!node.online)
-                {
-                    node.rejoin = true;
-                }
-                node.online = true;
-                node.t = new Timestamp(new Date().getTime());
-                // System.out.println("timestamp: "+onlineNodeList.get(onlineNodeList.indexOf(node)).t.toString());
-                break;
-            }
-        }
-    }
+	public void run()
+	{
+		try {
+			clientCnt.getAndIncrement();
+			// Get the request message from the client
+			// System.out.println("Request received:");
+			// System.out.println("requestBuffer: " + StringUtils.byteArrayToHexString(requestBuffer));
 
-    private void replica(byte[] key, byte[] value)
-    {
-        System.out.println("replicating: " + StringUtils.byteArrayToHexString(key));
-        // Convert key bytes to string
-        String keyStr = StringUtils.byteArrayToHexString(key);// Arrays.toString(key).replaceAll("(^\\[|\\]$)", "").replace(", ", "");
-        // Re-hash the key using our hash function so it's consistent
-        String rehashedKeyStr = getHash(keyStr);
-        if (value != null)
-        {
-            store.put(rehashedKeyStr, value);
-        }
-        else
-        {
-            store.remove(rehashedKeyStr);
-        }
-    }
+			// Get the command byte
+			byte[] command = new byte[CMD_SIZE];
+			receiveBytes(clntSock, command);
+			int cmd = ByteOrder.leb2int(command, 0, CMD_SIZE);
+			// System.out.println("cmd: " + cmd);
 
-    public void run()
-    {
-        try
-        {
-            clientCnt.getAndIncrement();
-            // Get the request message from the client
-            // System.out.println("Request received:");
-            // System.out.println("requestBuffer: " + StringUtils.byteArrayToHexString(requestBuffer));
+			// NOTE: As stated by Matei in class, assume that client is responsible for providing hashed keys so not necessary to perform re-hashing.
+			byte[] key = null;
+			byte[] value = null;
+			switch (cmd)
+			{
+			case 1: // Put command
+				// Get the key bytes
+				key = new byte[KEY_SIZE];
+				receiveBytes(clntSock, key);
+				// Get the value bytes (only do this if the command is put)
+				value = new byte[VALUE_SIZE];
+				receiveBytes(clntSock, value);
+				// System.out.println("value: " + StringUtils.byteArrayToHexString(value));
+				put(key, value);
+				break;
+			case 2: // Get command
+				// Get the key bytes
+				key = new byte[KEY_SIZE];
+				receiveBytes(clntSock, key);
+				// Store get result into value byte array
+				value = new byte[VALUE_SIZE];
+				value = get(key);
+				break;
+			case 3: // Remove command
+				// Get the key bytes
+				key = new byte[KEY_SIZE];
+				receiveBytes(clntSock, key);
+				remove(key);
+				break;
+			case 4: // shutdown command
+				shutdown();
+				break;
+			case 254:// FIXME
 
-            // Get the command byte
-            byte[] command = new byte[CMD_SIZE];
-            receiveBytes(clntSock, command);
-            int cmd = ByteOrder.leb2int(command, 0, CMD_SIZE);
-            // System.out.println("cmd: " + cmd);
+			case 255: // gossip signal
+				gossip();
+				break;
+			case 101:
+				key = new byte[KEY_SIZE];
+				receiveBytes(clntSock, key);
+				value = new byte[VALUE_SIZE];
+				receiveBytes(clntSock, value);
+				replica(key, value);
+			case 103:
+				key = new byte[KEY_SIZE];
+				receiveBytes(clntSock, key);
+				replica(key, null);
+			default: // Unrecognized command
+				errCode = 0x05;
+				break;
+			}
 
-            // NOTE: As stated by Matei in class, assume that client is responsible for providing hashed keys so not necessary to perform re-hashing.
-            byte[] key = null;
-            byte[] value = null;
-            switch (cmd)
-            {
-            case 1: // Put command
-                // Get the key bytes
-                key = new byte[KEY_SIZE];
-                receiveBytes(clntSock, key);
-                // Get the value bytes (only do this if the command is put)
-                value = new byte[VALUE_SIZE];
-                receiveBytes(clntSock, value);
-                // System.out.println("value: " + StringUtils.byteArrayToHexString(value));
-                put(key, value);
-                break;
-            case 2: // Get command
-                // Get the key bytes
-                key = new byte[KEY_SIZE];
-                receiveBytes(clntSock, key);
-                // Store get result into value byte array
-                value = new byte[VALUE_SIZE];
-                value = get(key);
-                break;
-            case 3: // Remove command
-                // Get the key bytes
-                key = new byte[KEY_SIZE];
-                receiveBytes(clntSock, key);
-                remove(key);
-                break;
-            case 4: // shutdown command
-                shutdown();
-                break;
-            case 254:// FIXME
+			// Send the reply message to the client
+			// Only send value if command was get and value returned wasn't null
+			if (cmd == 2 && value != null)
+			{
+				byte[] combined = new byte[ERR_SIZE + VALUE_SIZE];
+				System.arraycopy(new byte[] { errCode }, 0, combined, 0, ERR_SIZE);
+				System.arraycopy(value, 0, combined, ERR_SIZE, VALUE_SIZE);
+				sendBytes(clntSock, combined);
+			}
+			else
+			{
+				sendBytes(clntSock, new byte[] { errCode });
+				// If command was shutdown, then increment the flag after sending success reply
+				// so that Server knows it's safe to shutdown
+				if (cmd == 4)
+				{
+					shutdown.getAndIncrement();
+				}
+			}
+			// System.out.println("--------------------");
+		} catch (Exception e) {
+			// If any exception happens, return internal KVStore error
+			errCode = 0x04;
+			try {
+				sendBytes(clntSock, new byte[] { errCode });
+			} catch (Exception e2) { } // If we get an exception trying to send reply for internal error then do nothing
+		} finally {
+			// Close the socket
+			try {
+				if (clntSock != null)
+				{
+					clntSock.close();
+					clientCnt.getAndDecrement();
+				}
+			} catch (Exception e) {
+				// If any exception happens, return internal KVStore error
+				errCode = 0x04;
+				try {
+					sendBytes(clntSock, new byte[] { errCode });
+				} catch (Exception e2) { } // If we get an exception trying to send reply for internal error then do nothing
+			}
+		}
+	}
 
-            case 255: // gossip signal
-                gossip();
-                break;
-            case 101:
-                key = new byte[KEY_SIZE];
-                receiveBytes(clntSock, key);
-                value = new byte[VALUE_SIZE];
-                receiveBytes(clntSock, value);
-                replica(key, value);
-            case 103:
-                key = new byte[KEY_SIZE];
-                receiveBytes(clntSock, key);
-                replica(key, null);
-            default: // Unrecognized command
-                errCode = 0x05;
-                break;
-            }
+	private void receiveBytes(Socket srcSock, byte[] dest) throws IOException
+	{
+		InputStream in = srcSock.getInputStream();
+		int totalBytesRcvd = 0;
+		int bytesRcvd = 0;
+		while (totalBytesRcvd < dest.length)
+		{
+			if ((bytesRcvd = in.read(dest, totalBytesRcvd, dest.length - totalBytesRcvd)) != -1)
+			{
+				totalBytesRcvd += bytesRcvd;
+			}
+		}
+	}
 
-            // Send the reply message to the client
-            // Only send value if command was get and value returned wasn't null
-            if (cmd == 2 && value != null)
-            {
-                byte[] combined = new byte[ERR_SIZE + VALUE_SIZE];
-                System.arraycopy(new byte[] { errCode }, 0, combined, 0, ERR_SIZE);
-                System.arraycopy(value, 0, combined, ERR_SIZE, VALUE_SIZE);
-                sendBytes(clntSock, combined);
-            }
-            else
-            {
-                sendBytes(clntSock, new byte[] { errCode });
-                // If command was shutdown, then increment the flag after sending success reply
-                // so that Server knows it's safe to shutdown
-                if (cmd == 4)
-                {
-                    shutdown.getAndIncrement();
-                }
-            }
-            // System.out.println("--------------------");
-        } catch (Exception e)
-        {
-            // If any exception happens, return internal KVStore error
-            errCode = 0x04;
-            try
-            {
-                sendBytes(clntSock, new byte[] { errCode });
-            } catch (Exception e2)
-            {
-            } // If we get an exception trying to send reply for internal error then do nothing
-        } finally
-        {
-            // Close the socket
-            try
-            {
-                if (clntSock != null)
-                {
-                    clntSock.close();
-                    clientCnt.getAndDecrement();
-                }
-            } catch (Exception e)
-            {
-                // If any exception happens, return internal KVStore error
-                errCode = 0x04;
-                try
-                {
-                    sendBytes(clntSock, new byte[] { errCode });
-                } catch (Exception e2)
-                {
-                } // If we get an exception trying to send reply for internal error then do nothing
-            }
-        }
-    }
+	private void sendBytes(Socket destSock, byte[] src) throws IOException
+	{
+		OutputStream out = destSock.getOutputStream();
+		out.write(src);
+	}
 
-    private void receiveBytes(Socket srcSock, byte[] dest) throws IOException
-    {
-        InputStream in = srcSock.getInputStream();
-        int totalBytesRcvd = 0;
-        int bytesRcvd = 0;
-        while (totalBytesRcvd < dest.length)
-        {
-            if ((bytesRcvd = in.read(dest, totalBytesRcvd, dest.length - totalBytesRcvd)) != -1)
-            {
-                totalBytesRcvd += bytesRcvd;
-            }
-        }
-    }
+	private Map.Entry<String, Node> getNodeEntryForHash(String hashedKey)
+	{
+		// Get the node responsible for the partition with first hashed value that is greater than or equal to the key (i.e. clockwise on the ring)
+		// System.out.println("Hashed key string: " + hashedKey);
+		Map.Entry<String, Node> entry = nodeMap.ceilingEntry(hashedKey);
+		// If ceiling entry is null, then we've wrapped around the entire node ring, so set to first node
+		if (entry == null)
+		{
+			// System.out.println("Setting entry to first entry");
+			entry = nodeMap.firstEntry();
+		}
+		// System.out.println("Entry hash: " + entry.getKey());
+		return entry;
+	}
 
-    private void sendBytes(Socket destSock, byte[] src) throws IOException
-    {
-        OutputStream out = destSock.getOutputStream();
-        out.write(src);
-    }
+	public static String getHash(String msg)
+	{
+		String result = null;
+		try {
+			// Hash the id using SHA-256 to get a 32 byte hash
+			// since the ring space is from 0 to (2^256)-1
+			MessageDigest md = MessageDigest.getInstance("SHA-256");
+			byte[] hash = md.digest(msg.getBytes("UTF-8"));
+			result = StringUtils.byteArrayToHexString(hash);
+		} catch (Exception e) {
+			System.out.println("Error trying to get hash of string: " + msg);
+		}
+		return result;
+	}
 
-    private Map.Entry<String, Node> getNodeEntryForHash(String hashedKey)
-    {
-        // Get the node responsible for the partition with first hashed value that is greater than or equal to the key (i.e. clockwise on the ring)
-        // System.out.println("Hashed key string: " + hashedKey);
-        Map.Entry<String, Node> entry = nodeMap.ceilingEntry(hashedKey);
-        // If ceiling entry is null, then we've wrapped around the entire node ring, so set to first node
-        if (entry == null)
-        {
-            // System.out.println("Setting entry to first entry");
-            entry = nodeMap.firstEntry();
-        }
-        // System.out.println("Entry hash: " + entry.getKey());
-        return entry;
-    }
-
-    public static String getHash(String msg)
-    {
-        String result = null;
-        try
-        {
-            // Hash the id using SHA-256 to get a 32 byte hash
-            // since the ring space is from 0 to (2^256)-1
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] hash = md.digest(msg.getBytes("UTF-8"));
-            result = StringUtils.byteArrayToHexString(hash);
-        } catch (Exception e)
-        {
-            System.out.println("Error trying to get hash of string: " + msg);
-        }
-        return result;
-    }
-
-    public static String errorMessage(byte errCode)
-    {
-        switch (errCode)
-        {
-        case 0x00:
-            return "Operation successful";
-        case 0x01:
-            return "Inexistent key requested in a get or remove operation";
-        case 0x02:
-            return "Out of space for put operation";
-        case 0x03:
-            return "System Overload";
-        case 0x04:
-            return "Internal KVStore Failure";
-        case 0x05:
-            return "Unrecognized command";
-        case 0x21:
-            return "Attemped to forward to an offline node";
-        default:
-            return "Error code not handled";
-        }
-    }
+	public static String errorMessage(byte errCode)
+	{
+		switch (errCode)
+		{
+		case 0x00:
+			return "Operation successful";
+		case 0x01:
+			return "Inexistent key requested in a get or remove operation";
+		case 0x02:
+			return "Out of space for put operation";
+		case 0x03:
+			return "System Overload";
+		case 0x04:
+			return "Internal KVStore Failure";
+		case 0x05:
+			return "Unrecognized command";
+		case 0x21:
+			return "Attemped to forward to an offline node";
+		default:
+			return "Error code not handled";
+		}
+	}
 }
