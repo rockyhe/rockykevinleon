@@ -100,15 +100,13 @@ public class KVStore implements Runnable
 	{
 		// Re-hash the key using our hash function so it's consistent
 		String rehashedKeyStr = getHash(StringUtils.byteArrayToHexString(key));
-		// System.out.println("hashed key: " + rehashedKeyStr);
 
 		// Get the node responsible for the partition with first hashed value that is greater than or equal to the key (i.e. clockwise on the ring)
 		Map.Entry<String, Node> primary = getNodeEntryForHash(rehashedKeyStr);
 
-		// Check if the node that is responsible for the primary partition for the hash key is this one, or if we need to do a remote call
+		// Check if this node is the primary partition for the hash key, or if we need to do a remote call
 		if (primary.getValue().Equals(clntSock.getLocalAddress()))
 		{
-			// System.out.println("Host name matches");
 			if (store.size() < KVSTORE_SIZE)
 			{
 				store.put(rehashedKeyStr, value);
@@ -135,7 +133,6 @@ public class KVStore implements Runnable
 	{
 		// Re-hash the key using our hash function so it's consistent
 		String rehashedKeyStr = getHash(StringUtils.byteArrayToHexString(key));
-		// System.out.println("hashed key: " + rehashedKeyStr);
 
 		// If key doesn't exist on this node's local store
 		if (!store.containsKey(rehashedKeyStr))
@@ -143,11 +140,10 @@ public class KVStore implements Runnable
 			// Get the node responsible for the partition with first hashed value that is greater than or equal to the key (i.e. clockwise on the ring)
 			Map.Entry<String, Node> primary = getNodeEntryForHash(rehashedKeyStr);
 
-			// If the node that should contain it is this, then check its replicas
+			// Check if this node is the primary partition for the hash key (so we know to forward to successors)
 			if (primary.getValue().Equals(clntSock.getLocalAddress()))
 			{
-				// System.out.println("Host name matches");
-				// Check each replica, by getting the successor list belonging to this partition
+				// Iterate through each replica, by getting the successor list belonging to this partition, and check for key
 				ArrayList<String> successors = successorListMap.get(primary.getKey());
 				byte[] replyFromReplica = new byte[VALUE_SIZE];
 				for (String nextSuccessor : successors)
@@ -159,17 +155,34 @@ public class KVStore implements Runnable
 						return replyFromReplica;
 					}
 				}
-
-				// If the key doesn't exist of any of the replicas, then key doesn't exist
-				errCode = 0x01;
-				return null;
 			}
-			// Otherwise route to node that should contain
-			// System.out.println("Forwarding get command!");
-			return forward(primary.getValue(), 2, key, null);
+			// Otherwise only route the command if this node is neither the primary partition nor one of the replicas of the primary
+			else if (!isReplica(primary))
+			{
+				// Otherwise route to node that should contain
+				// System.out.println("Forwarding get command!");
+				return forward(primary.getValue(), 2, key, null);
+			}
+
+			// If the key doesn't exist of any of the replicas, then key doesn't exist
+			errCode = 0x01;
+			return null;
 		}
 		// System.out.println("Get command succeeded!");
 		return store.get(rehashedKeyStr);
+	}
+
+	private boolean isReplica(Map.Entry<String, Node> primary)
+	{
+		ArrayList<String> successors = successorListMap.get(primary.getKey());
+		for (String successor : successors)
+		{
+			if (nodeMap.get(successor).Equals(clntSock.getLocalAddress()))
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**
@@ -179,15 +192,13 @@ public class KVStore implements Runnable
 	{
 		// Re-hash the key using our hash function so it's consistent
 		String rehashedKeyStr = getHash(StringUtils.byteArrayToHexString(key));
-		// System.out.println("hashed key: " + rehashedKeyStr);
 
 		// Get the node responsible for the partition with first hashed value that is greater than or equal to the key (i.e. clockwise on the ring)
 		Map.Entry<String, Node> primary = getNodeEntryForHash(rehashedKeyStr);
 
-		// Check if the node that is responsible for the primary partition for the hash key is this one, or if we need to do a remote call
+		// Check if this node is the primary partition for the hash key, or if we need to do a remote call
 		if (primary.getValue().Equals(clntSock.getLocalAddress()))
 		{
-			// System.out.println("Host name matches");
 			if (!store.containsKey(rehashedKeyStr))
 			{
 				errCode = 0x01; // Key doesn't exist on primary
