@@ -110,9 +110,9 @@ public class KVStore implements Runnable
 			if (store.size() < KVSTORE_SIZE)
 			{
 				store.put(rehashedKeyStr, value);
-				System.out.println("before backup");
+				//System.out.println("before backup");
 				updateReplicas(key, value);
-				System.out.println("after backup");
+				//System.out.println("after backup");
 			}
 			else
 			{
@@ -121,7 +121,7 @@ public class KVStore implements Runnable
 		}
 		else
 		{
-			// System.out.println("Forwarding put command!");
+			//System.out.println("Forwarding put command!");
 			forward(primary.getValue(), 1, key, value);
 		}
 	}
@@ -137,15 +137,18 @@ public class KVStore implements Runnable
 		// If key doesn't exist on this node's local store
 		if (!store.containsKey(rehashedKeyStr))
 		{
+            System.out.println("I dont have the key");
 			// Get the node responsible for the partition with first hashed value that is greater than or equal to the key (i.e. clockwise on the ring)
 			Map.Entry<String, Node> primary = getNodeEntryForHash(rehashedKeyStr);
 
 			// Check if this node is the primary partition for the hash key (so we know to forward to successors)
+            System.out.println("primary = "+clntSock.getLocalAddress().toString());
 			if (primary.getValue().Equals(clntSock.getLocalAddress()))
 			{
 				// Iterate through each replica, by getting the successor list belonging to this partition, and check for key
 				ArrayList<String> successors = successorListMap.get(primary.getKey());
 				byte[] replyFromReplica = new byte[VALUE_SIZE];
+      
 				for (String nextSuccessor : successors)
 				{
 					// If a replica returns a value, then return that as the result
@@ -209,9 +212,9 @@ public class KVStore implements Runnable
 				// System.out.println("Remove command succeeded!");
 			}
 
-			System.out.println("before backup");
+			//System.out.println("before backup");
 			updateReplicas(key, null);
-			System.out.println("after backup");
+			//System.out.println("after backup");
 		}
 		else
 		{
@@ -225,6 +228,7 @@ public class KVStore implements Runnable
 		byte[] sendBuffer;
 		if (value != null)
 		{
+            //update existing key or put a new key
 			sendBuffer = new byte[CMD_SIZE + KEY_SIZE + VALUE_SIZE];
 			ByteOrder.int2leb(101, sendBuffer, 0); // Command byte - 1 byte
 			System.arraycopy(key, 0, sendBuffer, CMD_SIZE, KEY_SIZE); // Key bytes - 32 bytes
@@ -232,6 +236,7 @@ public class KVStore implements Runnable
 		}
 		else
 		{
+            //get value of existing key
 			sendBuffer = new byte[CMD_SIZE + KEY_SIZE];
 			ByteOrder.int2leb(103, sendBuffer, 0); // Command byte - 1 byte
 			System.arraycopy(key, 0, sendBuffer, CMD_SIZE, KEY_SIZE); // Key bytes - 32 bytes
@@ -248,9 +253,11 @@ public class KVStore implements Runnable
 		for (String nextSuccessor : successors)
 		{
 			//NOTE: What happens if we try to connect to a successor that happens to be offline at this time?
+            //check if sendBytes is successful, if not, loop to next on the successor list
+            System.out.println("replicate to "+nodeMap.get(nextSuccessor).address.getHostName().toString());
 			socket = new Socket(nodeMap.get(nextSuccessor).address.getHostName(), nodeMap.get(nextSuccessor).address.getPort());
 			sendBytes(socket, sendBuffer);
-		}
+        }
 	}
 
 	private byte[] forward(Node remoteNode, int cmd, byte[] key, byte[] value)
@@ -313,7 +320,7 @@ public class KVStore implements Runnable
 			int index = membership.indexOf(remoteNode);
 			membership.get(index).online = false;
 			membership.get(index).t = new Timestamp(0);
-			System.out.println(membership.get(index).address.getHostName().toString() + " left");
+			//System.out.println(membership.get(index).address.getHostName().toString() + " left");
 			return null;
 		}
 		return null;

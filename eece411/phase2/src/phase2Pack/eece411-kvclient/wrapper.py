@@ -9,6 +9,6 @@ client.put(KEY, VALUE)
 print(client.get(KEY))
 client.delete(KEY)
 try:
-    client.get(KEY)
+    print(client.get(KEY))
 except InvalidKeyError, error:
     print(str(error))
