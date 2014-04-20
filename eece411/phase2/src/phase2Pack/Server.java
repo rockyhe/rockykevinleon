@@ -28,8 +28,8 @@ public class Server
 	// Constants
 	private static final int PORT = 5000;
 	private static final int MAX_GOSSIP_MEMBERS = 16;
-	private static final int MAX_NUM_CLIENTS = 500;
-	private static final int BACKLOG_SIZE = 100;
+	private static final int MAX_NUM_CLIENTS = 250;
+	private static final int BACKLOG_SIZE = 50;
 	private static final String NODE_LIST_FILE = "nodeList.txt";
 	private static final int CMD_SIZE = 1;
 	private static final int GOSSIP_MSG = 255;
