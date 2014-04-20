@@ -12,10 +12,16 @@ import java.util.Arrays;
  */
 public class ReadEventHandler implements EventHandler
 {
+    // Constants
+    private static final int MAX_NUM_CLIENTS = 250;
+    private static final int CMD_SIZE = 1;
+    private static final int KEY_SIZE = 32;
+    private static final int VALUE_SIZE = 1024;
+    private static final int ERR_SIZE = 1;
+    private static final int KVSTORE_SIZE = 40000;
     private static final int BUFFER_SIZE = 33;
 
     private Selector demultiplexer;
-    private ByteBuffer inputBuffer = ByteBuffer.allocate(BUFFER_SIZE);
 
     public ReadEventHandler(Selector demultiplexer)
     {
@@ -27,7 +33,9 @@ public class ReadEventHandler implements EventHandler
     {
         SocketChannel socketChannel = (SocketChannel) handle.channel();
 
-        socketChannel.read(inputBuffer); // Read data from client
+        // Read data from client
+        ByteBuffer inputBuffer = ByteBuffer.allocate(BUFFER_SIZE);
+        socketChannel.read(inputBuffer);
 
         inputBuffer.flip();
         // Rewind the buffer to start reading from the beginning
