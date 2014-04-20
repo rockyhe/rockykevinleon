@@ -20,7 +20,7 @@ import java.nio.charset.*;
 import java.nio.CharBuffer;
 
 public class ServerNIO {
-	private static final int PORT = 8000;
+	private static final int PORT = 5000;
 	private static ConcurrentHashMap<String, byte[]> store;
 	private static final long TIMEOUT = 10000;
 
@@ -33,7 +33,7 @@ public class ServerNIO {
 			server.configureBlocking(false);
 			// host-port 8000
 			server.socket().bind(new java.net.InetSocketAddress(PORT));
-			System.out.println("Server connected to port 8000");
+			System.out.println("Server connected to port "+PORT);
 			// Create the selector
 			Selector selector = Selector.open();
 			// Recording server to selector (type OP_ACCEPT)
@@ -73,14 +73,17 @@ public class ServerNIO {
 					// then the server is ready to read
 					if (key.isReadable())
 					{
-
 						SocketChannel client = (SocketChannel) key.channel();
 
 						// Read byte coming from the client
 						int BUFFER_SIZE = 33;
-						ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE);
-						try {
+					    ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE);
+                        byte[] msg = null;
+                        try {
 							client.read(buffer);
+						    buffer.flip();
+                            msg = buffer.array();
+                            System.out.println(Arrays.toString(msg));
 						}
 						catch (Exception e) {
 							// client is no longer active
@@ -88,16 +91,12 @@ public class ServerNIO {
 							continue;
 						}
 						// Show bytes on the console
-						buffer.flip();
-						Charset charset=Charset.forName("ISO-8859-1");
-						CharsetDecoder decoder = charset.newDecoder();
-						CharBuffer charBuffer = decoder.decode(buffer);
-						System.out.print(charBuffer.toString());
 						continue;
 					}
 				}
 			}
-		} catch (Exception e) {
+		} catch (IOException e) {
+            e.printStackTrace();
 			System.out.print("Internal Server Error!");
 		}
 	}
