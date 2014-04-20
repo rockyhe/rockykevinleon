@@ -33,22 +33,22 @@ public class ReadEventHandler implements EventHandler
     {
         SocketChannel socketChannel = (SocketChannel) handle.channel();
 
-        // Read data from client
+        // Prepare memory location for buffer and read data from client
         ByteBuffer inputBuffer = ByteBuffer.allocate(BUFFER_SIZE);
         socketChannel.read(inputBuffer);
 
-        inputBuffer.flip();
         // Rewind the buffer to start reading from the beginning
+        inputBuffer.flip();
 
         byte[] buffer = new byte[inputBuffer.limit()];
         inputBuffer.get(buffer);
+        // Rewind the buffer to start reading from the beginning
         inputBuffer.flip();
         System.out.println("Received message from client : " + Arrays.toString(buffer));
 
-        // Rewind the buffer to start reading from the beginning
+        inputBuffer.clear();
         // Register the interest for writable readiness event for
         // this channel in order to echo back the message
-
         socketChannel.register(demultiplexer, SelectionKey.OP_WRITE, inputBuffer);
     }
 }
