@@ -16,13 +16,12 @@ public class Gossiper implements Runnable
     private static final int OFFLINE_THRES = (int) (Math.log10(MAX_GOSSIP_MEMBERS) / Math.log10(2)) * SLEEP_TIME + PROP_BUFFER; // 10 seconds log(N)/log(2) * SLEEP_TIME
 
     private ConsistentHashRing ring;
-    private int PORT;
+    private int gossipPort;
 
-
-    Gossiper(ConsistentHashRing ring, int serverPORT)
+    Gossiper(ConsistentHashRing ring, int gossipPort)
     {
         this.ring = ring;
-        this.PORT = serverPORT;
+        this.gossipPort = gossipPort;
     }
 
     public void run()
@@ -59,7 +58,7 @@ public class Gossiper implements Runnable
                 }
 
                 // System.out.println("gossiping to server: "+onlineNodeList.get(randomInt).address.getHostName());
-                socket = new Socket(ring.getMembership().get(randomInt).address.getHostName(), PORT);
+                socket = new Socket(ring.getMembership().get(randomInt).address.getHostName(), gossipPort);
 
                 // Send the message to the server
                 OutputStream os = socket.getOutputStream();
