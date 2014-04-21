@@ -84,7 +84,7 @@ public class ServerNIO
             ring = new KVStore(PORT);
 
             System.out.println("Starting NIO server at port : " + PORT);
-            new ReactorInitiator().initiateReactiveServer(PORT, kvStore);
+            new ReactorInitiator().initiateReactiveServer(PORT, ring);
 
             // Initialize gossip variables
             servSock = new ServerSocket(PORT);
