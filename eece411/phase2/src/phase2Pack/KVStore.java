@@ -293,7 +293,7 @@ public class KVStore
         }
     }
 
-    private void returnPartitions(int idx)
+    public void returnPartitions(int idx)
     {
         // foreach nodes in the nodeList
         // System.out.println("<<<<<<<<<<<<<<<<<<<<<<<rejoined node: "+onlineNodeList.get(idx).address.toString());
@@ -316,7 +316,7 @@ public class KVStore
         }
     }
 
-    private void takePartitions(int idx)
+    public void takePartitions(int idx)
     {
         // get the node that is offline now
         // foreach nodes in the nodeList

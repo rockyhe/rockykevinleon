@@ -1,26 +1,11 @@
 package phase2Pack;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.OutputStream;
-import java.net.InetSocketAddress;
-import java.net.ServerSocket;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.Socket;
 import java.sql.Timestamp;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Queue;
-import java.util.Random;
-import java.util.Scanner;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class GossipListener implements Runnable
@@ -30,17 +15,17 @@ public class GossipListener implements Runnable
 
     // Private members
     private Socket clntSock;
-    private static CopyOnWriteArrayList<Node> membership;
-    private static AtomicInteger concurrentClientCount;
-    
+    private CopyOnWriteArrayList<Node> membership;
+    private AtomicInteger concurrentClientCount;
+
     // Constructor
-    GossipListener(Socket clientSocket, AtomicInteger ClientCount, CopyOnWriteArrayList<Node> members)
+    GossipListener(Socket clientSocket, AtomicInteger clientCount, CopyOnWriteArrayList<Node> members)
     {
         this.clntSock = clientSocket;
-        this.concurrentClientCount = ClientCount;
+        this.concurrentClientCount = clientCount;
         this.membership = members;
     }
-    
+
     private void receiveBytes(Socket srcSock, byte[] dest) throws IOException
     {
         InputStream in = srcSock.getInputStream();
@@ -54,7 +39,7 @@ public class GossipListener implements Runnable
             }
         }
     }
-    
+
     private void gossip()
     {
         for (Node node : membership)
@@ -73,22 +58,23 @@ public class GossipListener implements Runnable
             }
         }
     }
-    
+
     public void run()
     {
-        try{
+        try {
             byte[] command = new byte[CMD_SIZE];
             receiveBytes(clntSock, command);
             int cmd = ByteOrder.leb2int(command, 0, CMD_SIZE);
-            
+
             System.out.println("cmd: " + cmd);
             if(cmd == 255)
             {
                 gossip();
             }
-            
-        }catch (Exception e){
+        } catch (Exception e) {
             System.out.println("internal Server Error");
+        } finally {
+            concurrentClientCount.getAndDecrement();
         }
     }
 
