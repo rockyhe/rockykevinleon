@@ -3,8 +3,6 @@ package phase2Pack;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -77,6 +75,11 @@ public class KVStore
         // displayRing();
         // verifyRing();
         // displaySuccessorListMap();
+    }
+
+    public CopyOnWriteArrayList<Node> getMembership()
+    {
+        return membership;
     }
 
     private void constructRing()
@@ -253,7 +256,7 @@ public class KVStore
         }
     }
 
-    private void shutdown()
+    public void shutdown()
     {
         // Increment the shutdown flag to no longer accept incoming connections
         shutdown.getAndIncrement();
@@ -266,21 +269,9 @@ public class KVStore
             self.online = false;
             self.t = new Timestamp(0);
         }
-
-        while (true)
-        {
-            // Wait until the only client left is the one initiating the shutdown command
-            // i.e. all other existing client requests have finished
-            // System.out.println("clientcnt: "+clientCnt.get());
-
-            if (clientCnt.get() == 1)
-            {
-                break;
-            }
-        }
     }
 
-    private void gossip()
+    public void gossip()
     {
         for (Node node : membership)
         {
@@ -507,26 +498,6 @@ public class KVStore
         {
             store.remove(rehashedKeyStr);
         }
-    }
-
-    private void receiveBytes(Socket srcSock, byte[] dest) throws IOException
-    {
-        InputStream in = srcSock.getInputStream();
-        int totalBytesRcvd = 0;
-        int bytesRcvd = 0;
-        while (totalBytesRcvd < dest.length)
-        {
-            if ((bytesRcvd = in.read(dest, totalBytesRcvd, dest.length - totalBytesRcvd)) != -1)
-            {
-                totalBytesRcvd += bytesRcvd;
-            }
-        }
-    }
-
-    private void sendBytes(Socket destSock, byte[] src) throws IOException
-    {
-        OutputStream out = destSock.getOutputStream();
-        out.write(src);
     }
 
     private Map.Entry<String, Node> getPrimary(String hashedKey)
