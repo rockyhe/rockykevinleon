@@ -1,4 +1,4 @@
-planetlab1.csee.usf.edu
-planetlab3.csee.usf.edu
+planet4.cs.ucsb.edu
+planetlab5.millennium.berkeley.edu
 planetlab1.cs.unc.edu
 planetlab1.utdallas.edu
