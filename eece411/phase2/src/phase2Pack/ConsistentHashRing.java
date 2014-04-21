@@ -314,10 +314,10 @@ public class ConsistentHashRing
         {
             String key = entry.getKey();
             ArrayList<String> successors = entry.getValue();
-            System.out.println(key + " => Successors:");
+            System.out.println(key + " => " + partitionMap.get(key).hostname + " => Successors:");
             for (String successor : successors)
             {
-                System.out.println("\t" + successor + " => " + partitionMap.get(successor).hostname.toString());
+                System.out.println("\t" + successor + " => " + partitionMap.get(successor).hostname);
             }
         }
     }
