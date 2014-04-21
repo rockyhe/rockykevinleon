@@ -13,7 +13,7 @@ import phase2Pack.nio.ReactorInitiator;
 public class Server
 {
     // Constants
-    public static final int PORT = 5000;
+    public static final int PORT = 6666;
     public static final int GOSSIP_PORT = 5555;
     private static final int MAX_NUM_CLIENTS = 50;
     private static final int BACKLOG_SIZE = 25;
@@ -36,19 +36,20 @@ public class Server
 
             System.out.println("Starting NIO server at port : " + PORT);
             new ReactorInitiator().initiateReactiveServer(PORT, ring, kvStore);
-
+            System.out.println("after ReactorInitiator");
             // Initialize gossip variables
             servSock = new ServerSocket(GOSSIP_PORT);
             backlog = new ArrayBlockingQueue<Socket>(BACKLOG_SIZE);
             concurrentClientCount = new AtomicInteger(0);
-
+            System.out.println("after initialize gossip variable");
             threadPool = Executors.newFixedThreadPool(MAX_NUM_CLIENTS);
-
+            
+           
             Thread producer = new Thread(new Producer());
             producer.start();
             Thread consumer = new Thread(new Consumer());
             consumer.start();
-
+            System.out.println("after creating consumer");
             // randomly grab 2 nodes concurrently
             Thread gossiper = new Thread(new Gossiper(ring, GOSSIP_PORT));
             gossiper.start();

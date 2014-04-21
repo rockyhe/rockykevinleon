@@ -73,7 +73,7 @@ public class Gossiper implements Runnable
             } catch (Exception e) {
                 ring.getMembership().get(randomInt).online = false;
                 ring.getMembership().get(randomInt).t = new Timestamp(0);
-                // System.out.println(membership.get(randomInt).address.getHostName().toString() + " left");
+                System.out.println(ring.getMembership().get(randomInt).address.getHostName().toString() + " left");
             }
 
         }
@@ -109,6 +109,7 @@ public class Gossiper implements Runnable
                             if (timeDiff > OFFLINE_THRES)
                             {
                                 node.online = false;
+                                System.out.println("taking partition");
                                 ring.takePartitions(ring.getMembership().indexOf(node));
                             }
                         }
