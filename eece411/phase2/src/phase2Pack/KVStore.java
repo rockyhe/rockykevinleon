@@ -21,7 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-public class ConsistentHashRing
+public class KVStore
 {
     // Constants
     private static final String NODE_LIST_FILE = "nodeList.txt";
@@ -46,7 +46,7 @@ public class ConsistentHashRing
     private ConcurrentSkipListMap<String, Node> nodeMap; // Sorted map for mapping hashed values to physical nodes
     private ConcurrentSkipListMap<String, ArrayList<String>> successorListMap; // Sorted map for mapping each partition to its successor partitions
 
-    public ConsistentHashRing(int port)
+    public KVStore(int port)
     {
         // Load the list of participating nodes and construct the membership list
         try

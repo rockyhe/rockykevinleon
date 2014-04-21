@@ -3,7 +3,7 @@ package phase2Pack.nio;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 
-import phase2Pack.ConsistentHashRing;
+import phase2Pack.KVStore;
 
 /*
  * Reactor initiator for NIO, reactor pattern
@@ -11,7 +11,7 @@ import phase2Pack.ConsistentHashRing;
  */
 public class ReactorInitiator
 {
-    public void initiateReactiveServer(int port, ConsistentHashRing ring) throws Exception
+    public void initiateReactiveServer(int port, KVStore ring) throws Exception
     {
         // Create the server socket channel
         ServerSocketChannel server = ServerSocketChannel.open();

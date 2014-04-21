@@ -6,7 +6,7 @@ import java.nio.channels.SocketChannel;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import phase2Pack.ConsistentHashRing;
+import phase2Pack.KVStore;
 import phase2Pack.ProcessRequest;
 
 /*
@@ -21,9 +21,9 @@ public class ReadEventHandler implements EventHandler
     private ExecutorService threadPool;
 
     private Selector demultiplexer;
-    private ConsistentHashRing ring;
+    private KVStore ring;
 
-    public ReadEventHandler(Selector demultiplexer, ConsistentHashRing ring)
+    public ReadEventHandler(Selector demultiplexer, KVStore ring)
     {
         this.demultiplexer = demultiplexer;
         this.ring = ring;

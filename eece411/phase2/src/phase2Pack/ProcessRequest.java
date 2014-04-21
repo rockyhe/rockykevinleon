@@ -17,9 +17,9 @@ public class ProcessRequest implements Runnable
     private SocketChannel socketChannel;
     private SelectionKey handle;
     private Selector demultiplexer;
-    private ConsistentHashRing ring;
+    private KVStore ring;
 
-    public ProcessRequest(SocketChannel socketChannel, SelectionKey handle, Selector demultiplexer, ConsistentHashRing ring)
+    public ProcessRequest(SocketChannel socketChannel, SelectionKey handle, Selector demultiplexer, KVStore ring)
     {
         this.socketChannel = socketChannel;
         this.handle = handle;

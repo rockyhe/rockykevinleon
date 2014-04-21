@@ -9,13 +9,13 @@ public class ServerNIO
     public static final long TIMEOUT = 10000;
 
     // Private members
-    private static ConsistentHashRing ring;
+    private static KVStore ring;
 
     public static void main(String[] args) throws Exception
     {
         try
         {
-            ring = new ConsistentHashRing(PORT);
+            ring = new KVStore(PORT);
 
             System.out.println("Starting NIO server at port : " + PORT);
             new ReactorInitiator().initiateReactiveServer(PORT, ring);
