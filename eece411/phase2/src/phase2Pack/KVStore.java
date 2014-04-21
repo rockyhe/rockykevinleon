@@ -2,7 +2,7 @@ package phase2Pack;
 
 import java.util.concurrent.ConcurrentHashMap;
 
-import phase2Pack.Exceptions.InexistedKeyException;
+import phase2Pack.Exceptions.InexistentKeyException;
 import phase2Pack.Exceptions.OutOfSpaceException;
 
 public class KVStore
@@ -30,21 +30,21 @@ public class KVStore
         }
     }
 
-    public byte[] get(String hashedKey) throws InexistedKeyException
+    public byte[] get(String hashedKey) throws InexistentKeyException
     {
         // If key doesn't exist on this node's local store
         if (!store.containsKey(hashedKey))
         {
-            throw new InexistedKeyException();
+            throw new InexistentKeyException();
         }
         return store.get(hashedKey);
     }
 
-    public void remove(String hashedKey) throws InexistedKeyException
+    public void remove(String hashedKey) throws InexistentKeyException
     {
         if (!store.containsKey(hashedKey))
         {
-            throw new InexistedKeyException();
+            throw new InexistentKeyException();
         }
         else
         {
