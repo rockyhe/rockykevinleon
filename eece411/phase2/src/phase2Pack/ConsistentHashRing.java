@@ -208,7 +208,7 @@ public class ConsistentHashRing
                 {
                     // replace it with the next node, or the first node
                     // System.out.println("rejoined node: "+onlineNodeList.get(idx).address.toString());
-                    // System.out.println("hash key for rejoin node: "+KVStore.getHash(node.address.getHostName() + i).toString());
+                    // System.out.println("hash key for rejoin node: "+KVStore.getHash(node.hostname + i).toString());
 
                     partitionMap.replace(getHash(node.hostname + i), membership.get(idx));
                 }
@@ -233,7 +233,7 @@ public class ConsistentHashRing
                 if (partitionMap.get(getHash(node.hostname + i)).Equals(membership.get(idx)))
                 {
                     // replace it with the next node, or the first node
-                    // System.out.println("hash key for offline node: "+KVStore.getHash(node.address.getHostName() + i).toString());
+                    // System.out.println("hash key for offline node: "+KVStore.getHash(node.hostname + i).toString());
 
                     if (idx < (membership.size() - 1))
                     {
