@@ -16,18 +16,18 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class Dispatcher
 {
     private Map<Integer, EventHandler> registeredHandlers = new ConcurrentHashMap<Integer, EventHandler>();
-    private Selector demultiplexer;
+    private Selector selector;
     private static AtomicBoolean shutdownFlag;
 
     public Dispatcher() throws Exception
     {
-        demultiplexer = Selector.open();
+        selector = Selector.open();
         shutdownFlag = new AtomicBoolean();
     }
 
-    public Selector getDemultiplexer()
+    public Selector getSelector()
     {
-        return demultiplexer;
+        return selector;
     }
 
     public void registerEventHandler(int eventType, EventHandler eventHandler)
@@ -39,7 +39,7 @@ public class Dispatcher
     // selector to accept incoming client connections
     public void registerChannel(int eventType, SelectableChannel channel) throws Exception
     {
-        channel.register(demultiplexer, eventType);
+        channel.register(selector, eventType);
     }
 
     public static void shutdown()
@@ -54,16 +54,20 @@ public class Dispatcher
             while (true)
             {
                 // Waiting for events
-                demultiplexer.select();
+                selector.select();
 
                 // Get keys
-                Set<SelectionKey> readyHandles = demultiplexer.selectedKeys();
+                Set<SelectionKey> readyHandles = selector.selectedKeys();
                 Iterator<SelectionKey> handleIterator = readyHandles.iterator();
 
                 // For each key
                 while (handleIterator.hasNext())
                 {
                     SelectionKey handle = handleIterator.next();
+                    if (!handle.isValid())
+                    {
+                        continue;
+                    }
 
                     if (handle.isAcceptable() && !shutdownFlag.get())
                     {

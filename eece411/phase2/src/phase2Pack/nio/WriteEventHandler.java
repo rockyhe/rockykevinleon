@@ -15,7 +15,10 @@ public class WriteEventHandler implements EventHandler
     {
         SocketChannel socketChannel = (SocketChannel) handle.channel();
         ByteBuffer inputBuffer = (ByteBuffer) handle.attachment();
-        socketChannel.write(inputBuffer);
+        while (inputBuffer.hasRemaining())
+        {
+            socketChannel.write(inputBuffer);
+        }
         socketChannel.close();
     }
 }

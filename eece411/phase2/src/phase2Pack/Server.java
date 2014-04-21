@@ -29,7 +29,7 @@ public class Server
     public static void main(String[] args) throws Exception
     {
         try {
-            //creating consistent hashing ring
+            // Create the consistent hash ring and KVStore data structure
             kvStore = new KVStore(PORT);
 
             System.out.println("Starting NIO server at port : " + PORT);

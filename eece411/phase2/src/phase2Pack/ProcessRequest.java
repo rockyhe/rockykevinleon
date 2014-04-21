@@ -37,7 +37,6 @@ public class ProcessRequest implements Runnable
             receiveBytes(commandBytes);
             int cmd = ByteOrder.leb2int(commandBytes, 0, CMD_SIZE);
 
-            // NOTE: As stated by Matei in class, assume that client is responsible for providing hashed keys so not necessary to perform re-hashing.
             byte[] key = null;
             byte[] value = null;
             switch (cmd)
@@ -65,20 +64,20 @@ public class ProcessRequest implements Runnable
                 receiveBytes(key);
                 kvStore.remove(key);
                 break;
-            case 4: // shutdown command
+            case 4: // Shutdown command
                 kvStore.shutdown();
                 break;
-            case 101: // put to replica
+            case 101: // Put to replica command
                 key = new byte[KEY_SIZE];
                 receiveBytes(key);
                 value = new byte[VALUE_SIZE];
                 receiveBytes(value);
                 kvStore.putToReplica(key, value);
-            case 103: // remove from replica
+            case 103: // Remove from replica command
                 key = new byte[KEY_SIZE];
                 receiveBytes(key);
                 kvStore.removeFromReplica(key);
-            case 255: // gossip signal
+            case 255: // Gossip signal
                 kvStore.gossip();
                 break;
             default: // Unrecognized command
@@ -113,7 +112,10 @@ public class ProcessRequest implements Runnable
     private void receiveBytes(byte[] dest) throws IOException
     {
         ByteBuffer buffer = ByteBuffer.allocate(dest.length);
-        socketChannel.read(buffer);
+        while (buffer.hasRemaining())
+        {
+            socketChannel.read(buffer);
+        }
         buffer.flip();
         buffer.get(dest);
         buffer.clear();
@@ -121,6 +123,8 @@ public class ProcessRequest implements Runnable
 
     private void sendBytes(byte[] src) throws IOException
     {
-        socketChannel.register(demultiplexer, SelectionKey.OP_WRITE, ByteBuffer.wrap(src));
+        handle.interestOps(SelectionKey.OP_WRITE);
+        handle.attach(ByteBuffer.wrap(src));
+        demultiplexer.wakeup();
     }
 }

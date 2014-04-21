@@ -11,9 +11,9 @@ import phase2Pack.KVStore;
  */
 public class ReactorInitiator
 {
-    public void initiateReactiveServer(int port, KVStore ring) throws Exception
+    public void initiateReactiveServer(int port, KVStore kvStore) throws Exception
     {
-        // Create the server socket channel
+        // Create the server socket channel and bind to specified port
         ServerSocketChannel server = ServerSocketChannel.open();
         server.socket().bind(new java.net.InetSocketAddress(port));
         server.configureBlocking(false);
@@ -22,8 +22,8 @@ public class ReactorInitiator
         // Create the Dispatcher (selector) and register the channel and event handlers
         Dispatcher dispatcher = new Dispatcher();
         dispatcher.registerChannel(SelectionKey.OP_ACCEPT, server);
-        dispatcher.registerEventHandler(SelectionKey.OP_ACCEPT, new AcceptEventHandler(dispatcher.getDemultiplexer()));
-        dispatcher.registerEventHandler(SelectionKey.OP_READ, new ReadEventHandler(dispatcher.getDemultiplexer(), ring));
+        dispatcher.registerEventHandler(SelectionKey.OP_ACCEPT, new AcceptEventHandler(dispatcher.getSelector()));
+        dispatcher.registerEventHandler(SelectionKey.OP_READ, new ReadEventHandler(dispatcher.getSelector(), kvStore));
         dispatcher.registerEventHandler(SelectionKey.OP_WRITE, new WriteEventHandler());
 
         // Run the dispatcher loop
