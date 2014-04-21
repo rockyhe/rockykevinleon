@@ -81,8 +81,7 @@ public class ProcessRequest implements Runnable
                 kvStore.gossip();
                 break;
             default: // Unrecognized command
-                errCode = 0x05;
-                break;
+                throw new UnrecognizedCmdException();
             }
 
             // Send the reply message to the client
@@ -109,9 +108,10 @@ public class ProcessRequest implements Runnable
         } catch (OutOfSpaceException e) {
             System.out.println("Out Of Space");
             sendBytes(new byte[] {0x02});
-        } catch (SystemOverloadException e){
-            System.out.println("System Overload");
-            sendBytes(new byte[] {0x03});
+            //TODO: Figure out where to throw this
+            //        } catch (SystemOverloadException e){
+            //            System.out.println("System Overload");
+            //            sendBytes(new byte[] {0x03});
         } catch (InternalKVStoreException e){
             System.out.println("Internal KVStore");
             sendBytes(new byte[] {0x04});
@@ -137,7 +137,7 @@ public class ProcessRequest implements Runnable
         buffer.clear();
     }
 
-    private void sendBytes(byte[] src) throws IOException
+    private void sendBytes(byte[] src)
     {
         handle.interestOps(SelectionKey.OP_WRITE);
         handle.attach(ByteBuffer.wrap(src));
