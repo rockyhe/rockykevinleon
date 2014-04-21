@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import phase2Pack.nio.ReactorInitiator;
 
-public class ServerNIO
+public class Server
 {
     // Constants
     public static final int PORT = 5000;
