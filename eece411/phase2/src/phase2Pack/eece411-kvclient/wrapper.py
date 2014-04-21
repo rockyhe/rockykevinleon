@@ -1,6 +1,6 @@
 from kvclient import KeyValueClient, InvalidKeyError
 
-SERVER = 'dhcp-128-189-243-76.ubcsecure.wireless.ubc.ca:5000'
+SERVER = 'planetlab1.cs.unc.edu:5000'
 KEY = '11'
 VALUE = '1'
 
