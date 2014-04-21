@@ -13,7 +13,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Dispatcher for NIO, reactor pattern
  * Reference: http://chamibuddhika.wordpress.com/2012/08/11/io-demystified/
  */
-public class Dispatcher
+public class Dispatcher implements Runnable
 {
     private Map<Integer, EventHandler> registeredHandlers = new ConcurrentHashMap<Integer, EventHandler>();
     private Selector selector;

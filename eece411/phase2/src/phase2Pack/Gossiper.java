@@ -102,7 +102,7 @@ public class Gossiper implements Runnable
                         {
                             Thread.currentThread().sleep(SLEEP_TIME);
                             currentTime = new Timestamp(new Date().getTime());
-                            // System.out.println("node: "+onlineNodeList.get(onlineNodeList.indexOf(node)).address.getHostName());
+                            // System.out.println("node: "+onlineNodeList.get(onlineNodeList.indexOf(node)).hostname);
                             // System.out.println("last update: "+onlineNodeList.get(onlineNodeList.indexOf(node)).t.toString());
                             timeDiff = currentTime.getTime() - node.t.getTime();
                             // System.out.println("timeDiff: "+timeDiff);

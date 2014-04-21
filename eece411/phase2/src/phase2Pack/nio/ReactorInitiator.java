@@ -28,6 +28,7 @@ public class ReactorInitiator
         dispatcher.registerEventHandler(SelectionKey.OP_WRITE, new WriteEventHandler());
 
         // Run the dispatcher loop
-        dispatcher.run();
+        Thread dispatcherThread = new Thread(dispatcher);
+        dispatcherThread.start();
     }
 }
