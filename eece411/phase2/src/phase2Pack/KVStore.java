@@ -7,6 +7,8 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.SocketChannel;
 import java.security.MessageDigest;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -18,6 +20,8 @@ import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+
+import phase2Pack.nio.Dispatcher;
 
 public class KVStore
 {
@@ -37,7 +41,6 @@ public class KVStore
     private static String localHost;
 
     private ConcurrentHashMap<String, byte[]> store;
-    private byte errCode = 0x00; // Set default errCode to 0x00, so we can assume that operation is successful unless errCode is explicitly changed
 
     private int partitionsPerNode;
     private CopyOnWriteArrayList<Node> membership;
@@ -208,8 +211,8 @@ public class KVStore
                     }
                 }
             }
-            // Otherwise only route the command if this node is neither the primary partition nor one of the replicas of the primary
-            else if (!isReplica(primary))
+            // Otherwise only route the command if this node is not one of the successors of the primary
+            else if (!isSuccessor(primary))
             {
                 // Otherwise route to node that should contain
                 // System.out.println("Forwarding get command!");
@@ -259,10 +262,10 @@ public class KVStore
     public void shutdown()
     {
         // Increment the shutdown flag to no longer accept incoming connections
-        shutdown.getAndIncrement();
+        Dispatcher.shutdown();
 
         // Update online status to false and timestamp to 0 of self node, so it propagates faster
-        int index = membership.indexOf(clntSock.getInetAddress().getHostName());
+        int index = membership.indexOf(localHost);
         if (index >= 0)
         {
             Node self = membership.get(index);
@@ -363,7 +366,7 @@ public class KVStore
         }
     }
 
-    private boolean isReplica(Map.Entry<String, Node> primary)
+    private boolean isSuccessor(Map.Entry<String, Node> primary)
     {
         ArrayList<String> successors = successorListMap.get(primary.getKey());
         for (String successor : successors)
@@ -416,17 +419,22 @@ public class KVStore
     private byte[] forward(Node remoteNode, int cmd, byte[] key, byte[] value)
     {
         System.out.println("Forwarding to " + remoteNode.address.toString());
-        // System.out.println("cmd: " + cmd);
-        // System.out.println("key: " + StringUtils.byteArrayToHexString(key));
-        // if (value != null)
-        // {
-        // System.out.println("value: " + StringUtils.byteArrayToHexString(value));
-        // }
 
-        // Open a socket connection to the other server
-        // System.out.println("Creating socket");
         try
         {
+            SocketChannel client;
+            try {
+                client = SocketChannel.open();
+
+                System.out.println("connect to nio remote " + handle.isValid());
+                client.configureBlocking(false);
+                client.connect(new InetSocketAddress(host, KVStore.NIO_SERVER_PORT));
+                ClientDispatcher.registerChannel(SelectionKey.OP_CONNECT, client,
+                        handle, message, host);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
             Socket socket = new Socket(remoteNode.address.getHostName(), remoteNode.address.getPort());
             // System.out.println("Connected to server: " + socket.getInetAddress().toString());
 
@@ -481,23 +489,23 @@ public class KVStore
         return null;
     }
 
-
-
-    private void replicatedWrite(byte[] key, byte[] value)
+    public void putToReplica(byte[] key, byte[] value)
     {
         System.out.println("replicating: " + StringUtils.byteArrayToHexString(key));
         // Convert key bytes to string
-        String keyStr = StringUtils.byteArrayToHexString(key);// Arrays.toString(key).replaceAll("(^\\[|\\]$)", "").replace(", ", "");
+        String keyStr = StringUtils.byteArrayToHexString(key);
         // Re-hash the key using our hash function so it's consistent
         String rehashedKeyStr = getHash(keyStr);
-        if (value != null)
-        {
-            store.put(rehashedKeyStr, value);
-        }
-        else
-        {
-            store.remove(rehashedKeyStr);
-        }
+        store.put(rehashedKeyStr, value);
+    }
+
+    public void removeFromReplica(byte[] key)
+    {
+        // Convert key bytes to string
+        String keyStr = StringUtils.byteArrayToHexString(key);
+        // Re-hash the key using our hash function so it's consistent
+        String rehashedKeyStr = getHash(keyStr);
+        store.remove(rehashedKeyStr);
     }
 
     private Map.Entry<String, Node> getPrimary(String hashedKey)

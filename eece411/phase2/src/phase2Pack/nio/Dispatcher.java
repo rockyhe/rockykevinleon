@@ -7,7 +7,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /*
  * Dispatcher for NIO, reactor pattern
@@ -17,13 +17,12 @@ public class Dispatcher
 {
     private Map<Integer, EventHandler> registeredHandlers = new ConcurrentHashMap<Integer, EventHandler>();
     private Selector demultiplexer;
-
-    private static AtomicInteger concurrentClientCount;
-    private static AtomicInteger shutdownFlag;
+    private static AtomicBoolean shutdownFlag;
 
     public Dispatcher() throws Exception
     {
         demultiplexer = Selector.open();
+        shutdownFlag = new AtomicBoolean();
     }
 
     public Selector getDemultiplexer()
@@ -41,6 +40,11 @@ public class Dispatcher
     public void registerChannel(int eventType, SelectableChannel channel) throws Exception
     {
         channel.register(demultiplexer, eventType);
+    }
+
+    public static void shutdown()
+    {
+        shutdownFlag.set(true);
     }
 
     public void run()
@@ -61,7 +65,7 @@ public class Dispatcher
                 {
                     SelectionKey handle = handleIterator.next();
 
-                    if (handle.isAcceptable() && !stopAccepting)
+                    if (handle.isAcceptable() && !shutdownFlag.get())
                     {
                         EventHandler handler = registeredHandlers.get(SelectionKey.OP_ACCEPT);
                         handler.handleEvent(handle);

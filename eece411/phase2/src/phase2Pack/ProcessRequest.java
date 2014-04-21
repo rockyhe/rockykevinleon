@@ -19,6 +19,8 @@ public class ProcessRequest implements Runnable
     private Selector demultiplexer;
     private KVStore kvStore;
 
+    private byte errCode = 0x00; // Set default errCode to 0x00, so we can assume that operation is successful unless explicitly changed
+
     public ProcessRequest(SocketChannel socketChannel, SelectionKey handle, Selector demultiplexer, KVStore kvStore)
     {
         this.socketChannel = socketChannel;
@@ -66,19 +68,19 @@ public class ProcessRequest implements Runnable
             case 4: // shutdown command
                 kvStore.shutdown();
                 break;
-            case 255: // gossip signal
-                kvStore.gossip();
-                break;
-            case 101: // write to replica
+            case 101: // put to replica
                 key = new byte[KEY_SIZE];
                 receiveBytes(key);
                 value = new byte[VALUE_SIZE];
                 receiveBytes(value);
-                replicatedWrite(key, value);
+                kvStore.putToReplica(key, value);
             case 103: // remove from replica
                 key = new byte[KEY_SIZE];
                 receiveBytes(key);
-                replicatedWrite(key, null);
+                kvStore.removeFromReplica(key);
+            case 255: // gossip signal
+                kvStore.gossip();
+                break;
             default: // Unrecognized command
                 errCode = 0x05;
                 break;
@@ -96,11 +98,10 @@ public class ProcessRequest implements Runnable
             else
             {
                 sendBytes(new byte[] { errCode });
-                // If command was shutdown, then increment the flag after sending success reply
-                // so that Server knows it's safe to shutdown
+                // If command was shutdown, then close the application after sending the reply
                 if (cmd == 4)
                 {
-                    shutdown.getAndIncrement();
+                    System.exit(0);
                 }
             }
         } catch (Exception e) {

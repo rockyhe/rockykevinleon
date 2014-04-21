@@ -21,12 +21,12 @@ public class ReadEventHandler implements EventHandler
     private ExecutorService threadPool;
 
     private Selector demultiplexer;
-    private KVStore ring;
+    private KVStore kvStore;
 
-    public ReadEventHandler(Selector demultiplexer, KVStore ring)
+    public ReadEventHandler(Selector demultiplexer, KVStore kvStore)
     {
         this.demultiplexer = demultiplexer;
-        this.ring = ring;
+        this.kvStore = kvStore;
 
         // Create a fixed thread pool since we'll have at most MAX_NUM_CLIENTS concurrent threads
         this.threadPool = Executors.newFixedThreadPool(MAX_NUM_CLIENTS);
@@ -37,6 +37,6 @@ public class ReadEventHandler implements EventHandler
     {
         SocketChannel socketChannel = (SocketChannel) handle.channel();
         // Process the event on a thread
-        threadPool.execute(new ProcessRequest(socketChannel, handle, demultiplexer, ring));
+        threadPool.execute(new ProcessRequest(socketChannel, handle, demultiplexer, kvStore));
     }
 }
