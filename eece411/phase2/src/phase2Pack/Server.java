@@ -35,8 +35,6 @@ public class Server
             kvStore = new KVStore();
 
             System.out.println("Starting NIO server at port : " + PORT);
-            new ReactorInitiator().initiateReactiveServer(PORT, ring, kvStore);
-            System.out.println("after ReactorInitiator");
             // Initialize gossip variables
             servSock = new ServerSocket(GOSSIP_PORT);
             backlog = new ArrayBlockingQueue<Socket>(BACKLOG_SIZE);
@@ -61,6 +59,8 @@ public class Server
             timestampCheck.start();
 
             System.out.println("Server is ready...");
+        
+            new ReactorInitiator().initiateReactiveServer(PORT, ring, kvStore);
         } catch (Exception e) {
             System.out.println("Internal Server Error!");
             e.printStackTrace();
