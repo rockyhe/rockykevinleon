@@ -6,6 +6,7 @@ import java.nio.channels.SocketChannel;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import phase2Pack.ConsistentHashRing;
 import phase2Pack.KVStore;
 import phase2Pack.ProcessRequest;
 
@@ -21,11 +22,13 @@ public class ReadEventHandler implements EventHandler
     private ExecutorService threadPool;
 
     private Selector demultiplexer;
+    private ConsistentHashRing ring;
     private KVStore kvStore;
 
-    public ReadEventHandler(Selector demultiplexer, KVStore kvStore)
+    public ReadEventHandler(Selector demultiplexer, ConsistentHashRing ring, KVStore kvStore)
     {
         this.demultiplexer = demultiplexer;
+        this.ring = ring;
         this.kvStore = kvStore;
 
         // Create a fixed thread pool since we'll have at most MAX_NUM_CLIENTS concurrent threads
@@ -37,6 +40,6 @@ public class ReadEventHandler implements EventHandler
     {
         SocketChannel socketChannel = (SocketChannel) handle.channel();
         // Process the event on a thread
-        threadPool.execute(new ProcessRequest(socketChannel, handle, demultiplexer, kvStore));
+        threadPool.execute(new ProcessRequest(socketChannel, handle, demultiplexer, ring, kvStore));
     }
 }

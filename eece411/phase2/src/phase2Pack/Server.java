@@ -20,6 +20,7 @@ public class Server
     public static final long TIMEOUT = 10000;
 
     // Private members
+    private static ConsistentHashRing ring;
     private static KVStore kvStore;
     private static ServerSocket servSock;
     private static Queue<Socket> backlog;
@@ -30,10 +31,11 @@ public class Server
     {
         try {
             // Create the consistent hash ring and KVStore data structure
-            kvStore = new KVStore(PORT);
+            ring = new ConsistentHashRing(PORT);
+            kvStore = new KVStore();
 
             System.out.println("Starting NIO server at port : " + PORT);
-            new ReactorInitiator().initiateReactiveServer(PORT, kvStore);
+            new ReactorInitiator().initiateReactiveServer(PORT, ring, kvStore);
 
             // Initialize gossip variables
             servSock = new ServerSocket(PORT);
@@ -48,13 +50,13 @@ public class Server
             consumer.start();
 
             // randomly grab 2 nodes concurrently
-            Thread gossiper = new Thread(new Gossiper(kvStore, GOSSIP_PORT));
+            Thread gossiper = new Thread(new Gossiper(ring, GOSSIP_PORT));
             gossiper.start();
-            Thread gossiper2 = new Thread(new Gossiper(kvStore, GOSSIP_PORT));
+            Thread gossiper2 = new Thread(new Gossiper(ring, GOSSIP_PORT));
             gossiper2.start();
 
             // check timestamp from the nodeList
-            Thread timestampCheck = new Thread(new Gossiper.TimestampCheck(kvStore.getMembership(), kvStore));
+            Thread timestampCheck = new Thread(new Gossiper.TimestampCheck(ring));
             timestampCheck.start();
 
             System.out.println("Server is ready...");
@@ -101,7 +103,7 @@ public class Server
                     if (concurrentClientCount.get() < MAX_NUM_CLIENTS && (clntSock = backlog.poll()) != null)
                     {
                         concurrentClientCount.getAndIncrement();
-                        GossipListener connection = new GossipListener(clntSock, concurrentClientCount, kvStore.getMembership());
+                        GossipListener connection = new GossipListener(clntSock, concurrentClientCount, ring.getMembership());
                         // Create a new thread for each client connection
                         threadPool.execute(connection);
                         // System.out.println("New gossip client executing.");

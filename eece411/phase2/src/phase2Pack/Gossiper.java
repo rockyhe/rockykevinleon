@@ -5,7 +5,6 @@ import java.net.Socket;
 import java.sql.Timestamp;
 import java.util.Date;
 import java.util.Random;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 public class Gossiper implements Runnable
 {
@@ -16,15 +15,13 @@ public class Gossiper implements Runnable
     private static final int PROP_BUFFER = 2000;
     private static final int OFFLINE_THRES = (int) (Math.log10(MAX_GOSSIP_MEMBERS) / Math.log10(2)) * SLEEP_TIME + PROP_BUFFER; // 10 seconds log(N)/log(2) * SLEEP_TIME
 
-    private CopyOnWriteArrayList<Node> membership;
-    private KVStore kvStore;
+    private ConsistentHashRing ring;
     private int PORT;
 
 
-    Gossiper(KVStore kvStore, int serverPORT)
+    Gossiper(ConsistentHashRing ring, int serverPORT)
     {
-        this.kvStore = kvStore;
-        this.membership = kvStore.getMembership();
+        this.ring = ring;
         this.PORT = serverPORT;
     }
 
@@ -44,25 +41,25 @@ public class Gossiper implements Runnable
                 // randomly select a node to gossip
                 while (true)
                 {
-                    randomInt = randomGenerator.nextInt(membership.size());
+                    randomInt = randomGenerator.nextInt(ring.getMembership().size());
 
-                    if (!(membership.get(randomInt).Equals(java.net.InetAddress.getLocalHost())))
+                    if (!(ring.getMembership().get(randomInt).Equals(java.net.InetAddress.getLocalHost())))
                     {
-                        if (membership.get(randomInt).online)
+                        if (ring.getMembership().get(randomInt).online)
                         {
                             break;
                         }
                     }
                 }
 
-                if (membership.get(randomInt).rejoin)
+                if (ring.getMembership().get(randomInt).rejoin)
                 {
-                    kvStore.returnPartitions(randomInt);
-                    membership.get(randomInt).rejoin = false;
+                    ring.returnPartitions(randomInt);
+                    ring.getMembership().get(randomInt).rejoin = false;
                 }
 
                 // System.out.println("gossiping to server: "+onlineNodeList.get(randomInt).address.getHostName());
-                socket = new Socket(membership.get(randomInt).address.getHostName(), PORT);
+                socket = new Socket(ring.getMembership().get(randomInt).address.getHostName(), PORT);
 
                 // Send the message to the server
                 OutputStream os = socket.getOutputStream();
@@ -75,8 +72,8 @@ public class Gossiper implements Runnable
                 // sleep
                 Thread.currentThread().sleep(SLEEP_TIME);
             } catch (Exception e) {
-                membership.get(randomInt).online = false;
-                membership.get(randomInt).t = new Timestamp(0);
+                ring.getMembership().get(randomInt).online = false;
+                ring.getMembership().get(randomInt).t = new Timestamp(0);
                 // System.out.println(membership.get(randomInt).address.getHostName().toString() + " left");
             }
 
@@ -85,13 +82,11 @@ public class Gossiper implements Runnable
 
     static class TimestampCheck implements Runnable
     {
-        private CopyOnWriteArrayList<Node> membership;
-        private KVStore kvStore;
+        private ConsistentHashRing ring;
 
-        TimestampCheck(CopyOnWriteArrayList<Node> gossipMembers, KVStore kvStore)
+        TimestampCheck(ConsistentHashRing ring)
         {
-            this.membership = gossipMembers;
-            this.kvStore = kvStore;
+            this.ring = ring;
         }
 
         public void run()
@@ -101,7 +96,7 @@ public class Gossiper implements Runnable
             while (true)
             {
                 // System.out.println("----------------------------");
-                for (Node node : membership)
+                for (Node node : ring.getMembership())
                 {
                     try {
                         if (!(node.Equals(java.net.InetAddress.getLocalHost())))
@@ -115,7 +110,7 @@ public class Gossiper implements Runnable
                             if (timeDiff > OFFLINE_THRES)
                             {
                                 node.online = false;
-                                kvStore.takePartitions(membership.indexOf(node));
+                                ring.takePartitions(ring.getMembership().indexOf(node));
                             }
                         }
                     } catch (Exception e) {

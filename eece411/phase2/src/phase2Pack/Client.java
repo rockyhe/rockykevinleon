@@ -1,10 +1,12 @@
 package phase2Pack;
 
-import java.io.*;
-import java.net.*;
-import java.util.*;
 
 public class Client {
+    /*
+     * DEPRECATED
+     */
+
+    /*
 	private static final int CMD_SIZE = 1;
 	private static final int KEY_SIZE = 32;
 	private static final int VALUE_SIZE = 1024;
@@ -123,5 +125,6 @@ public class Client {
 			}
 		}
 	}
+     */
 }
 
