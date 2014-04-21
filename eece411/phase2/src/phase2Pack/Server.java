@@ -14,18 +14,13 @@ public class Server
 {
     // Constants
     private static final int PORT = 5000;
-    private static final int MAX_GOSSIP_MEMBERS = 16;
     private static final int MAX_NUM_CLIENTS = 250;
     private static final int BACKLOG_SIZE = 50;
     private static final String NODE_LIST_FILE = "nodeList.txt";
     private static final int CMD_SIZE = 1;
-    private static final int GOSSIP_MSG = 255;
     // Make sure this value is larger than number of physical nodes
     // Since potential max nodes is 100, then use 100 * 100 = 10000
     private static final int NUM_PARTITIONS = 10000;
-    private static final int SLEEP_TIME = 1000; // 4 seconds
-    private static final int PROP_BUFFER = 2000;
-    private static final int OFFLINE_THRES = (int) (Math.log10(MAX_GOSSIP_MEMBERS) / Math.log10(2)) * SLEEP_TIME + PROP_BUFFER; // 10 seconds log(N)/log(2) * SLEEP_TIME
     private static final int REPLICATION_FACTOR = 3;
 
     // Private members
@@ -51,16 +46,16 @@ public class Server
             producer.start();
 
             // randomly grab 2 nodes concurrently
-            Thread gossiper = new Thread(new Gossiper());
+            Thread gossiper = new Thread(new Gossiper(membership,ring, PORT));
             gossiper.start();
-            Thread gossiper2 = new Thread(new Gossiper());
+            Thread gossiper2 = new Thread(new Gossiper(membership,ring,PORT));
             gossiper2.start();
             // Create a new Consumer thread for servicing clients in the queue
             Thread consumer = new Thread(new Consumer());
             consumer.start();
 
             // check timestamp from the nodeList
-            Thread timestampCheck = new Thread(new TimestampCheck());
+            Thread timestampCheck = new Thread(new Gossiper.TimestampCheck(membership,ring));
             timestampCheck.start();
 
         } catch (Exception e)
@@ -164,7 +159,6 @@ public class Server
                     membership.get(randomInt).t = new Timestamp(0);
                     // System.out.println(membership.get(randomInt).address.getHostName().toString() + " left");
                 }
-
             }
         }
     }
