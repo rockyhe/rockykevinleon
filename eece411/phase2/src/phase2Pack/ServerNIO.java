@@ -9,16 +9,16 @@ public class ServerNIO
     public static final long TIMEOUT = 10000;
 
     // Private members
-    private static KVStore ring;
+    private static KVStore kvStore;
 
     public static void main(String[] args) throws Exception
     {
         try
         {
-            ring = new KVStore(PORT);
+            kvStore = new KVStore(PORT);
 
             System.out.println("Starting NIO server at port : " + PORT);
-            new ReactorInitiator().initiateReactiveServer(PORT, ring);
+            new ReactorInitiator().initiateReactiveServer(PORT, kvStore);
 
             System.out.println("Server is ready...");
         } catch (Exception e) {

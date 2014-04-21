@@ -17,14 +17,14 @@ public class ProcessRequest implements Runnable
     private SocketChannel socketChannel;
     private SelectionKey handle;
     private Selector demultiplexer;
-    private KVStore ring;
+    private KVStore kvStore;
 
-    public ProcessRequest(SocketChannel socketChannel, SelectionKey handle, Selector demultiplexer, KVStore ring)
+    public ProcessRequest(SocketChannel socketChannel, SelectionKey handle, Selector demultiplexer, KVStore kvStore)
     {
         this.socketChannel = socketChannel;
         this.handle = handle;
         this.demultiplexer = demultiplexer;
-        this.ring = ring;
+        this.kvStore = kvStore;
     }
 
     public void run()
@@ -47,7 +47,7 @@ public class ProcessRequest implements Runnable
                 // Get the value bytes (only do this if the command is put)
                 value = new byte[VALUE_SIZE];
                 receiveBytes(value);
-                ring.put(key, value);
+                kvStore.put(key, value);
                 break;
             case 2: // Get command
                 // Get the key bytes
@@ -55,21 +55,19 @@ public class ProcessRequest implements Runnable
                 receiveBytes(key);
                 // Store get result into value byte array
                 value = new byte[VALUE_SIZE];
-                value = ring.get(key);
+                value = kvStore.get(key);
                 break;
             case 3: // Remove command
                 // Get the key bytes
                 key = new byte[KEY_SIZE];
                 receiveBytes(key);
-                ring.remove(key);
+                kvStore.remove(key);
                 break;
             case 4: // shutdown command
-                ring.shutdown();
+                kvStore.shutdown();
                 break;
-            case 254:// FIXME
-
             case 255: // gossip signal
-                gossip();
+                kvStore.gossip();
                 break;
             case 101: // write to replica
                 key = new byte[KEY_SIZE];
