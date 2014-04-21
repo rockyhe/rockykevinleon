@@ -103,10 +103,26 @@ public class ProcessRequest implements Runnable
                     System.exit(0);
                 }
             }
-        } catch (Exception e) {
-            System.out.println("Internal Server Error!");
+        } catch (InexistedKeyException e) {
+            System.out.println("inexisted key");
+            sendBytes(new byte[] {0x01});
+        } catch (OutOfSpaceException e) {
+            System.out.println("Out Of Space");
+            sendBytes(new byte[] {0x02});
+        } catch (SystemOverloadException e){
+            System.out.println("System Overload");
+            sendBytes(new byte[] {0x03});
+        } catch (InternalKVStoreException e){
+            System.out.println("Internal KVStore");
+            sendBytes(new byte[] {0x04});
+        } catch (UnrecognizedCmdException e){
+            System.out.println("Unrecognized Cmd");
+            sendBytes(new byte[] {0x05});
+        } catch (Exception e){
+            System.out.println("internal server error");
             e.printStackTrace();
         }
+
     }
 
     private void receiveBytes(byte[] dest) throws IOException
