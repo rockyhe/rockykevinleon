@@ -191,6 +191,7 @@ public class ProcessRequest implements Runnable
                 for (String nextSuccessor : successors)
                 {
                     // If a replica returns a value, then return that as the result
+                    System.out.println("Forwarding get command to replica");
                     replyFromReplica = forward(ring.getNodeForPartition(nextSuccessor), 2, key, null);
                     if (replyFromReplica != null)
                     {
@@ -202,7 +203,7 @@ public class ProcessRequest implements Runnable
             else if (!ring.isSuccessor(primary))
             {
                 // Otherwise route to node that should contain
-                // System.out.println("Forwarding get command!");
+                System.out.println("Routing get command!");
                 return forward(primary.getValue(), 2, key, null);
             }
 
