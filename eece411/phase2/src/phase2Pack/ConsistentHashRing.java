@@ -248,6 +248,7 @@ public class ConsistentHashRing
                     {
                         if (membership.get(j).online)
                         {
+                            System.out.println("taking partition");
                             partitionMap.replace(getHash(node.hostname + i), membership.get(j));
                             break;
                         }
