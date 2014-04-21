@@ -3,7 +3,6 @@ package phase2Pack;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.security.MessageDigest;
 import java.util.ArrayList;
@@ -50,7 +49,7 @@ public class ConsistentHashRing
             while (s.hasNext())
             {
                 String nodeName = s.next();
-                node = new Node(new InetSocketAddress(nodeName, port), true);
+                node = new Node(nodeName, true);
                 membership.add(node);
             }
             s.close();
@@ -139,7 +138,7 @@ public class ConsistentHashRing
         {
             for (int i = 0; i < partitionsPerNode; ++i)
             {
-                partitionMap.put(getHash(node.address.getHostName() + i), node);
+                partitionMap.put(getHash(node.hostname + i), node);
             }
         }
 
@@ -211,7 +210,7 @@ public class ConsistentHashRing
                     // System.out.println("rejoined node: "+onlineNodeList.get(idx).address.toString());
                     // System.out.println("hash key for rejoin node: "+KVStore.getHash(node.address.getHostName() + i).toString());
 
-                    partitionMap.replace(getHash(node.address.getHostName() + i), membership.get(idx));
+                    partitionMap.replace(getHash(node.hostname + i), membership.get(idx));
                 }
             }
         }
@@ -231,7 +230,7 @@ public class ConsistentHashRing
             {
                 j = 0;
                 // if current partition's hash key's value (node) is the offline node
-                if (partitionMap.get(getHash(node.address.getHostName() + i)).Equals(membership.get(idx)))
+                if (partitionMap.get(getHash(node.hostname + i)).Equals(membership.get(idx)))
                 {
                     // replace it with the next node, or the first node
                     // System.out.println("hash key for offline node: "+KVStore.getHash(node.address.getHostName() + i).toString());
@@ -249,7 +248,7 @@ public class ConsistentHashRing
                     {
                         if (membership.get(j).online)
                         {
-                            partitionMap.replace(getHash(node.address.getHostName() + i), membership.get(j));
+                            partitionMap.replace(getHash(node.hostname + i), membership.get(j));
                             break;
                         }
 
@@ -287,7 +286,7 @@ public class ConsistentHashRing
 
         for (Map.Entry<Node, Integer> node : distribution.entrySet())
         {
-            System.out.println(node.getKey().address.getHostName() + " => " + node.getValue().toString());
+            System.out.println(node.getKey().hostname + " => " + node.getValue().toString());
         }
     }
 
@@ -299,8 +298,8 @@ public class ConsistentHashRing
         for (Map.Entry<String, Node> entry : partitionMap.entrySet())
         {
             String key = entry.getKey();
-            InetSocketAddress addr = entry.getValue().address;
-            // System.out.println(key + " => " + addr.toString() + " => " + entry.getValue().online);
+            String hostname = entry.getValue().hostname;
+            // System.out.println(key + " => " + hostname + " => " + entry.getValue().online);
             System.out.println(key + " => " + membership.indexOf(entry.getValue()));
         }
     }
@@ -317,7 +316,7 @@ public class ConsistentHashRing
             System.out.println(key + " => Successors:");
             for (String successor : successors)
             {
-                System.out.println("\t" + successor + " => " + partitionMap.get(successor).address.toString());
+                System.out.println("\t" + successor + " => " + partitionMap.get(successor).hostname.toString());
             }
         }
     }

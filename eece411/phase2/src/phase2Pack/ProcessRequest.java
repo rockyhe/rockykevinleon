@@ -332,19 +332,19 @@ public class ProcessRequest implements Runnable
         {
             // NOTE: What happens if we try to connect to a successor that happens to be offline at this time?
             // check if sendBytes is successful, if not, loop to next on the successor list
-            System.out.println("replicate to " + ring.getNodeForPartition(nextSuccessor).address.getHostName().toString());
-            socket = new Socket(ring.getNodeForPartition(nextSuccessor).address.getHostName(), ring.getNodeForPartition(nextSuccessor).address.getPort());
+            System.out.println("replicate to " + ring.getNodeForPartition(nextSuccessor).hostname);
+            socket = new Socket(ring.getNodeForPartition(nextSuccessor).hostname, Server.PORT);
             sendBytes(socket, sendBuffer);
         }
     }
 
     private byte[] forward(Node remoteNode, int cmd, byte[] key, byte[] value) throws InternalKVStoreException
     {
-        System.out.println("Forwarding to " + remoteNode.address.toString());
+        System.out.println("Forwarding to " + remoteNode.hostname.toString());
 
         try
         {
-            Socket socket = new Socket(remoteNode.address.getHostName(), remoteNode.address.getPort());
+            Socket socket = new Socket(remoteNode.hostname, Server.PORT);
             // System.out.println("Connected to server: " + socket.getInetAddress().toString());
 
             // Route the message

@@ -58,7 +58,7 @@ public class Gossiper implements Runnable
                 }
 
                 // System.out.println("gossiping to server: "+onlineNodeList.get(randomInt).address.getHostName());
-                socket = new Socket(ring.getMembership().get(randomInt).address.getHostName(), gossipPort);
+                socket = new Socket(ring.getMembership().get(randomInt).hostname, gossipPort);
 
                 // Send the message to the server
                 OutputStream os = socket.getOutputStream();

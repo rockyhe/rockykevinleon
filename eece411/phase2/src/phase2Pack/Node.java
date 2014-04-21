@@ -1,21 +1,20 @@
 package phase2Pack;
 
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.sql.Timestamp;
 import java.util.Date;
 
 //Class for node info
 public class Node
 {
-    public InetSocketAddress address;
+    public String hostname;
     public boolean online;
     public Timestamp t = new Timestamp(new Date().getTime());
     public boolean rejoin = false;
 
-    Node(InetSocketAddress addr, boolean alive)
+    Node(String hostname, boolean alive)
     {
-        this.address = addr;
+        this.hostname = hostname;
         this.online = alive;
     }
 
@@ -23,7 +22,7 @@ public class Node
     {
         if (hostname != null)
         {
-            if (hostname.equals(this.address.getHostName()))
+            if (hostname.equals(this.hostname))
             {
                 return true;
             }
@@ -35,7 +34,7 @@ public class Node
     {
         if (addr != null)
         {
-            if (addr.getHostName().equals(this.address.getHostName()))
+            if (addr.getHostName().equals(this.hostname))
             {
                 return true;
             }
@@ -52,7 +51,7 @@ public class Node
                 return true;
             }
 
-            if (node.address.getHostName().equals(this.address.getHostName()))
+            if (node.hostname.equals(this.hostname))
             {
                 return true;
             }

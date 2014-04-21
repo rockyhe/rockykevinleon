@@ -38,7 +38,7 @@ public class Server
             new ReactorInitiator().initiateReactiveServer(PORT, ring, kvStore);
 
             // Initialize gossip variables
-            servSock = new ServerSocket(PORT);
+            servSock = new ServerSocket(GOSSIP_PORT);
             backlog = new ArrayBlockingQueue<Socket>(BACKLOG_SIZE);
             concurrentClientCount = new AtomicInteger(0);
 
