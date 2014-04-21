@@ -151,7 +151,7 @@ public class KVStore
         }
     }
 
-    public void put(byte[] key, byte[] value) throws IOException
+    public void put(byte[] key, byte[] value) throws OutOfSpaceException
     {
         // Re-hash the key using our hash function so it's consistent
         String rehashedKeyStr = getHash(StringUtils.byteArrayToHexString(key));
@@ -160,28 +160,33 @@ public class KVStore
         Map.Entry<String, Node> primary = getPrimary(rehashedKeyStr);
 
         // Check if this node is the primary partition for the hash key, or if we need to do a remote call
-        if (primary.getValue().Equals(localHost))
-        {
-            if (store.size() < KVSTORE_SIZE)
+        try{
+            if (primary.getValue().Equals(localHost))
             {
-                store.put(rehashedKeyStr, value);
-                // System.out.println("before backup");
-                updateReplicas(key, value);
-                // System.out.println("after backup");
+                if (store.size() < KVSTORE_SIZE)
+                {
+                    store.put(rehashedKeyStr, value);
+                    // System.out.println("before backup");
+                    updateReplicas(key, value);
+                    // System.out.println("after backup");
+                }
+                else
+                {
+                    throw new OutOfSpaceException();
+                    //errCode = 0x02;
+                }
             }
             else
             {
-                errCode = 0x02;
+                // System.out.println("Forwarding put command!");
+                forward(primary.getValue(), 1, key, value);
             }
-        }
-        else
-        {
-            // System.out.println("Forwarding put command!");
-            forward(primary.getValue(), 1, key, value);
+        }catch(IOException e){
+            throw new OutOfSpaceException();
         }
     }
 
-    public byte[] get(byte[] key) throws IOException
+    public byte[] get(byte[] key) throws InexistedKeyException
     {
         // Re-hash the key using our hash function so it's consistent
         String rehashedKeyStr = getHash(StringUtils.byteArrayToHexString(key));
@@ -189,45 +194,51 @@ public class KVStore
         // If key doesn't exist on this node's local store
         if (!store.containsKey(rehashedKeyStr))
         {
-            System.out.println("I dont have the key");
-            // Get the node responsible for the partition with first hashed value that is greater than or equal to the key (i.e. clockwise on the ring)
-            Map.Entry<String, Node> primary = getPrimary(rehashedKeyStr);
+            try{
+                System.out.println("I dont have the key");
+                // Get the node responsible for the partition with first hashed value that is greater than or equal to the key (i.e. clockwise on the ring)
+                Map.Entry<String, Node> primary = getPrimary(rehashedKeyStr);
 
-            // Check if this node is the primary partition for the hash key (so we know to forward to successors)
-            System.out.println("primary = " + localHost);
-            if (primary.getValue().Equals(localHost))
-            {
-                // Iterate through each replica, by getting the successor list belonging to this partition, and check for key
-                ArrayList<String> successors = successorListMap.get(primary.getKey());
-                byte[] replyFromReplica = new byte[VALUE_SIZE];
-
-                for (String nextSuccessor : successors)
+                // Check if this node is the primary partition for the hash key (so we know to forward to successors)
+                System.out.println("primary = " + localHost);
+                if (primary.getValue().Equals(localHost))
                 {
-                    // If a replica returns a value, then return that as the result
-                    replyFromReplica = forward(nodeMap.get(nextSuccessor), 2, key, null);
-                    if (replyFromReplica != null)
+                    // Iterate through each replica, by getting the successor list belonging to this partition, and check for key
+                    ArrayList<String> successors = successorListMap.get(primary.getKey());
+                    byte[] replyFromReplica = new byte[VALUE_SIZE];
+
+                    for (String nextSuccessor : successors)
                     {
-                        return replyFromReplica;
+                        // If a replica returns a value, then return that as the result
+                        replyFromReplica = forward(nodeMap.get(nextSuccessor), 2, key, null);
+                        if (replyFromReplica != null)
+                        {
+                            return replyFromReplica;
+                        }
                     }
                 }
-            }
-            // Otherwise only route the command if this node is not one of the successors of the primary
-            else if (!isSuccessor(primary))
-            {
-                // Otherwise route to node that should contain
-                // System.out.println("Forwarding get command!");
-                return forward(primary.getValue(), 2, key, null);
-            }
-
-            // If the key doesn't exist of any of the replicas, then key doesn't exist
-            errCode = 0x01;
-            return null;
+                // Otherwise only route the command if this node is not one of the successors of the primary
+                else if (!isSuccessor(primary))
+                {
+                    // Otherwise route to node that should contain
+                    // System.out.println("Forwarding get command!");
+                    return forward(primary.getValue(), 2, key, null);
+                }
+                
+                throw new InexistedKeyException();
+                // If the key doesn't exist of any of the replicas, then key doesn't exist
+                //errCode = 0x01;
+                return null;
+           
+        }catch(IOException e){
+            throw new InexistedKeyException();
         }
+
         // System.out.println("Get command succeeded!");
         return store.get(rehashedKeyStr);
     }
 
-    public void remove(byte[] key) throws IOException // Propagate the exceptions to main
+    public void remove(byte[] key) throws InexistedKeyException // Propagate the exceptions to main
     {
         // Re-hash the key using our hash function so it's consistent
         String rehashedKeyStr = getHash(StringUtils.byteArrayToHexString(key));
@@ -236,26 +247,31 @@ public class KVStore
         Map.Entry<String, Node> primary = getPrimary(rehashedKeyStr);
 
         // Check if this node is the primary partition for the hash key, or if we need to do a remote call
-        if (primary.getValue().Equals(localHost))
-        {
-            if (!store.containsKey(rehashedKeyStr))
+        try{
+            if (primary.getValue().Equals(localHost))
             {
-                errCode = 0x01; // Key doesn't exist on primary
+                if (!store.containsKey(rehashedKeyStr))
+                {
+                    throw new InexistedKeyException();
+                    //errCode = 0x01; // Key doesn't exist on primary
+                }
+                else
+                {
+                    store.remove(rehashedKeyStr);
+                    // System.out.println("Remove command succeeded!");
+                }
+
+                // System.out.println("before backup");
+                updateReplicas(key, null);
+                // System.out.println("after backup");
             }
             else
             {
-                store.remove(rehashedKeyStr);
-                // System.out.println("Remove command succeeded!");
+                // System.out.println("Forwarding remove command!");
+                forward(primary.getValue(), 3, key, null);
             }
-
-            // System.out.println("before backup");
-            updateReplicas(key, null);
-            // System.out.println("after backup");
-        }
-        else
-        {
-            // System.out.println("Forwarding remove command!");
-            forward(primary.getValue(), 3, key, null);
+        }catch(IOException e){
+            throw new InexistedKeyException();
         }
     }
 
@@ -416,7 +432,7 @@ public class KVStore
         }
     }
 
-    private byte[] forward(Node remoteNode, int cmd, byte[] key, byte[] value)
+    private byte[] forward(Node remoteNode, int cmd, byte[] key, byte[] value) throws InternalKVStoreException
     {
         System.out.println("Forwarding to " + remoteNode.address.toString());
 
@@ -479,7 +495,8 @@ public class KVStore
         } catch (Exception e)
         {
             // System.out.println("Forwarding to a node that is offline!");
-            errCode = 0x04; // Just set to internal KVStore error if we fail to connect to the node we want to forward to
+            //errCode = 0x04; // Just set to internal KVStore error if we fail to connect to the node we want to forward to
+            throw new InternalKVStoreException();
             int index = membership.indexOf(remoteNode);
             membership.get(index).online = false;
             membership.get(index).t = new Timestamp(0);
