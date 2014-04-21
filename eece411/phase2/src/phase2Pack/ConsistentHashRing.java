@@ -1,64 +1,160 @@
 package phase2Pack;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.security.MessageDigest;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.atomic.AtomicInteger;
 
-public class KVStore implements Runnable
+public class ConsistentHashRing
 {
     // Constants
+    private static final String NODE_LIST_FILE = "nodeList.txt";
+    // Make sure this value is larger than number of physical nodes
+    // Since potential max nodes is 100, then use 100 * 100 = 10000
+    private static final int NUM_PARTITIONS = 10000;
+    private static final int REPLICATION_FACTOR = 3;
+    private static final int KVSTORE_SIZE = 40000;
     private static final int CMD_SIZE = 1;
     private static final int KEY_SIZE = 32;
     private static final int VALUE_SIZE = 1024;
     private static final int ERR_SIZE = 1;
-    private static final int KVSTORE_SIZE = 40000;
 
     // Private members
-    private Socket clntSock;
-    private ConcurrentHashMap<String, byte[]> store;
-    private AtomicInteger clientCnt;
-    private AtomicInteger shutdown;
-    private ConcurrentSkipListMap<String, Node> nodeMap;
-    private CopyOnWriteArrayList<Node> membership;
-    private ConcurrentSkipListMap<String, ArrayList<String>> successorListMap;
+    private static String localHost;
 
+    private ConcurrentHashMap<String, byte[]> store;
     private byte errCode = 0x00; // Set default errCode to 0x00, so we can assume that operation is successful unless errCode is explicitly changed
 
-    // Constructor
-    KVStore(Socket clientSocket, ConcurrentHashMap<String, byte[]> KVstore, ConcurrentSkipListMap<String, Node> nodeMap, AtomicInteger concurrentClientCount, AtomicInteger shutdownFlag, CopyOnWriteArrayList<Node> membershipList, ConcurrentSkipListMap<String, ArrayList<String>> successorListMap)
+    private int partitionsPerNode;
+    private CopyOnWriteArrayList<Node> membership;
+    private ConcurrentSkipListMap<String, Node> nodeMap; // Sorted map for mapping hashed values to physical nodes
+    private ConcurrentSkipListMap<String, ArrayList<String>> successorListMap; // Sorted map for mapping each partition to its successor partitions
+
+    public ConsistentHashRing(int port)
     {
-        this.clntSock = clientSocket;
-        this.store = KVstore;
-        this.nodeMap = nodeMap;
-        this.clientCnt = concurrentClientCount;
-        this.shutdown = shutdownFlag;
-        this.membership = membershipList;
-        this.successorListMap = successorListMap;
+        // Load the list of participating nodes and construct the membership list
+        try
+        {
+            // Store the local host name for convenient access later
+            localHost = InetAddress.getLocalHost().getHostName();
+
+            Scanner s = new Scanner(new File(NODE_LIST_FILE));
+            Node node;
+            membership = new CopyOnWriteArrayList<Node>();
+            while (s.hasNext())
+            {
+                String nodeName = s.next();
+                node = new Node(new InetSocketAddress(nodeName, port), true);
+                membership.add(node);
+            }
+            s.close();
+        } catch (FileNotFoundException e) {
+            System.out.println("Cannot find node list file!");
+        } catch (UnknownHostException e) {
+            System.out.println("Couldn't determine IP of local host!");
+        } catch (Exception e) {
+            System.out.println("Error loading node list!");
+        }
+
+        // Construct the initial ring by mapping the nodes to partitions
+        constructRing();
+        // displayRing();
+        // verifyRing();
+        // displaySuccessorListMap();
     }
 
-    /**
-     * Puts the given value into the store, mapped to the given key. If there is already a value corresponding to the key, then the value is overwritten. If the number of key-value pairs is KVSTORE_SIZE, the store returns out of space error.
-     */
-    private void put(byte[] key, byte[] value) throws IOException // Propagate the exceptions to main
+    private void constructRing()
+    {
+        // Divide the hash space into NUM_PARTITIONS partitions
+        // with each physical node responsible for (NUM_PARTITIONS / number of nodes) hash ranges
+        // int partitionsPerNode = NUM_PARTITIONS / onlineNodeList.size();
+        nodeMap = new ConcurrentSkipListMap<String, Node>();
+        partitionsPerNode = NUM_PARTITIONS / membership.size();
+        for (Node node : membership)
+        {
+            for (int i = 0; i < partitionsPerNode; ++i)
+            {
+                nodeMap.put(getHash(node.address.getHostName() + i), node);
+            }
+        }
+
+        // Construct the successor list for each partition
+        constructSuccessorLists();
+    }
+
+    // When constructing successor list, we may skip partitions to ensure only unique physical nodes
+    private void constructSuccessorLists()
+    {
+        successorListMap = new ConcurrentSkipListMap<String, ArrayList<String>>();
+        int numSuccessors = REPLICATION_FACTOR - 1;
+        if (membership.size() <= numSuccessors)
+        {
+            // If the number of participating nodes is not larger than the backups desired,
+            // then just set to number of backups to the number of participating nodes
+            numSuccessors = membership.size() - 1;
+        }
+
+        // For each partition, construct its successor list
+        // Ensure there are no duplicate physical nodes in the successor list
+        HashMap<String, Node> successors;
+        Iterator<Map.Entry<String, Node>> partitionIterator = nodeMap.entrySet().iterator();
+        Map.Entry<String, Node> sourcePartition;
+
+        while (partitionIterator.hasNext())
+        {
+            sourcePartition = partitionIterator.next();
+            successors = new HashMap<String, Node>();
+
+            Map.Entry<String, Node> lastSuccessor = sourcePartition;
+            while (successors.size() < numSuccessors)
+            {
+                // Keep looking for the next successor if we already have a successor partition owned by the same physical node
+                // or if the successor is owned by the same physical node that owns the current partition that we're generating successors for
+                // This guarantees that the successors (and therefore the replicas) will be different physical nodes
+                do
+                {
+                    lastSuccessor = nodeMap.higherEntry(lastSuccessor.getKey());
+                    // If there are no high entries, then we're at the end of the ring, so wrap around
+                    if (lastSuccessor == null)
+                    {
+                        lastSuccessor = nodeMap.firstEntry();
+                    }
+
+                } while (successors.values().contains(lastSuccessor.getValue()) || lastSuccessor.getValue().Equals(sourcePartition.getValue()));
+
+                successors.put(lastSuccessor.getKey(), lastSuccessor.getValue());
+            }
+
+            successorListMap.put(sourcePartition.getKey(), new ArrayList<String>(successors.keySet()));
+        }
+    }
+
+    public void put(byte[] key, byte[] value) throws IOException
     {
         // Re-hash the key using our hash function so it's consistent
         String rehashedKeyStr = getHash(StringUtils.byteArrayToHexString(key));
 
         // Get the node responsible for the partition with first hashed value that is greater than or equal to the key (i.e. clockwise on the ring)
-        Map.Entry<String, Node> primary = getNodeEntryForHash(rehashedKeyStr);
+        Map.Entry<String, Node> primary = getPrimary(rehashedKeyStr);
 
         // Check if this node is the primary partition for the hash key, or if we need to do a remote call
-        if (primary.getValue().Equals(clntSock.getLocalAddress()))
+        if (primary.getValue().Equals(localHost))
         {
             if (store.size() < KVSTORE_SIZE)
             {
@@ -79,10 +175,7 @@ public class KVStore implements Runnable
         }
     }
 
-    /**
-     * Returns the value associated with the given key. If there is no such key in the store, the store returns key not found error.
-     */
-    private byte[] get(byte[] key) throws IOException // Propagate the exceptions to main
+    public byte[] get(byte[] key) throws IOException
     {
         // Re-hash the key using our hash function so it's consistent
         String rehashedKeyStr = getHash(StringUtils.byteArrayToHexString(key));
@@ -92,11 +185,11 @@ public class KVStore implements Runnable
         {
             System.out.println("I dont have the key");
             // Get the node responsible for the partition with first hashed value that is greater than or equal to the key (i.e. clockwise on the ring)
-            Map.Entry<String, Node> primary = getNodeEntryForHash(rehashedKeyStr);
+            Map.Entry<String, Node> primary = getPrimary(rehashedKeyStr);
 
             // Check if this node is the primary partition for the hash key (so we know to forward to successors)
-            System.out.println("primary = " + clntSock.getLocalAddress().toString());
-            if (primary.getValue().Equals(clntSock.getLocalAddress()))
+            System.out.println("primary = " + localHost);
+            if (primary.getValue().Equals(localHost))
             {
                 // Iterate through each replica, by getting the successor list belonging to this partition, and check for key
                 ArrayList<String> successors = successorListMap.get(primary.getKey());
@@ -128,32 +221,16 @@ public class KVStore implements Runnable
         return store.get(rehashedKeyStr);
     }
 
-    private boolean isReplica(Map.Entry<String, Node> primary)
-    {
-        ArrayList<String> successors = successorListMap.get(primary.getKey());
-        for (String successor : successors)
-        {
-            if (nodeMap.get(successor).Equals(clntSock.getLocalAddress()))
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Removes the value associated with the given key. If there is no such key in the store, the store returns key not found error.
-     */
-    private void remove(byte[] key) throws IOException // Propagate the exceptions to main
+    public void remove(byte[] key) throws IOException // Propagate the exceptions to main
     {
         // Re-hash the key using our hash function so it's consistent
         String rehashedKeyStr = getHash(StringUtils.byteArrayToHexString(key));
 
         // Get the node responsible for the partition with first hashed value that is greater than or equal to the key (i.e. clockwise on the ring)
-        Map.Entry<String, Node> primary = getNodeEntryForHash(rehashedKeyStr);
+        Map.Entry<String, Node> primary = getPrimary(rehashedKeyStr);
 
         // Check if this node is the primary partition for the hash key, or if we need to do a remote call
-        if (primary.getValue().Equals(clntSock.getLocalAddress()))
+        if (primary.getValue().Equals(localHost))
         {
             if (!store.containsKey(rehashedKeyStr))
             {
@@ -174,6 +251,138 @@ public class KVStore implements Runnable
             // System.out.println("Forwarding remove command!");
             forward(primary.getValue(), 3, key, null);
         }
+    }
+
+    private void shutdown()
+    {
+        // Increment the shutdown flag to no longer accept incoming connections
+        shutdown.getAndIncrement();
+
+        // Update online status to false and timestamp to 0 of self node, so it propagates faster
+        int index = membership.indexOf(clntSock.getInetAddress().getHostName());
+        if (index >= 0)
+        {
+            Node self = membership.get(index);
+            self.online = false;
+            self.t = new Timestamp(0);
+        }
+
+        while (true)
+        {
+            // Wait until the only client left is the one initiating the shutdown command
+            // i.e. all other existing client requests have finished
+            // System.out.println("clientcnt: "+clientCnt.get());
+
+            if (clientCnt.get() == 1)
+            {
+                break;
+            }
+        }
+    }
+
+    private void gossip()
+    {
+        for (Node node : membership)
+        {
+            // System.out.println("client sock: "+clntSock.getInetAddress().getHostName().toString());
+            if (node.Equals(localHost))
+            {
+                if (!node.online)
+                {
+                    node.rejoin = true;
+                }
+                node.online = true;
+                node.t = new Timestamp(new Date().getTime());
+                // System.out.println("timestamp: "+onlineNodeList.get(onlineNodeList.indexOf(node)).t.toString());
+                break;
+            }
+        }
+    }
+
+    private void returnPartitions(int idx)
+    {
+        // foreach nodes in the nodeList
+        // System.out.println("<<<<<<<<<<<<<<<<<<<<<<<rejoined node: "+onlineNodeList.get(idx).address.toString());
+        for (Node node : membership)
+        {
+
+            // foreach partition in each node
+            for (int i = 0; i < partitionsPerNode; ++i)
+            {
+                // if current partition's hash key's value (node) is the rejoin node
+                if (node.Equals(membership.get(idx)))
+                {
+                    // replace it with the next node, or the first node
+                    // System.out.println("rejoined node: "+onlineNodeList.get(idx).address.toString());
+                    // System.out.println("hash key for rejoin node: "+KVStore.getHash(node.address.getHostName() + i).toString());
+
+                    nodeMap.replace(getHash(node.address.getHostName() + i), membership.get(idx));
+                }
+            }
+        }
+    }
+
+    private void takePartitions(int idx)
+    {
+        // get the node that is offline now
+        // foreach nodes in the nodeList
+        int j;
+
+        // System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>offline  node: "+onlineNodeList.get(idx).address.toString());
+        for (Node node : membership)
+        {
+            // foreach partition in each node
+            for (int i = 0; i < partitionsPerNode; ++i)
+            {
+                j = 0;
+                // if current partition's hash key's value (node) is the offline node
+                if (nodeMap.get(getHash(node.address.getHostName() + i)).Equals(membership.get(idx)))
+                {
+                    // replace it with the next node, or the first node
+                    // System.out.println("hash key for offline node: "+KVStore.getHash(node.address.getHostName() + i).toString());
+
+                    if (idx < (membership.size() - 1))
+                    {
+                        j = idx + 1;
+                    }
+                    else
+                    {
+                        j = 0;
+                    }
+
+                    while (true)
+                    {
+                        if (membership.get(j).online)
+                        {
+                            nodeMap.replace(getHash(node.address.getHostName() + i), membership.get(j));
+                            break;
+                        }
+
+                        if (j == (membership.size() - 1))
+                        {
+                            j = 0;
+                        }
+                        else
+                        {
+                            j++;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private boolean isReplica(Map.Entry<String, Node> primary)
+    {
+        ArrayList<String> successors = successorListMap.get(primary.getKey());
+        for (String successor : successors)
+        {
+            if (nodeMap.get(successor).Equals(localHost))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void updateReplicas(byte[] key, byte[] value) throws IOException // Propagate the exceptions to main
@@ -198,7 +407,7 @@ public class KVStore implements Runnable
         // Re-hash the key using our hash function so it's consistent
         String rehashedKeyStr = getHash(StringUtils.byteArrayToHexString(key));
         // Get the id of the primary partition
-        Map.Entry<String, Node> primary = getNodeEntryForHash(rehashedKeyStr);
+        Map.Entry<String, Node> primary = getPrimary(rehashedKeyStr);
 
         Socket socket = null;
         // Get the successor list of the primary partition so we know where to place the replicas
@@ -281,51 +490,7 @@ public class KVStore implements Runnable
         return null;
     }
 
-    private void shutdown()
-    {
-        // Increment the shutdown flag to no longer accept incoming connections
-        shutdown.getAndIncrement();
 
-        // Update online status to false and timestamp to 0 of self node, so it propagates faster
-        int index = membership.indexOf(clntSock.getInetAddress().getHostName());
-        if (index >= 0)
-        {
-            Node self = membership.get(index);
-            self.online = false;
-            self.t = new Timestamp(0);
-        }
-
-        while (true)
-        {
-            // Wait until the only client left is the one initiating the shutdown command
-            // i.e. all other existing client requests have finished
-            // System.out.println("clientcnt: "+clientCnt.get());
-
-            if (clientCnt.get() == 1)
-            {
-                break;
-            }
-        }
-    }
-
-    private void gossip()
-    {
-        for (Node node : membership)
-        {
-            // System.out.println("client sock: "+clntSock.getInetAddress().getHostName().toString());
-            if (node.Equals(clntSock.getInetAddress()))
-            {
-                if (!node.online)
-                {
-                    node.rejoin = true;
-                }
-                node.online = true;
-                node.t = new Timestamp(new Date().getTime());
-                // System.out.println("timestamp: "+onlineNodeList.get(onlineNodeList.indexOf(node)).t.toString());
-                break;
-            }
-        }
-    }
 
     private void replicatedWrite(byte[] key, byte[] value)
     {
@@ -341,127 +506,6 @@ public class KVStore implements Runnable
         else
         {
             store.remove(rehashedKeyStr);
-        }
-    }
-
-    public void run()
-    {
-        try
-        {
-            clientCnt.getAndIncrement();
-            // Get the request message from the client
-            // System.out.println("Request received:");
-            // System.out.println("requestBuffer: " + StringUtils.byteArrayToHexString(requestBuffer));
-
-            // Get the command byte
-            byte[] command = new byte[CMD_SIZE];
-            receiveBytes(clntSock, command);
-            int cmd = ByteOrder.leb2int(command, 0, CMD_SIZE);
-            // System.out.println("cmd: " + cmd);
-
-            // NOTE: As stated by Matei in class, assume that client is responsible for providing hashed keys so not necessary to perform re-hashing.
-            byte[] key = null;
-            byte[] value = null;
-            switch (cmd)
-            {
-            case 1: // Put command
-                // Get the key bytes
-                key = new byte[KEY_SIZE];
-                receiveBytes(clntSock, key);
-                // Get the value bytes (only do this if the command is put)
-                value = new byte[VALUE_SIZE];
-                receiveBytes(clntSock, value);
-                // System.out.println("value: " + StringUtils.byteArrayToHexString(value));
-                put(key, value);
-                break;
-            case 2: // Get command
-                // Get the key bytes
-                key = new byte[KEY_SIZE];
-                receiveBytes(clntSock, key);
-                // Store get result into value byte array
-                value = new byte[VALUE_SIZE];
-                value = get(key);
-                break;
-            case 3: // Remove command
-                // Get the key bytes
-                key = new byte[KEY_SIZE];
-                receiveBytes(clntSock, key);
-                remove(key);
-                break;
-            case 4: // shutdown command
-                shutdown();
-                break;
-            case 254:// FIXME
-
-            case 255: // gossip signal
-                gossip();
-                break;
-            case 101: // write to replica
-                key = new byte[KEY_SIZE];
-                receiveBytes(clntSock, key);
-                value = new byte[VALUE_SIZE];
-                receiveBytes(clntSock, value);
-                replicatedWrite(key, value);
-            case 103: // remove from replica
-                key = new byte[KEY_SIZE];
-                receiveBytes(clntSock, key);
-                replicatedWrite(key, null);
-            default: // Unrecognized command
-                errCode = 0x05;
-                break;
-            }
-
-            // Send the reply message to the client
-            // Only send value if command was get and value returned wasn't null
-            if (cmd == 2 && value != null)
-            {
-                byte[] combined = new byte[ERR_SIZE + VALUE_SIZE];
-                System.arraycopy(new byte[] { errCode }, 0, combined, 0, ERR_SIZE);
-                System.arraycopy(value, 0, combined, ERR_SIZE, VALUE_SIZE);
-                sendBytes(clntSock, combined);
-            }
-            else
-            {
-                sendBytes(clntSock, new byte[] { errCode });
-                // If command was shutdown, then increment the flag after sending success reply
-                // so that Server knows it's safe to shutdown
-                if (cmd == 4)
-                {
-                    shutdown.getAndIncrement();
-                }
-            }
-            // System.out.println("--------------------");
-        } catch (Exception e)
-        {
-            // If any exception happens, return internal KVStore error
-            errCode = 0x04;
-            try
-            {
-                sendBytes(clntSock, new byte[] { errCode });
-            } catch (Exception e2)
-            {
-            } // If we get an exception trying to send reply for internal error then do nothing
-        } finally
-        {
-            // Close the socket
-            try
-            {
-                if (clntSock != null)
-                {
-                    clntSock.close();
-                    clientCnt.getAndDecrement();
-                }
-            } catch (Exception e)
-            {
-                // If any exception happens, return internal KVStore error
-                errCode = 0x04;
-                try
-                {
-                    sendBytes(clntSock, new byte[] { errCode });
-                } catch (Exception e2)
-                {
-                } // If we get an exception trying to send reply for internal error then do nothing
-            }
         }
     }
 
@@ -485,7 +529,7 @@ public class KVStore implements Runnable
         out.write(src);
     }
 
-    private Map.Entry<String, Node> getNodeEntryForHash(String hashedKey)
+    private Map.Entry<String, Node> getPrimary(String hashedKey)
     {
         // Get the node responsible for the partition with first hashed value that is greater than or equal to the key (i.e. clockwise on the ring)
         // System.out.println("Hashed key string: " + hashedKey);
@@ -535,6 +579,62 @@ public class KVStore implements Runnable
             return "Unrecognized command";
         default:
             return "Error code not handled";
+        }
+    }
+
+
+    /*
+     * For debugging purposes: print the number of partitions assigned to each physical node
+     */
+    private void verifyRing()
+    {
+        Map<Node, Integer> distribution = new HashMap<Node, Integer>();
+        for (Node node : membership)
+        {
+            distribution.put(node, 0);
+        }
+
+        for (Map.Entry<String, Node> entry : nodeMap.entrySet())
+        {
+            Node node = entry.getValue();
+            Integer count = distribution.get(node);
+            distribution.put(node, count + 1);
+        }
+
+        for (Map.Entry<Node, Integer> node : distribution.entrySet())
+        {
+            System.out.println(node.getKey().address.getHostName() + " => " + node.getValue().toString());
+        }
+    }
+
+    /*
+     * For debugging purposes: print the mapping of hash value to physical node, for each partition
+     */
+    private void displayRing()
+    {
+        for (Map.Entry<String, Node> entry : nodeMap.entrySet())
+        {
+            String key = entry.getKey();
+            InetSocketAddress addr = entry.getValue().address;
+            // System.out.println(key + " => " + addr.toString() + " => " + entry.getValue().online);
+            System.out.println(key + " => " + membership.indexOf(entry.getValue()));
+        }
+    }
+
+    /*
+     * For debugging purposes: print the successor list mapping of hash value to physical node, for each partition
+     */
+    private void displaySuccessorListMap()
+    {
+        for (Map.Entry<String, ArrayList<String>> entry : successorListMap.entrySet())
+        {
+            String key = entry.getKey();
+            ArrayList<String> successors = entry.getValue();
+            System.out.println(key + " => Successors:");
+            for (String successor : successors)
+            {
+                System.out.println("\t" + successor + " => " + nodeMap.get(successor).address.toString());
+            }
         }
     }
 }

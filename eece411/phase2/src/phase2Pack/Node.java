@@ -19,6 +19,18 @@ public class Node
         this.online = alive;
     }
 
+    public boolean Equals(String hostname)
+    {
+        if (hostname != null)
+        {
+            if (hostname.equals(this.address.getHostName()))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public boolean Equals(InetAddress addr)
     {
         if (addr != null)

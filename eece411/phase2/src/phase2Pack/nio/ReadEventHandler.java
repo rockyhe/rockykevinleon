@@ -1,10 +1,13 @@
 package phase2Pack.nio;
 
-import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
-import java.util.Arrays;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import phase2Pack.ConsistentHashRing;
+import phase2Pack.ProcessRequest;
 
 /*
  * Read event handler for NIO, reactor pattern
@@ -14,41 +17,26 @@ public class ReadEventHandler implements EventHandler
 {
     // Constants
     private static final int MAX_NUM_CLIENTS = 250;
-    private static final int CMD_SIZE = 1;
-    private static final int KEY_SIZE = 32;
-    private static final int VALUE_SIZE = 1024;
-    private static final int ERR_SIZE = 1;
-    private static final int KVSTORE_SIZE = 40000;
-    private static final int BUFFER_SIZE = 33;
+
+    private ExecutorService threadPool;
 
     private Selector demultiplexer;
+    private ConsistentHashRing ring;
 
-    public ReadEventHandler(Selector demultiplexer)
+    public ReadEventHandler(Selector demultiplexer, ConsistentHashRing ring)
     {
         this.demultiplexer = demultiplexer;
+        this.ring = ring;
+
+        // Create a fixed thread pool since we'll have at most MAX_NUM_CLIENTS concurrent threads
+        this.threadPool = Executors.newFixedThreadPool(MAX_NUM_CLIENTS);
     }
 
     @Override
     public void handleEvent(SelectionKey handle) throws Exception
     {
         SocketChannel socketChannel = (SocketChannel) handle.channel();
-
-        // Prepare memory location for buffer and read data from client
-        ByteBuffer inputBuffer = ByteBuffer.allocate(BUFFER_SIZE);
-        socketChannel.read(inputBuffer);
-
-        // Rewind the buffer to start reading from the beginning
-        inputBuffer.flip();
-
-        byte[] buffer = new byte[inputBuffer.limit()];
-        inputBuffer.get(buffer);
-        // Rewind the buffer to start reading from the beginning
-        inputBuffer.flip();
-        System.out.println("Received message from client : " + Arrays.toString(buffer));
-
-        inputBuffer.clear();
-        // Register the interest for writable readiness event for
-        // this channel in order to echo back the message
-        socketChannel.register(demultiplexer, SelectionKey.OP_WRITE, inputBuffer);
+        // Process the event on a thread
+        threadPool.execute(new ProcessRequest(socketChannel, handle, demultiplexer, ring));
     }
 }
