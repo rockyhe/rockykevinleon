@@ -27,18 +27,13 @@ public class Server
 {
     // Constants
     private static final int PORT = 5000;
-    private static final int MAX_GOSSIP_MEMBERS = 16;
     private static final int MAX_NUM_CLIENTS = 250;
     private static final int BACKLOG_SIZE = 50;
     private static final String NODE_LIST_FILE = "nodeList.txt";
     private static final int CMD_SIZE = 1;
-    private static final int GOSSIP_MSG = 255;
     // Make sure this value is larger than number of physical nodes
     // Since potential max nodes is 100, then use 100 * 100 = 10000
     private static final int NUM_PARTITIONS = 10000;
-    private static final int SLEEP_TIME = 1000; // 4 seconds
-    private static final int PROP_BUFFER = 2000;
-    private static final int OFFLINE_THRES = (int) (Math.log10(MAX_GOSSIP_MEMBERS) / Math.log10(2)) * SLEEP_TIME + PROP_BUFFER; // 10 seconds log(N)/log(2) * SLEEP_TIME
     private static final int REPLICATION_FACTOR = 3;
 
     // Private members
@@ -103,16 +98,16 @@ public class Server
             producer.start();
 
             // randomly grab 2 nodes concurrently
-            Thread gossiper = new Thread(new Gossiper());
+            Thread gossiper = new Thread(new Gossiper(membership,ring, PORT));
             gossiper.start();
-            Thread gossiper2 = new Thread(new Gossiper());
+            Thread gossiper2 = new Thread(new Gossiper(membership,ring,PORT));
             gossiper2.start();
             // Create a new Consumer thread for servicing clients in the queue
             Thread consumer = new Thread(new Consumer());
             consumer.start();
 
             // check timestamp from the nodeList
-            Thread timestampCheck = new Thread(new TimestampCheck());
+            Thread timestampCheck = new Thread(new Gossiper.TimestampCheck(membership,ring));
             timestampCheck.start();
 
         } catch (Exception e)
@@ -301,105 +296,6 @@ public class Server
             for (String successor : successors)
             {
                 System.out.println("\t" + successor + " => " + nodeMap.get(successor).address.toString());
-            }
-        }
-    }
-
-    private static class TimestampCheck implements Runnable
-    {
-        public void run()
-        {
-            long timeDiff = 0;
-            Timestamp currentTime;
-            while (true)
-            {
-                // System.out.println("----------------------------");
-                for (Node node : membership)
-                {
-                    try
-                    {
-                        if (!(node.Equals(java.net.InetAddress.getLocalHost())))
-                        {
-                            Thread.currentThread().sleep(SLEEP_TIME);
-                            currentTime = new Timestamp(new Date().getTime());
-                            // System.out.println("node: "+onlineNodeList.get(onlineNodeList.indexOf(node)).address.getHostName());
-                            // System.out.println("last update: "+onlineNodeList.get(onlineNodeList.indexOf(node)).t.toString());
-                            timeDiff = currentTime.getTime() - node.t.getTime();
-                            // System.out.println("timeDiff: "+timeDiff);
-                            if (timeDiff > OFFLINE_THRES)
-                            {
-                                node.online = false;
-                                takePartitions(membership.indexOf(node));
-                            }
-                        }
-                    } catch (Exception e)
-                    {
-                        System.out.println("unrecognized node");
-                    }
-                }
-            }
-        }
-    }
-
-    private static class Gossiper implements Runnable
-    {
-        public void run()
-        {
-            Socket socket = null;
-            Random randomGenerator;
-            int randomInt = 0;
-            int lastRandNum = -1;
-            byte[] gossipBuffer = new byte[CMD_SIZE];
-            gossipBuffer[0] = (byte) (GOSSIP_MSG & 0x000000FF);
-
-            while (true)
-            {
-                try
-                {
-                    randomGenerator = new Random();
-                    // Random randomGenerator = new Random();
-                    // randomly select a node to gossip
-                    while (true)
-                    {
-                        // do{
-                        randomInt = randomGenerator.nextInt(membership.size());
-                        // }while(randomInt == lastRandNum);
-
-                        if (!(membership.get(randomInt).Equals(java.net.InetAddress.getLocalHost())))
-                        {
-                            if (membership.get(randomInt).online)
-                            {
-                                break;
-                            }
-                        }
-                    }
-
-                    if (membership.get(randomInt).rejoin)
-                    {
-                        returnPartitions(randomInt);
-                        membership.get(randomInt).rejoin = false;
-                    }
-
-                    // System.out.println("gossiping to server: "+onlineNodeList.get(randomInt).address.getHostName());
-                    socket = new Socket(membership.get(randomInt).address.getHostName(), PORT);
-
-                    // Send the message to the server
-                    OutputStream os = socket.getOutputStream();
-                    // Send the encoded string to the server
-                    os.write(gossipBuffer);
-                    // System.out.println("Sending request:");
-                    // System.out.println(StringUtils.byteArrayToHexString(gossipBuffer));
-
-                    // lastRandNum = randomInt;
-                    // sleep
-                    Thread.currentThread().sleep(SLEEP_TIME);
-                } catch (Exception e)
-                {
-                    membership.get(randomInt).online = false;
-                    membership.get(randomInt).t = new Timestamp(0);
-                    // System.out.println(membership.get(randomInt).address.getHostName().toString() + " left");
-                }
-
             }
         }
     }
