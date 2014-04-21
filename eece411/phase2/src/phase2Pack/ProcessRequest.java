@@ -1,7 +1,6 @@
 package phase2Pack;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
@@ -335,19 +334,6 @@ public class ProcessRequest implements Runnable
 
         try
         {
-            SocketChannel client;
-            try {
-                client = SocketChannel.open();
-
-                System.out.println("connect to nio remote " + handle.isValid());
-                client.configureBlocking(false);
-                client.connect(new InetSocketAddress(host, KVStore.NIO_SERVER_PORT));
-                ClientDispatcher.registerChannel(SelectionKey.OP_CONNECT, client,
-                        handle, message, host);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
             Socket socket = new Socket(remoteNode.address.getHostName(), remoteNode.address.getPort());
             // System.out.println("Connected to server: " + socket.getInetAddress().toString());
 
@@ -389,14 +375,13 @@ public class ProcessRequest implements Runnable
                 // System.out.println("Value for GET: " + StringUtils.byteArrayToHexString(getValue));
                 return getValue;
             }
-        } catch (Exception e)
-        {
+        } catch (Exception e) {
             // System.out.println("Forwarding to a node that is offline!");
             //errCode = 0x04; // Just set to internal KVStore error if we fail to connect to the node we want to forward to
             throw new InternalKVStoreException();
-            int index = membership.indexOf(remoteNode);
-            membership.get(index).online = false;
-            membership.get(index).t = new Timestamp(0);
+            int index = ring.getMembership().indexOf(remoteNode);
+            ring.getMembership().get(index).online = false;
+            ring.getMembership().get(index).t = new Timestamp(0);
             // System.out.println(membership.get(index).address.getHostName().toString() + " left");
             return null;
         }
