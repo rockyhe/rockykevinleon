@@ -41,6 +41,7 @@ public enum Commands
         case 255:
             return GOSSIP;
         default:
+            System.out.println("Error trying to cast int of " + i + " to Commands enum. Returning null!");
             return null;
         }
     }

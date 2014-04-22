@@ -38,6 +38,7 @@ public enum ErrorCodes
         case 5:
             return UNRECOGNIZED_COMMAND;
         default:
+            System.out.println("Error trying to cast byte of " + b + " to ErrorCodes enum. Returning null!");
             return null;
         }
     }
