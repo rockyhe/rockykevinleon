@@ -53,6 +53,7 @@ public class Gossiper implements Runnable
 
                 if (ring.getMembership().get(randomInt).rejoin)
                 {
+                    System.out.println(ring.getMembership().get(randomInt).hostname+" rejoined");
                     ring.returnPartitions(randomInt);
                     ring.getMembership().get(randomInt).rejoin = false;
                 }
@@ -64,8 +65,8 @@ public class Gossiper implements Runnable
                 OutputStream os = socket.getOutputStream();
                 // Send the encoded string to the server
                 os.write(gossipBuffer);
-                // System.out.println("Sending request:");
-                // System.out.println(StringUtils.byteArrayToHexString(gossipBuffer));
+                System.out.println("gossiping to:"+ring.getMembership().get(randomInt).hostname);
+                //System.out.println(StringUtils.byteArrayToHexString(gossipBuffer));
 
                 // lastRandNum = randomInt;
                 // sleep

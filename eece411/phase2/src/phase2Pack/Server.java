@@ -34,13 +34,14 @@ public class Server
             kvStore = new KVStore();
 
             System.out.println("Starting NIO server at port : " + PORT);
+            new ReactorInitiator().initiateReactiveServer(PORT, ring, kvStore);
+
             // Initialize gossip variables
             servSock = new ServerSocket(GOSSIP_PORT);
             backlog = new ArrayBlockingQueue<Socket>(GOSSIP_BACKLOG_SIZE);
             concurrentClientCount = new AtomicInteger(0);
             System.out.println("after initialize gossip variable");
             threadPool = Executors.newFixedThreadPool(GOSSIP_MAX_NUM_CLIENTS);
-
 
             Thread producer = new Thread(new Producer());
             producer.start();
@@ -58,8 +59,6 @@ public class Server
             timestampCheck.start();
 
             System.out.println("Server is ready...");
-
-            new ReactorInitiator().initiateReactiveServer(PORT, ring, kvStore);
         } catch (Exception e) {
             System.out.println("Internal Server Error!");
             e.printStackTrace();
