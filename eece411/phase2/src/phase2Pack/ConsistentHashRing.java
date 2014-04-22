@@ -124,7 +124,7 @@ public class ConsistentHashRing
 
     private void constructRing()
     {
-        // Divide the hash space into NUM_PARTITIONS partitions
+        // Divide the hash space into NUM_PARTITIONS partitions (ideally, but may be less if membership size doesn't divide nicely)
         // with each physical node responsible for (NUM_PARTITIONS / number of nodes) hash ranges
         // int partitionsPerNode = NUM_PARTITIONS / onlineNodeList.size();
         partitionMap = new ConcurrentSkipListMap<String, Node>();
@@ -133,6 +133,7 @@ public class ConsistentHashRing
         {
             for (int i = 0; i < partitionsPerNode; ++i)
             {
+                // Distribution of partitions will be random based on hash value of hostname + i
                 partitionMap.put(getHash(node.hostname + i), node);
             }
         }
@@ -194,7 +195,6 @@ public class ConsistentHashRing
         // System.out.println("<<<<<<<<<<<<<<<<<<<<<<<rejoined node: "+onlineNodeList.get(idx).address.toString());
         for (Node node : membership)
         {
-
             // foreach partition in each node
             for (int i = 0; i < partitionsPerNode; ++i)
             {
