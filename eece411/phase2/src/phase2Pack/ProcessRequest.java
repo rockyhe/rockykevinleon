@@ -341,7 +341,7 @@ public class ProcessRequest implements Runnable
 
     private byte[] forward(Node remoteNode, int cmd, byte[] key, byte[] value) throws InternalKVStoreException
     {
-        System.out.println("Forwarding to " + remoteNode.hostname.toString());
+        System.out.println("Forwarding to " + remoteNode.hostname);
 
         try
         {

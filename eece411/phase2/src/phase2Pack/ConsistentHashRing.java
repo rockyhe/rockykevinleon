@@ -38,12 +38,13 @@ public class ConsistentHashRing
             // Store the local host name for convenient access later
             localHost = InetAddress.getLocalHost().getHostName();
 
+            membership = new CopyOnWriteArrayList<Node>();
             Scanner s = new Scanner(new File(NODE_LIST_FILE));
             Node node;
-            membership = new CopyOnWriteArrayList<Node>();
+            String nodeName;
             while (s.hasNext())
             {
-                String nodeName = s.next();
+                nodeName = s.next();
                 node = new Node(nodeName, true);
                 membership.add(node);
             }
@@ -60,7 +61,7 @@ public class ConsistentHashRing
         constructRing();
         // displayRing();
         // verifyRing();
-        //displaySuccessorListMap();
+        // displaySuccessorListMap();
     }
 
     public CopyOnWriteArrayList<Node> getMembership()
