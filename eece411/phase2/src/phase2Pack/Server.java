@@ -40,15 +40,9 @@ public class Server
             servSock = new ServerSocket(GOSSIP_PORT);
             backlog = new ArrayBlockingQueue<Socket>(GOSSIP_BACKLOG_SIZE);
             concurrentClientCount = new AtomicInteger(0);
-<<<<<<< HEAD
-            threadPool = Executors.newFixedThreadPool(MAX_NUM_CLIENTS);
-            
-           
-=======
             System.out.println("after initialize gossip variable");
             threadPool = Executors.newFixedThreadPool(GOSSIP_MAX_NUM_CLIENTS);
 
->>>>>>> FETCH_HEAD
             Thread producer = new Thread(new Producer());
             producer.start();
             Thread consumer = new Thread(new Consumer());
