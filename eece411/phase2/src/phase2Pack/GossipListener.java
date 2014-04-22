@@ -70,7 +70,7 @@ public class GossipListener implements Runnable
             byte[] command = new byte[CMD_SIZE];
             receiveBytes(clntSock, command);
             Commands cmd = Commands.fromInt(ByteOrder.leb2int(command, 0, CMD_SIZE));
-            System.out.println("cmd: " + cmd);
+            //System.out.println("cmd: " + cmd);
 
             if (cmd == Commands.GOSSIP)
             {
