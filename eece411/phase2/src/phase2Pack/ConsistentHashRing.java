@@ -65,7 +65,7 @@ public class ConsistentHashRing
         constructRing();
         // displayRing();
         // verifyRing();
-        // displaySuccessorListMap();
+        //displaySuccessorListMap();
     }
 
     public CopyOnWriteArrayList<Node> getMembership()
@@ -233,7 +233,7 @@ public class ConsistentHashRing
                 if (partitionMap.get(getHash(node.hostname + i)).Equals(membership.get(idx)))
                 {
                     // replace it with the next node, or the first node
-                    // System.out.println("hash key for offline node: "+KVStore.getHash(node.hostname + i).toString());
+                    //System.out.println("hash key for offline node: "+KVStore.getHash(node.hostname + i).toString());
 
                     if (idx < (membership.size() - 1))
                     {
@@ -248,7 +248,6 @@ public class ConsistentHashRing
                     {
                         if (membership.get(j).online)
                         {
-                            System.out.println("taking partition");
                             partitionMap.replace(getHash(node.hostname + i), membership.get(j));
                             break;
                         }

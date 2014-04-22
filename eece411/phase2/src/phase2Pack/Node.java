@@ -22,7 +22,7 @@ public class Node
     {
         if (hostname != null)
         {
-            if (hostname.equals(this.hostname))
+            if (hostname.equalsIgnoreCase(this.hostname))
             {
                 return true;
             }
@@ -34,7 +34,7 @@ public class Node
     {
         if (addr != null)
         {
-            if (addr.getHostName().equals(this.hostname))
+            if (addr.getHostName().equalsIgnoreCase(this.hostname))
             {
                 return true;
             }
@@ -51,7 +51,7 @@ public class Node
                 return true;
             }
 
-            if (node.hostname.equals(this.hostname))
+            if (node.hostname.equalsIgnoreCase(this.hostname))
             {
                 return true;
             }
