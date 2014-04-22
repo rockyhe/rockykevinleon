@@ -47,7 +47,6 @@ public class Server
             producer.start();
             Thread consumer = new Thread(new Consumer());
             consumer.start();
-            System.out.println("after creating consumer");
             // randomly grab 2 nodes concurrently
             Thread gossiper = new Thread(new Gossiper(ring, GOSSIP_PORT));
             gossiper.start();
@@ -60,7 +59,7 @@ public class Server
 
             System.out.println("Server is ready...");
         } catch (Exception e) {
-            System.out.println("Internal Server Error!");
+            System.out.println("Server Internal Server Error!");
             e.printStackTrace();
         }
     }
@@ -82,7 +81,7 @@ public class Server
                     }
                 }
             } catch (Exception e) {
-                System.out.println("Internal Server Error!");
+                System.out.println("Producer Internal Server Error!");
                 e.printStackTrace();
             }
         }
@@ -109,7 +108,7 @@ public class Server
                     }
                 }
             } catch (Exception e) {
-                System.out.println("Internal Server Error!");
+                System.out.println("consumer Internal Server Error!");
                 e.printStackTrace();
             }
         }

@@ -203,7 +203,6 @@ public class ConsistentHashRing
                 if (node.Equals(membership.get(idx)))
                 {
                     // replace it with the next node, or the first node
-                    // System.out.println("rejoined node: "+onlineNodeList.get(idx).address.toString());
                     // System.out.println("hash key for rejoin node: "+KVStore.getHash(node.hostname + i).toString());
 
                     partitionMap.replace(getHash(node.hostname + i), membership.get(idx));
@@ -218,7 +217,6 @@ public class ConsistentHashRing
         // foreach nodes in the nodeList
         int j;
 
-        // System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>offline  node: "+onlineNodeList.get(idx).address.toString());
         for (Node node : membership)
         {
             // foreach partition in each node

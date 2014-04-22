@@ -187,6 +187,7 @@ public class ProcessRequest implements Runnable
                 {
                     // If a replica returns a value, then return that as the result
                     System.out.println("Forwarding get command to replica");
+                    System.out.println(ring.getNodeForPartition(nextSuccessor).hostname);
                     replyFromReplica = forward(ring.getNodeForPartition(nextSuccessor), Commands.GET, key, null);
                     if (replyFromReplica != null)
                     {
@@ -418,7 +419,9 @@ public class ProcessRequest implements Runnable
         ByteBuffer buffer = ByteBuffer.allocate(dest.length);
         while (buffer.hasRemaining())
         {
+            //if(socketChannel.isConnected()){
             socketChannel.read(buffer);
+            //}
         }
         buffer.flip();
         buffer.get(dest);

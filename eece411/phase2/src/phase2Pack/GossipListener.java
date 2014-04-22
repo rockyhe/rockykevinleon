@@ -47,8 +47,8 @@ public class GossipListener implements Runnable
         for (Node node : membership)
         {
             //System.out.println("client sock: "+clntSock.getInetAddress().getHostName().toString());
-            System.out.println("Clnt Sock: "+clntSock.getInetAddress().getHostName());
-            System.out.println("member: "+node.hostname);
+            //System.out.println("Clnt Sock: "+clntSock.getInetAddress().getHostName());
+            //System.out.println("member: "+node.hostname);
             if (node.Equals(clntSock.getInetAddress()))
             {
                 if (!node.online)
