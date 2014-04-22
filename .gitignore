@@ -5,8 +5,13 @@
 *.war
 *.ear
 
+# User Preference Files #
+*.ui.prefs
+
 eece411/assign2/src/com/matei/eece411/A2/.Client.java.swp
 
 eece411/phase2/src/phase2Pack/.KVStore.java.swp
 
 eece411/phase2/src/phase2Pack/eece411-kvclient/
+
+eece411/phase2/bin/

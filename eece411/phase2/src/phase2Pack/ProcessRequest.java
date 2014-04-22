@@ -16,7 +16,10 @@ import java.util.Map;
 import phase2Pack.Exceptions.InexistentKeyException;
 import phase2Pack.Exceptions.InternalKVStoreException;
 import phase2Pack.Exceptions.OutOfSpaceException;
+import phase2Pack.Exceptions.SystemOverloadException;
 import phase2Pack.Exceptions.UnrecognizedCmdException;
+import phase2Pack.enums.Commands;
+import phase2Pack.enums.ErrorCodes;
 import phase2Pack.nio.Dispatcher;
 
 public class ProcessRequest implements Runnable
@@ -33,8 +36,6 @@ public class ProcessRequest implements Runnable
     private ConsistentHashRing ring;
     private KVStore kvStore;
 
-    private byte errCode = 0x00; // Set default errCode to 0x00, so we can assume that operation is successful unless explicitly changed
-
     public ProcessRequest(SocketChannel socketChannel, SelectionKey handle, Selector demultiplexer, ConsistentHashRing ring, KVStore kvStore)
     {
         this.socketChannel = socketChannel;
@@ -50,13 +51,13 @@ public class ProcessRequest implements Runnable
             // Read the command byte
             byte[] commandBytes = new byte[CMD_SIZE];
             receiveBytesNIO(commandBytes);
-            int cmd = ByteOrder.leb2int(commandBytes, 0, CMD_SIZE);
+            Commands cmd = Commands.fromInt(ByteOrder.leb2int(commandBytes, 0, CMD_SIZE));
 
             byte[] key = null;
             byte[] value = null;
             switch (cmd)
             {
-            case 1: // Put command
+            case PUT: // Put command
                 // Get the key bytes
                 key = new byte[KEY_SIZE];
                 receiveBytesNIO(key);
@@ -65,7 +66,7 @@ public class ProcessRequest implements Runnable
                 receiveBytesNIO(value);
                 put(key, value);
                 break;
-            case 2: // Get command
+            case GET: // Get command
                 // Get the key bytes
                 key = new byte[KEY_SIZE];
                 receiveBytesNIO(key);
@@ -73,26 +74,26 @@ public class ProcessRequest implements Runnable
                 value = new byte[VALUE_SIZE];
                 value = get(key);
                 break;
-            case 3: // Remove command
+            case REMOVE: // Remove command
                 // Get the key bytes
                 key = new byte[KEY_SIZE];
                 receiveBytesNIO(key);
                 remove(key);
                 break;
-            case 4: // Shutdown command
+            case SHUTDOWN: // Shutdown command
                 shutdown();
                 break;
-            case 101: // Put to replica command
+            case PUT_TO_REPLICA: // Put to replica command
                 key = new byte[KEY_SIZE];
                 receiveBytesNIO(key);
                 value = new byte[VALUE_SIZE];
                 receiveBytesNIO(value);
                 putToReplica(key, value);
-            case 103: // Remove from replica command
+            case REMOVE_FROM_REPLICA: // Remove from replica command
                 key = new byte[KEY_SIZE];
                 receiveBytesNIO(key);
                 removeFromReplica(key);
-            case 255: // Gossip signal
+            case GOSSIP: // Gossip signal
                 gossip();
                 break;
             default: // Unrecognized command
@@ -101,46 +102,41 @@ public class ProcessRequest implements Runnable
 
             // Send the reply message to the client
             // Only send value if command was get and value returned wasn't null
-            if (cmd == 2 && value != null)
+            if (cmd == Commands.GET && value != null)
             {
                 byte[] combined = new byte[ERR_SIZE + VALUE_SIZE];
-                System.arraycopy(new byte[] { errCode }, 0, combined, 0, ERR_SIZE);
+                System.arraycopy(new byte[] { ErrorCodes.SUCCESS.toByte() }, 0, combined, 0, ERR_SIZE);
                 System.arraycopy(value, 0, combined, ERR_SIZE, VALUE_SIZE);
                 sendBytesNIO(combined);
             }
             else
             {
-                sendBytesNIO(new byte[] { errCode });
+                sendBytesNIO(new byte[] { ErrorCodes.SUCCESS.toByte() });
                 // If command was shutdown, then close the application after sending the reply
-                if (cmd == 4)
+                if (cmd == Commands.SHUTDOWN)
                 {
                     System.exit(0);
                 }
             }
         } catch (InexistentKeyException e) {
-            System.out.println("inexisted key");
-            sendBytesNIO(new byte[] {0x01});
+            System.out.println("Inexistent Key");
+            sendBytesNIO(new byte[] { ErrorCodes.INEXISTENT_KEY.toByte() });
         } catch (OutOfSpaceException e) {
             System.out.println("Out Of Space");
-            sendBytesNIO(new byte[] {0x02});
-            //TODO: Figure out where to throw this
-            //        } catch (SystemOverloadException e){
-            //            System.out.println("System Overload");
-            //            sendBytes(new byte[] {0x03});
+            sendBytesNIO(new byte[] { ErrorCodes.OUT_OF_SPACE.toByte() });
         } catch (InternalKVStoreException e){
             System.out.println("Internal KVStore");
-            sendBytesNIO(new byte[] {0x04});
+            sendBytesNIO(new byte[] { ErrorCodes.INTERNAL_KVSTORE.toByte() });
         } catch (UnrecognizedCmdException e){
-            System.out.println("Unrecognized Cmd");
-            sendBytesNIO(new byte[] {0x05});
+            System.out.println("Unrecognized Command");
+            sendBytesNIO(new byte[] { ErrorCodes.UNRECOGNIZED_COMMAND.toByte() });
         } catch (Exception e){
-            System.out.println("internal server error");
+            System.out.println("Internal Server Error");
             e.printStackTrace();
         }
     }
 
-
-    public void put(byte[] key, byte[] value) throws OutOfSpaceException, InternalKVStoreException
+    private void put(byte[] key, byte[] value) throws InexistentKeyException, OutOfSpaceException, SystemOverloadException, InternalKVStoreException, UnrecognizedCmdException
     {
         // Re-hash the key using our hash function so it's consistent
         String rehashedKeyStr = ConsistentHashRing.getHash(StringUtils.byteArrayToHexString(key));
@@ -149,7 +145,6 @@ public class ProcessRequest implements Runnable
         Map.Entry<String, Node> primary = ring.getPrimary(rehashedKeyStr);
 
         // Check if this node is the primary partition for the hash key, or if we need to do a remote call
-
         if (primary.getValue().Equals(ring.localHost))
         {
             kvStore.put(rehashedKeyStr, value);
@@ -165,11 +160,11 @@ public class ProcessRequest implements Runnable
         else
         {
             // System.out.println("Forwarding put command!");
-            forward(primary.getValue(), 1, key, value);
+            forward(primary.getValue(), Commands.PUT, key, value);
         }
     }
 
-    public byte[] get(byte[] key) throws InexistentKeyException, InternalKVStoreException
+    private byte[] get(byte[] key) throws InexistentKeyException, OutOfSpaceException, SystemOverloadException, InternalKVStoreException, UnrecognizedCmdException
     {
         // Re-hash the key using our hash function so it's consistent
         String rehashedKeyStr = ConsistentHashRing.getHash(StringUtils.byteArrayToHexString(key));
@@ -192,7 +187,7 @@ public class ProcessRequest implements Runnable
                 {
                     // If a replica returns a value, then return that as the result
                     System.out.println("Forwarding get command to replica");
-                    replyFromReplica = forward(ring.getNodeForPartition(nextSuccessor), 2, key, null);
+                    replyFromReplica = forward(ring.getNodeForPartition(nextSuccessor), Commands.GET, key, null);
                     if (replyFromReplica != null)
                     {
                         return replyFromReplica;
@@ -204,7 +199,7 @@ public class ProcessRequest implements Runnable
             {
                 // Otherwise route to node that should contain
                 System.out.println("Routing get command!");
-                return forward(primary.getValue(), 2, key, null);
+                return forward(primary.getValue(), Commands.GET, key, null);
             }
 
             // If the key doesn't exist of any of the replicas, then key doesn't exist
@@ -212,7 +207,7 @@ public class ProcessRequest implements Runnable
         }
     }
 
-    public void remove(byte[] key) throws InexistentKeyException, InternalKVStoreException
+    private void remove(byte[] key) throws InexistentKeyException, OutOfSpaceException, SystemOverloadException, InternalKVStoreException, UnrecognizedCmdException
     {
         // Re-hash the key using our hash function so it's consistent
         String rehashedKeyStr = ConsistentHashRing.getHash(StringUtils.byteArrayToHexString(key));
@@ -237,11 +232,11 @@ public class ProcessRequest implements Runnable
         else
         {
             // System.out.println("Forwarding remove command!");
-            forward(primary.getValue(), 3, key, null);
+            forward(primary.getValue(), Commands.REMOVE, key, null);
         }
     }
 
-    public void shutdown()
+    private void shutdown()
     {
         // Increment the shutdown flag to no longer accept incoming connections
         Dispatcher.shutdown();
@@ -256,7 +251,7 @@ public class ProcessRequest implements Runnable
         }
     }
 
-    public void gossip()
+    private void gossip()
     {
         for (Node node : ring.getMembership())
         {
@@ -275,7 +270,7 @@ public class ProcessRequest implements Runnable
         }
     }
 
-    public void putToReplica(byte[] key, byte[] value)
+    private void putToReplica(byte[] key, byte[] value)
     {
         System.out.println("Put to replica: " + StringUtils.byteArrayToHexString(key));
         // Convert key bytes to string
@@ -289,7 +284,7 @@ public class ProcessRequest implements Runnable
         }
     }
 
-    public void removeFromReplica(byte[] key)
+    private void removeFromReplica(byte[] key)
     {
         System.out.println("Remove from replica: " + StringUtils.byteArrayToHexString(key));
         // Convert key bytes to string
@@ -310,7 +305,7 @@ public class ProcessRequest implements Runnable
         {
             // update existing key or put a new key
             sendBuffer = new byte[CMD_SIZE + KEY_SIZE + VALUE_SIZE];
-            ByteOrder.int2leb(101, sendBuffer, 0); // Command byte - 1 byte
+            ByteOrder.int2leb(Commands.PUT_TO_REPLICA.getValue(), sendBuffer, 0); // Command byte - 1 byte
             System.arraycopy(key, 0, sendBuffer, CMD_SIZE, KEY_SIZE); // Key bytes - 32 bytes
             System.arraycopy(value, 0, sendBuffer, CMD_SIZE + KEY_SIZE, VALUE_SIZE); // Value bytes - 1024 bytes
         }
@@ -318,7 +313,7 @@ public class ProcessRequest implements Runnable
         {
             // get value of existing key
             sendBuffer = new byte[CMD_SIZE + KEY_SIZE];
-            ByteOrder.int2leb(103, sendBuffer, 0); // Command byte - 1 byte
+            ByteOrder.int2leb(Commands.REMOVE_FROM_REPLICA.getValue(), sendBuffer, 0); // Command byte - 1 byte
             System.arraycopy(key, 0, sendBuffer, CMD_SIZE, KEY_SIZE); // Key bytes - 32 bytes
         }
 
@@ -339,29 +334,28 @@ public class ProcessRequest implements Runnable
         }
     }
 
-    private byte[] forward(Node remoteNode, int cmd, byte[] key, byte[] value) throws InternalKVStoreException
+    private byte[] forward(Node remoteNode, Commands cmd, byte[] key, byte[] value) throws InexistentKeyException, OutOfSpaceException, SystemOverloadException, InternalKVStoreException, UnrecognizedCmdException
     {
         System.out.println("Forwarding to " + remoteNode.hostname);
 
-        try
-        {
+        try {
             Socket socket = new Socket(remoteNode.hostname, Server.PORT);
             // System.out.println("Connected to server: " + socket.getInetAddress().toString());
 
             // Route the message
             // If command is put, then increase request buffer size to include value bytes
             byte[] requestBuffer;
-            if (cmd == 1)
+            if (cmd == Commands.PUT)
             {
                 requestBuffer = new byte[CMD_SIZE + KEY_SIZE + VALUE_SIZE];
-                ByteOrder.int2leb(cmd, requestBuffer, 0); // Command byte - 1 byte
+                ByteOrder.int2leb(cmd.getValue(), requestBuffer, 0); // Command byte - 1 byte
                 System.arraycopy(key, 0, requestBuffer, CMD_SIZE, KEY_SIZE); // Key bytes - 32 bytes
                 System.arraycopy(value, 0, requestBuffer, CMD_SIZE + KEY_SIZE, VALUE_SIZE); // Value bytes - 1024 bytes
             }
             else
             {
                 requestBuffer = new byte[CMD_SIZE + KEY_SIZE];
-                ByteOrder.int2leb(cmd, requestBuffer, 0); // Command byte - 1 byte
+                ByteOrder.int2leb(cmd.getValue(), requestBuffer, 0); // Command byte - 1 byte
                 System.arraycopy(key, 0, requestBuffer, CMD_SIZE, KEY_SIZE); // Key bytes - 32 bytes
             }
 
@@ -375,16 +369,36 @@ public class ProcessRequest implements Runnable
             byte[] errorCode = new byte[ERR_SIZE];
             receiveBytes(socket, errorCode);
             // System.out.println("Received reply from forwarded request");
-            errCode = errorCode[0];
+            ErrorCodes errCode = ErrorCodes.fromByte(errorCode[0]);
             // System.out.println("Error Code: " + errorMessage(errCode));
 
             // If command was get and ran successfully, then get the value bytes
-            if (cmd == 2 && errCode == 0x00)
+            if (cmd == Commands.GET && errCode == ErrorCodes.SUCCESS)
             {
                 byte[] getValue = new byte[VALUE_SIZE];
                 receiveBytes(socket, getValue);
                 // System.out.println("Value for GET: " + StringUtils.byteArrayToHexString(getValue));
                 return getValue;
+            }
+            else
+            {
+                switch (errCode)
+                {
+                case SUCCESS:
+                    break;
+                case INEXISTENT_KEY:
+                    throw new InexistentKeyException();
+                case OUT_OF_SPACE:
+                    throw new OutOfSpaceException();
+                case SYSTEM_OVERLOAD:
+                    throw new SystemOverloadException();
+                case INTERNAL_KVSTORE:
+                    throw new InternalKVStoreException();
+                case UNRECOGNIZED_COMMAND:
+                    throw new UnrecognizedCmdException();
+                default:
+                    throw new InternalKVStoreException();
+                }
             }
         } catch (Exception e) {
             // System.out.println("Forwarding to a node that is offline!");

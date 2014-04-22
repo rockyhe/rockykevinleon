@@ -6,11 +6,12 @@ import java.sql.Timestamp;
 import java.util.Date;
 import java.util.Random;
 
+import phase2Pack.enums.Commands;
+
 public class Gossiper implements Runnable
 {
     private static final int CMD_SIZE = 1;
     private static final int MAX_GOSSIP_MEMBERS = 16;
-    private static final int GOSSIP_MSG = 255;
     private static final int SLEEP_TIME = 1000; // 4 seconds
     private static final int PROP_BUFFER = 2000;
     private static final int OFFLINE_THRES = (int) (Math.log10(MAX_GOSSIP_MEMBERS) / Math.log10(2)) * SLEEP_TIME + PROP_BUFFER; // 10 seconds log(N)/log(2) * SLEEP_TIME
@@ -30,7 +31,7 @@ public class Gossiper implements Runnable
         Random randomGenerator;
         int randomInt = 0;
         byte[] gossipBuffer = new byte[CMD_SIZE];
-        gossipBuffer[0] = (byte) (GOSSIP_MSG & 0x000000FF);
+        gossipBuffer[0] = (byte) (Commands.GOSSIP.getValue() & 0x000000FF);
 
         while (true)
         {

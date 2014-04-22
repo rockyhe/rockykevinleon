@@ -8,6 +8,8 @@ import java.util.Date;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import phase2Pack.enums.Commands;
+
 public class GossipListener implements Runnable
 {
     // Constants
@@ -67,10 +69,10 @@ public class GossipListener implements Runnable
         try {
             byte[] command = new byte[CMD_SIZE];
             receiveBytes(clntSock, command);
-            int cmd = ByteOrder.leb2int(command, 0, CMD_SIZE);
-
+            Commands cmd = Commands.fromInt(ByteOrder.leb2int(command, 0, CMD_SIZE));
             System.out.println("cmd: " + cmd);
-            if(cmd == 255)
+
+            if (cmd == Commands.GOSSIP)
             {
                 gossip();
             }

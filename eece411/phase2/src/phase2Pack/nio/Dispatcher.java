@@ -11,6 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import phase2Pack.Exceptions.SystemOverloadException;
+import phase2Pack.enums.ErrorCodes;
 
 /*
  * Dispatcher for NIO, reactor pattern
@@ -95,7 +96,7 @@ public class Dispatcher implements Runnable
                             handler.handleEvent(handle);
                         } catch (SystemOverloadException e) {
                             System.out.println("System Overload");
-                            Dispatcher.sendBytesNIO(handle, new byte[] {0x03});
+                            Dispatcher.sendBytesNIO(handle, new byte[] {ErrorCodes.SYSTEM_OVERLOAD.toByte()});
                         }
                         handleIterator.remove();
                     }
