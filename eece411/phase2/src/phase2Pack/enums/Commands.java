@@ -10,7 +10,6 @@ public enum Commands
     REMOVE_FROM_REPLICA(103),
     GOSSIP(255);
 
-    private final static Commands[] values = Commands.values();
     private int value;
 
     private Commands(int value)
@@ -25,12 +24,25 @@ public enum Commands
 
     public static Commands fromInt(int i)
     {
-        return values[i];
-    }
-
-    public static Commands fromByte(byte b)
-    {
-        return values[b];
+        switch (i)
+        {
+        case 1:
+            return PUT;
+        case 2:
+            return GET;
+        case 3:
+            return REMOVE;
+        case 4:
+            return SHUTDOWN;
+        case 101:
+            return PUT_TO_REPLICA;
+        case 103:
+            return REMOVE_FROM_REPLICA;
+        case 255:
+            return GOSSIP;
+        default:
+            return null;
+        }
     }
 
     public static byte toByte(Commands code)

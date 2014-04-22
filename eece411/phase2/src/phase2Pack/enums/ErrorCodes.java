@@ -9,7 +9,6 @@ public enum ErrorCodes
     INTERNAL_KVSTORE(4),
     UNRECOGNIZED_COMMAND(5);
 
-    private final static ErrorCodes[] values = ErrorCodes.values();
     private int value;
 
     private ErrorCodes(int value)
@@ -22,14 +21,25 @@ public enum ErrorCodes
         return this.value;
     }
 
-    public static ErrorCodes fromInt(int i)
-    {
-        return values[i];
-    }
-
     public static ErrorCodes fromByte(byte b)
     {
-        return values[b];
+        switch (b)
+        {
+        case 0:
+            return SUCCESS;
+        case 1:
+            return INEXISTENT_KEY;
+        case 2:
+            return OUT_OF_SPACE;
+        case 3:
+            return SYSTEM_OVERLOAD;
+        case 4:
+            return INTERNAL_KVSTORE;
+        case 5:
+            return UNRECOGNIZED_COMMAND;
+        default:
+            return null;
+        }
     }
 
     public static byte toByte(ErrorCodes code)
