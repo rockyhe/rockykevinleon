@@ -11,11 +11,11 @@ import java.nio.channels.SocketChannel;
  */
 public class AcceptEventHandler implements EventHandler
 {
-    private Selector demultiplexer;
+    private Selector selector;
 
-    public AcceptEventHandler(Selector demultiplexer)
+    public AcceptEventHandler(Selector selector)
     {
-        this.demultiplexer = demultiplexer;
+        this.selector = selector;
     }
 
     @Override
@@ -26,7 +26,7 @@ public class AcceptEventHandler implements EventHandler
         if (socketChannel != null)
         {
             socketChannel.configureBlocking(false);
-            socketChannel.register(demultiplexer, SelectionKey.OP_READ);
+            socketChannel.register(selector, SelectionKey.OP_READ);
         }
     }
 }

@@ -21,11 +21,6 @@ public class ConsistentHashRing
     // Since potential max nodes is 100, then use 100 * 100 = 10000
     private static final int NUM_PARTITIONS = 10000;
     private static final int REPLICATION_FACTOR = 3;
-    private static final int KVSTORE_SIZE = 40000;
-    private static final int CMD_SIZE = 1;
-    private static final int KEY_SIZE = 32;
-    private static final int VALUE_SIZE = 1024;
-    private static final int ERR_SIZE = 1;
 
     public String localHost;
 
@@ -173,7 +168,7 @@ public class ConsistentHashRing
             while (successors.size() < numSuccessors)
             {
                 // Keep looking for the next successor if we already have a successor partition owned by the same physical node
-                // or if the successor is owned by the same physical node that owns the current partition that we're generating successors for
+                // or if the successor is owned by the same physical node that owns the current partition that we're generating successors for (i.e. source partition)
                 // This guarantees that the successors (and therefore the replicas) will be different physical nodes
                 do
                 {

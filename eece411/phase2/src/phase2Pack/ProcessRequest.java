@@ -29,7 +29,7 @@ public class ProcessRequest implements Runnable
 
     private SocketChannel socketChannel;
     private SelectionKey handle;
-    private Selector demultiplexer;
+    private Selector selector;
     private ConsistentHashRing ring;
     private KVStore kvStore;
 
@@ -39,7 +39,7 @@ public class ProcessRequest implements Runnable
     {
         this.socketChannel = socketChannel;
         this.handle = handle;
-        this.demultiplexer = demultiplexer;
+        this.selector = demultiplexer;
         this.ring = ring;
         this.kvStore = kvStore;
     }
@@ -413,9 +413,7 @@ public class ProcessRequest implements Runnable
 
     private void sendBytesNIO(byte[] src)
     {
-        handle.interestOps(SelectionKey.OP_WRITE);
-        handle.attach(ByteBuffer.wrap(src));
-        demultiplexer.wakeup();
+        Dispatcher.sendBytesNIO(handle, src);
     }
 
     private void receiveBytes(Socket srcSock, byte[] dest) throws IOException
