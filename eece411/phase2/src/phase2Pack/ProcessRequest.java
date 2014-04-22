@@ -57,6 +57,7 @@ public class ProcessRequest implements Runnable
             // Read the command byte
             Commands cmd = Commands.fromInt(ByteOrder.leb2int(commandBytes, 0, CMD_SIZE));
             
+
             switch (cmd)
             {
             case PUT: // Put command
