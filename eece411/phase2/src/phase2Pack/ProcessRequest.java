@@ -35,70 +35,55 @@ public class ProcessRequest implements Runnable
     private Selector selector;
     private ConsistentHashRing ring;
     private KVStore kvStore;
+    private byte[]  commandBytes = new byte[CMD_SIZE];
+    byte[] key = new byte[KEY_SIZE];
+    byte[] value = new byte[VALUE_SIZE];
 
-    public ProcessRequest(SocketChannel socketChannel, SelectionKey handle, Selector demultiplexer, ConsistentHashRing ring, KVStore kvStore)
+    public ProcessRequest(SocketChannel socketChannel, SelectionKey handle, Selector demultiplexer, ConsistentHashRing ring, KVStore kvStore,byte[] cmd,byte[] key,byte[] value)
     {
         this.socketChannel = socketChannel;
         this.handle = handle;
         this.selector = demultiplexer;
         this.ring = ring;
         this.kvStore = kvStore;
+        this.commandBytes = cmd;
+        this.key = key;
+        this.value = value;
     }
 
     public void run()
     {
         try {
             // Read the command byte
-            byte[] commandBytes = new byte[CMD_SIZE];
-            receiveBytesNIO(commandBytes);
             Commands cmd = Commands.fromInt(ByteOrder.leb2int(commandBytes, 0, CMD_SIZE));
-
-            byte[] key = null;
-            byte[] value = null;
+            
             switch (cmd)
             {
             case PUT: // Put command
-                // Get the key bytes
-                key = new byte[KEY_SIZE];
-                receiveBytesNIO(key);
-                // Get the value bytes (only do this if the command is put)
-                value = new byte[VALUE_SIZE];
-                receiveBytesNIO(value);
                 put(key, value);
                 break;
             case GET: // Get command
-                // Get the key bytes
-                key = new byte[KEY_SIZE];
-                receiveBytesNIO(key);
-                // Store get result into value byte array
-                value = new byte[VALUE_SIZE];
                 value = get(key);
                 break;
             case REMOVE: // Remove command
-                // Get the key bytes
-                key = new byte[KEY_SIZE];
-                receiveBytesNIO(key);
                 remove(key);
                 break;
             case SHUTDOWN: // Shutdown command
                 shutdown();
                 break;
             case PUT_TO_REPLICA: // Put to replica command
-                key = new byte[KEY_SIZE];
-                receiveBytesNIO(key);
-                value = new byte[VALUE_SIZE];
-                receiveBytesNIO(value);
                 putToReplica(key, value);
+                break;
             case REMOVE_FROM_REPLICA: // Remove from replica command
-                key = new byte[KEY_SIZE];
-                receiveBytesNIO(key);
                 removeFromReplica(key);
+                break;
             case GOSSIP: // Gossip signal
                 gossip();
                 break;
             default: // Unrecognized command
                 throw new UnrecognizedCmdException();
             }
+
 
             // Send the reply message to the client
             // Only send value if command was get and value returned wasn't null
@@ -131,6 +116,7 @@ public class ProcessRequest implements Runnable
             System.out.println("Unrecognized Command");
             sendBytesNIO(new byte[] { ErrorCodes.UNRECOGNIZED_COMMAND.toByte() });
         } catch (Exception e){
+            sendBytesNIO(new byte[] { ErrorCodes.INTERNAL_KVSTORE.toByte() });
             System.out.println("Internal Server Error");
             e.printStackTrace();
         }
@@ -138,6 +124,7 @@ public class ProcessRequest implements Runnable
 
     private void put(byte[] key, byte[] value) throws InexistentKeyException, OutOfSpaceException, SystemOverloadException, InternalKVStoreException, UnrecognizedCmdException
     {
+        System.out.println("in put");
         // Re-hash the key using our hash function so it's consistent
         String rehashedKeyStr = ConsistentHashRing.getHash(StringUtils.byteArrayToHexString(key));
 
