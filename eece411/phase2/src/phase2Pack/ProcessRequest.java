@@ -51,7 +51,8 @@ public class ProcessRequest implements Runnable
             // Read the command byte
             byte[] commandBytes = new byte[CMD_SIZE];
             receiveBytesNIO(commandBytes);
-            Commands cmd = Commands.fromInt(ByteOrder.leb2int(commandBytes, 0, CMD_SIZE));
+            int commandInt = ByteOrder.leb2int(commandBytes, 0, CMD_SIZE);
+            Commands cmd = Commands.fromInt(commandInt);
 
             byte[] key = null;
             byte[] value = null;
@@ -89,10 +90,12 @@ public class ProcessRequest implements Runnable
                 value = new byte[VALUE_SIZE];
                 receiveBytesNIO(value);
                 putToReplica(key, value);
+                break;
             case REMOVE_FROM_REPLICA: // Remove from replica command
                 key = new byte[KEY_SIZE];
                 receiveBytesNIO(key);
                 removeFromReplica(key);
+                break;
             case GOSSIP: // Gossip signal
                 gossip();
                 break;
