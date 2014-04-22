@@ -3,12 +3,13 @@ package phase2Pack.nio;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 
 import phase2Pack.ConsistentHashRing;
 import phase2Pack.KVStore;
 import phase2Pack.ProcessRequest;
+import phase2Pack.Exceptions.SystemOverloadException;
 
 /*
  * Read event handler for NIO, reactor pattern
@@ -18,28 +19,37 @@ public class ReadEventHandler implements EventHandler
 {
     // Constants
     private static final int MAX_NUM_CLIENTS = 250;
+    private static final int BACKLOG_SIZE = 250;
 
-    private ExecutorService threadPool;
-
-    private Selector demultiplexer;
+    // Private members
+    private ThreadPoolExecutor threadPool;
+    private Selector selector;
     private ConsistentHashRing ring;
     private KVStore kvStore;
 
-    public ReadEventHandler(Selector demultiplexer, ConsistentHashRing ring, KVStore kvStore)
+    public ReadEventHandler(Selector selector, ConsistentHashRing ring, KVStore kvStore)
     {
-        this.demultiplexer = demultiplexer;
+        this.selector = selector;
         this.ring = ring;
         this.kvStore = kvStore;
 
         // Create a fixed thread pool since we'll have at most MAX_NUM_CLIENTS concurrent threads
-        this.threadPool = Executors.newFixedThreadPool(MAX_NUM_CLIENTS);
+        this.threadPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(MAX_NUM_CLIENTS);
     }
 
     @Override
-    public void handleEvent(SelectionKey handle) throws Exception
+    public void handleEvent(SelectionKey handle) throws SystemOverloadException, Exception
     {
         SocketChannel socketChannel = (SocketChannel) handle.channel();
         // Process the event on a thread
-        threadPool.execute(new ProcessRequest(socketChannel, handle, demultiplexer, ring, kvStore));
+        if (threadPool.getQueue().size() < BACKLOG_SIZE)
+        {
+            threadPool.execute(new ProcessRequest(socketChannel, handle, selector, ring, kvStore));
+        }
+        // If the thread pool queue reaches the max backlog size, then throw a system overload error
+        else
+        {
+            throw new SystemOverloadException();
+        }
     }
 }

@@ -15,9 +15,8 @@ public class Server
     // Constants
     public static final int PORT = 6666;
     public static final int GOSSIP_PORT = 5555;
-    private static final int MAX_NUM_CLIENTS = 50;
-    private static final int BACKLOG_SIZE = 25;
-    public static final long TIMEOUT = 10000;
+    private static final int GOSSIP_MAX_NUM_CLIENTS = 50;
+    private static final int GOSSIP_BACKLOG_SIZE = 25;
 
     // Private members
     private static ConsistentHashRing ring;
@@ -35,21 +34,25 @@ public class Server
             kvStore = new KVStore();
 
             System.out.println("Starting NIO server at port : " + PORT);
-            
             new ReactorInitiator().initiateReactiveServer(PORT, ring, kvStore);
+
             // Initialize gossip variables
             servSock = new ServerSocket(GOSSIP_PORT);
-            backlog = new ArrayBlockingQueue<Socket>(BACKLOG_SIZE);
+            backlog = new ArrayBlockingQueue<Socket>(GOSSIP_BACKLOG_SIZE);
             concurrentClientCount = new AtomicInteger(0);
-            System.out.println("after initialize gossip variable");
+<<<<<<< HEAD
             threadPool = Executors.newFixedThreadPool(MAX_NUM_CLIENTS);
             
            
+=======
+            System.out.println("after initialize gossip variable");
+            threadPool = Executors.newFixedThreadPool(GOSSIP_MAX_NUM_CLIENTS);
+
+>>>>>>> FETCH_HEAD
             Thread producer = new Thread(new Producer());
             producer.start();
             Thread consumer = new Thread(new Consumer());
             consumer.start();
-            System.out.println("after creating consumer");
             // randomly grab 2 nodes concurrently
             Thread gossiper = new Thread(new Gossiper(ring, GOSSIP_PORT));
             gossiper.start();
@@ -61,9 +64,8 @@ public class Server
             timestampCheck.start();
 
             System.out.println("Server is ready...");
-        
         } catch (Exception e) {
-            System.out.println("Internal Server Error!");
+            System.out.println("Server Internal Server Error!");
             e.printStackTrace();
         }
     }
@@ -78,14 +80,14 @@ public class Server
                 {
                     Socket clntSock = servSock.accept(); // Get client connection
                     // If backlog isn't full, add client to it
-                    if (backlog.size() < BACKLOG_SIZE)
+                    if (backlog.size() < GOSSIP_BACKLOG_SIZE)
                     {
                         backlog.add(clntSock);
                         // System.out.println("Adding gossip client to backlog.");
                     }
                 }
             } catch (Exception e) {
-                System.out.println("Internal Server Error!");
+                System.out.println("Producer Internal Server Error!");
                 e.printStackTrace();
             }
         }
@@ -102,7 +104,7 @@ public class Server
                 {
                     // If current number of concurrent clients hasn't reached MAX_NUM_CLIENTS
                     // then service client at the head of queue
-                    if (concurrentClientCount.get() < MAX_NUM_CLIENTS && (clntSock = backlog.poll()) != null)
+                    if (concurrentClientCount.get() < GOSSIP_MAX_NUM_CLIENTS && (clntSock = backlog.poll()) != null)
                     {
                         concurrentClientCount.getAndIncrement();
                         GossipListener connection = new GossipListener(clntSock, concurrentClientCount, ring.getMembership());
@@ -112,7 +114,7 @@ public class Server
                     }
                 }
             } catch (Exception e) {
-                System.out.println("Internal Server Error!");
+                System.out.println("consumer Internal Server Error!");
                 e.printStackTrace();
             }
         }

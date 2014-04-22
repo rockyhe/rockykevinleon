@@ -45,8 +45,8 @@ public class GossipListener implements Runnable
         for (Node node : membership)
         {
             //System.out.println("client sock: "+clntSock.getInetAddress().getHostName().toString());
-            System.out.println("Clnt Sock: "+clntSock.getInetAddress().getHostName());
-            System.out.println("member: "+node.hostname);
+            //System.out.println("Clnt Sock: "+clntSock.getInetAddress().getHostName());
+            //System.out.println("member: "+node.hostname);
             if (node.Equals(clntSock.getInetAddress()))
             {
                 if (!node.online)
@@ -69,7 +69,7 @@ public class GossipListener implements Runnable
             receiveBytes(clntSock, command);
             int cmd = ByteOrder.leb2int(command, 0, CMD_SIZE);
 
-            System.out.println("cmd: " + cmd);
+            //System.out.println("cmd: " + cmd);
             if(cmd == 255)
             {
                 gossip();

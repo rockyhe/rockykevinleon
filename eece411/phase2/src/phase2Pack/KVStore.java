@@ -46,9 +46,6 @@ public class KVStore
         {
             throw new InexistentKeyException();
         }
-        else
-        {
-            store.remove(hashedKey);
-        }
+        store.remove(hashedKey);
     }
 }

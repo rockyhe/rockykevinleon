@@ -29,7 +29,7 @@ public class ProcessRequest implements Runnable
 
     private SocketChannel socketChannel;
     private SelectionKey handle;
-    private Selector demultiplexer;
+    private Selector selector;
     private ConsistentHashRing ring;
     private KVStore kvStore;
 
@@ -39,7 +39,7 @@ public class ProcessRequest implements Runnable
     {
         this.socketChannel = socketChannel;
         this.handle = handle;
-        this.demultiplexer = demultiplexer;
+        this.selector = demultiplexer;
         this.ring = ring;
         this.kvStore = kvStore;
     }
@@ -134,7 +134,7 @@ public class ProcessRequest implements Runnable
             System.out.println("Unrecognized Cmd");
             sendBytesNIO(new byte[] {0x05});
         } catch (Exception e){
-            System.out.println("internal server error");
+            System.out.println("process request internal server error");
             e.printStackTrace();
         }
     }
@@ -192,6 +192,7 @@ public class ProcessRequest implements Runnable
                 {
                     // If a replica returns a value, then return that as the result
                     System.out.println("Forwarding get command to replica");
+                    System.out.println(ring.getNodeForPartition(nextSuccessor).hostname);
                     replyFromReplica = forward(ring.getNodeForPartition(nextSuccessor), 2, key, null);
                     if (replyFromReplica != null)
                     {
@@ -341,7 +342,7 @@ public class ProcessRequest implements Runnable
 
     private byte[] forward(Node remoteNode, int cmd, byte[] key, byte[] value) throws InternalKVStoreException
     {
-        System.out.println("Forwarding to " + remoteNode.hostname.toString());
+        System.out.println("Forwarding to " + remoteNode.hostname);
 
         try
         {
@@ -404,7 +405,9 @@ public class ProcessRequest implements Runnable
         ByteBuffer buffer = ByteBuffer.allocate(dest.length);
         while (buffer.hasRemaining())
         {
-            socketChannel.read(buffer);
+            //if(socketChannel.isConnected()){
+                socketChannel.read(buffer);
+            //}
         }
         buffer.flip();
         buffer.get(dest);
@@ -413,9 +416,7 @@ public class ProcessRequest implements Runnable
 
     private void sendBytesNIO(byte[] src)
     {
-        handle.interestOps(SelectionKey.OP_WRITE);
-        handle.attach(ByteBuffer.wrap(src));
-        demultiplexer.wakeup();
+        Dispatcher.sendBytesNIO(handle, src);
     }
 
     private void receiveBytes(Socket srcSock, byte[] dest) throws IOException

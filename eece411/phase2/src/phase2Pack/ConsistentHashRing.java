@@ -21,11 +21,6 @@ public class ConsistentHashRing
     // Since potential max nodes is 100, then use 100 * 100 = 10000
     private static final int NUM_PARTITIONS = 10000;
     private static final int REPLICATION_FACTOR = 3;
-    private static final int KVSTORE_SIZE = 40000;
-    private static final int CMD_SIZE = 1;
-    private static final int KEY_SIZE = 32;
-    private static final int VALUE_SIZE = 1024;
-    private static final int ERR_SIZE = 1;
 
     public String localHost;
 
@@ -43,12 +38,13 @@ public class ConsistentHashRing
             // Store the local host name for convenient access later
             localHost = InetAddress.getLocalHost().getHostName();
 
+            membership = new CopyOnWriteArrayList<Node>();
             Scanner s = new Scanner(new File(NODE_LIST_FILE));
             Node node;
-            membership = new CopyOnWriteArrayList<Node>();
+            String nodeName;
             while (s.hasNext())
             {
-                String nodeName = s.next();
+                nodeName = s.next();
                 node = new Node(nodeName, true);
                 membership.add(node);
             }
@@ -65,7 +61,7 @@ public class ConsistentHashRing
         constructRing();
         // displayRing();
         // verifyRing();
-        //displaySuccessorListMap();
+        // displaySuccessorListMap();
     }
 
     public CopyOnWriteArrayList<Node> getMembership()
@@ -129,7 +125,7 @@ public class ConsistentHashRing
 
     private void constructRing()
     {
-        // Divide the hash space into NUM_PARTITIONS partitions
+        // Divide the hash space into NUM_PARTITIONS partitions (ideally, but may be less if membership size doesn't divide nicely)
         // with each physical node responsible for (NUM_PARTITIONS / number of nodes) hash ranges
         // int partitionsPerNode = NUM_PARTITIONS / onlineNodeList.size();
         partitionMap = new ConcurrentSkipListMap<String, Node>();
@@ -138,6 +134,7 @@ public class ConsistentHashRing
         {
             for (int i = 0; i < partitionsPerNode; ++i)
             {
+                // Distribution of partitions will be random based on hash value of hostname + i
                 partitionMap.put(getHash(node.hostname + i), node);
             }
         }
@@ -173,7 +170,7 @@ public class ConsistentHashRing
             while (successors.size() < numSuccessors)
             {
                 // Keep looking for the next successor if we already have a successor partition owned by the same physical node
-                // or if the successor is owned by the same physical node that owns the current partition that we're generating successors for
+                // or if the successor is owned by the same physical node that owns the current partition that we're generating successors for (i.e. source partition)
                 // This guarantees that the successors (and therefore the replicas) will be different physical nodes
                 do
                 {
@@ -199,7 +196,6 @@ public class ConsistentHashRing
         // System.out.println("<<<<<<<<<<<<<<<<<<<<<<<rejoined node: "+onlineNodeList.get(idx).address.toString());
         for (Node node : membership)
         {
-
             // foreach partition in each node
             for (int i = 0; i < partitionsPerNode; ++i)
             {
@@ -207,7 +203,6 @@ public class ConsistentHashRing
                 if (node.Equals(membership.get(idx)))
                 {
                     // replace it with the next node, or the first node
-                    // System.out.println("rejoined node: "+onlineNodeList.get(idx).address.toString());
                     // System.out.println("hash key for rejoin node: "+KVStore.getHash(node.hostname + i).toString());
 
                     partitionMap.replace(getHash(node.hostname + i), membership.get(idx));
@@ -222,7 +217,6 @@ public class ConsistentHashRing
         // foreach nodes in the nodeList
         int j;
 
-        // System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>offline  node: "+onlineNodeList.get(idx).address.toString());
         for (Node node : membership)
         {
             // foreach partition in each node
