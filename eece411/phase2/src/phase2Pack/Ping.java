@@ -1,11 +1,11 @@
 package phase2Pack;
 
 import java.io.OutputStream;
+import java.net.InetAddress;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.sql.Timestamp;
 import java.util.Date;
-import java.util.Random;
-
 import phase2Pack.enums.Commands;
 
 public class Ping implements Runnable
@@ -16,6 +16,8 @@ public class Ping implements Runnable
     private static final int PROP_BUFFER = 2000;
     private static final int OFFLINE_THRES = (int) (Math.log10(MAX_PING_MEMBERS) / Math.log10(2)) * SLEEP_TIME + PROP_BUFFER; // 10 seconds log(N)/log(2) * SLEEP_TIME
 
+    public String localHost;
+
     private ConsistentHashRing ring;
     private int pingPort;
     private int pingerNum;
@@ -25,12 +27,19 @@ public class Ping implements Runnable
         this.ring = ring;
         this.pingPort = port;
         this.pingerNum = num;
+
+        // Store the local host name for convenient access later
+        try {
+            localHost = InetAddress.getLocalHost().getHostName();
+        } catch (UnknownHostException e) {
+            System.out.println("Couldn't determine IP of local host!");
+        }
     }
 
     public void run()
     {
         Socket socket = null;
-        Random randomGenerator;
+        //Random randomGenerator;
         int randomInt = 0;
         int rangeHigh = 0;
         int rangeLow = 0;
@@ -59,11 +68,13 @@ public class Ping implements Runnable
                 //{
                 //randomInt = randomGenerator.nextInt(rangeHigh-rangeLow)+rangeLow;
 
-                if(ring.getMembership().get(randomInt).Equals(java.net.InetAddress.getLocalHost()))
+                if (ring.getMembership().get(randomInt).Equals(localHost))
                 {
-                    if(randomInt == rangeHigh-1) {
+                    if (randomInt == rangeHigh-1)
+                    {
                         randomInt = rangeLow;
-                    } else {
+                    } else
+                    {
                         randomInt++;
                     }
                     continue;
