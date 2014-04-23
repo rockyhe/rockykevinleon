@@ -16,7 +16,6 @@ import phase2Pack.Exceptions.SystemOverloadException;
 import phase2Pack.enums.Commands;
 import phase2Pack.Exceptions.UnrecognizedCmdException;
 
-
 /*
  * Read event handler for NIO, reactor pattern
  * Reference: http://chamibuddhika.wordpress.com/2012/08/11/io-demystified/
@@ -72,7 +71,7 @@ public class ReadEventHandler implements EventHandler
                 case GET: case REMOVE: case REMOVE_FROM_REPLICA:
                     receiveBytesNIO(socketChannel,key);
                     break;
-                case GOSSIP:
+                case PING:
                     break;
                 default:
                     break;

@@ -9,7 +9,6 @@ import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.Map;
 
 import phase2Pack.Exceptions.InexistentKeyException;
@@ -77,9 +76,9 @@ public class ProcessRequest implements Runnable
             case REMOVE_FROM_REPLICA: // Remove from replica command
                 removeFromReplica(key);
                 break;
-            case GOSSIP: // Gossip signal
-                gossip();
-                break;
+                //            case PING: // Ping signal
+                //                ping();
+                //                break;
             default: // Unrecognized command
                 throw new UnrecognizedCmdException();
             }
@@ -238,7 +237,8 @@ public class ProcessRequest implements Runnable
         }
     }
 
-    private void gossip()
+    /*
+    private void ping()
     {
         for (Node node : ring.getMembership())
         {
@@ -256,6 +256,7 @@ public class ProcessRequest implements Runnable
             }
         }
     }
+     */
 
     private void putToReplica(byte[] key, byte[] value)
     {

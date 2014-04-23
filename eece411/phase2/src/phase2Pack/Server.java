@@ -14,9 +14,9 @@ public class Server
 {
     // Constants
     public static final int PORT = 6666;
-    public static final int GOSSIP_PORT = 5555;
-    private static final int GOSSIP_MAX_NUM_CLIENTS = 50;
-    private static final int GOSSIP_BACKLOG_SIZE = 25;
+    public static final int PING_PORT = 5555;
+    private static final int PING_MAX_NUM_CLIENTS = 50;
+    private static final int PING_BACKLOG_SIZE = 25;
 
     // Private members
     private static ConsistentHashRing ring;
@@ -36,25 +36,24 @@ public class Server
             System.out.println("Starting NIO server at port : " + PORT);
             new ReactorInitiator().initiateReactiveServer(PORT, ring, kvStore);
 
-            // Initialize gossip variables
-            servSock = new ServerSocket(GOSSIP_PORT);
-            backlog = new ArrayBlockingQueue<Socket>(GOSSIP_BACKLOG_SIZE);
+            // Initialize ping variables
+            servSock = new ServerSocket(PING_PORT);
+            backlog = new ArrayBlockingQueue<Socket>(PING_BACKLOG_SIZE);
             concurrentClientCount = new AtomicInteger(0);
-            System.out.println("after initialize gossip variable");
-            threadPool = Executors.newFixedThreadPool(GOSSIP_MAX_NUM_CLIENTS);
+            threadPool = Executors.newFixedThreadPool(PING_MAX_NUM_CLIENTS);
 
             Thread producer = new Thread(new Producer());
             producer.start();
             Thread consumer = new Thread(new Consumer());
             consumer.start();
             // randomly grab 2 nodes concurrently
-            Thread gossiper = new Thread(new Gossiper(ring, GOSSIP_PORT,1));
-            gossiper.start();
-            Thread gossiper2 = new Thread(new Gossiper(ring, GOSSIP_PORT,2));
-            gossiper2.start();
+            Thread pinger = new Thread(new Ping(ring, PING_PORT, 1));
+            pinger.start();
+            Thread pinger2 = new Thread(new Ping(ring, PING_PORT, 2));
+            pinger2.start();
 
             // check timestamp from the nodeList
-            Thread timestampCheck = new Thread(new Gossiper.TimestampCheck(ring));
+            Thread timestampCheck = new Thread(new Ping.TimestampCheck(ring));
             timestampCheck.start();
 
             System.out.println("Server is ready...");
@@ -74,10 +73,9 @@ public class Server
                 {
                     Socket clntSock = servSock.accept(); // Get client connection
                     // If backlog isn't full, add client to it
-                    if (backlog.size() < GOSSIP_BACKLOG_SIZE)
+                    if (backlog.size() < PING_BACKLOG_SIZE)
                     {
                         backlog.add(clntSock);
-                        // System.out.println("Adding gossip client to backlog.");
                     }
                 }
             } catch (Exception e) {
@@ -98,14 +96,13 @@ public class Server
                 {
                     // If current number of concurrent clients hasn't reached MAX_NUM_CLIENTS
                     // then service client at the head of queue
-                    if (concurrentClientCount.get() < GOSSIP_MAX_NUM_CLIENTS && (clntSock = backlog.poll()) != null)
+                    if (concurrentClientCount.get() < PING_MAX_NUM_CLIENTS && (clntSock = backlog.poll()) != null)
                     {
                         concurrentClientCount.getAndIncrement();
                         System.out.println("ping threads: "+concurrentClientCount.get());
                         GossipListener connection = new GossipListener(clntSock, concurrentClientCount, ring.getMembership());
                         // Create a new thread for each client connection
                         threadPool.execute(connection);
-                        // System.out.println("New gossip client executing.");
                     }
                 }
             } catch (Exception e) {
