@@ -59,38 +59,6 @@ public class PingListener implements Runnable
         }
     }
 
-    //    private void updateStatus()
-    //    {
-    //        for (Node node : ring.getMembership())
-    //        {
-    //            //System.out.println("client sock: "+clntSock.getInetAddress().getHostName().toString());
-    //            //System.out.println("Clnt Sock: "+clntSock.getInetAddress().getHostName());
-    //            //System.out.println("member: "+node.hostname);
-    //            if (node.Equals(clientHostname))
-    //            {
-    //                if (!node.online)
-    //                {
-    //                    System.out.println(node.hostname + " rejoined");
-    //                    node.rejoin = true;
-    //                }
-    //                node.online = true;
-    //                node.t = new Timestamp(new Date().getTime());
-    //                // System.out.println("timestamp: "+onlineNodeList.get(onlineNodeList.indexOf(node)).t.toString());
-    //                break;
-    //            }
-    //        }
-    //    }
-
-    //    private void processAck()
-    //    {
-    //        for (Node node : membership)
-    //        {
-    //            if (node.Equals(clntSock.getInetAddress()))
-    //            {
-    //            }
-    //        }
-    //    }
-
     public void run()
     {
         try {
