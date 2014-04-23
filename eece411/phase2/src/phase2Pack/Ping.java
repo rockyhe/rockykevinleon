@@ -58,7 +58,7 @@ public class Ping implements Runnable
         }
 
         //randomGenerator = new Random();
-        randomInt = rangeLow;
+        randomInt = ring.membershipIndexOf(localHost);
         while (true)
         {
             try {

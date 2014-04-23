@@ -64,16 +64,6 @@ public class PingListener implements Runnable
         }
     }
 
-    private void processAck()
-    {
-        for (Node node : membership)
-        {
-            if (node.Equals(clntSock.getInetAddress()))
-            {
-            }
-        }
-    }
-
     public void run()
     {
         try {
