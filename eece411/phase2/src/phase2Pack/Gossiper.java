@@ -11,8 +11,8 @@ import phase2Pack.enums.Commands;
 public class Gossiper implements Runnable
 {
     private static final int CMD_SIZE = 1;
-    private static final int MAX_GOSSIP_MEMBERS = 16;
-    private static final int SLEEP_TIME = 1000; // 4 seconds
+    private static final int MAX_GOSSIP_MEMBERS = 100;
+    private static final int SLEEP_TIME = 250; // 4 seconds
     private static final int PROP_BUFFER = 2000;
     private static final int OFFLINE_THRES = (int) (Math.log10(MAX_GOSSIP_MEMBERS) / Math.log10(2)) * SLEEP_TIME + PROP_BUFFER; // 10 seconds log(N)/log(2) * SLEEP_TIME
 
@@ -66,11 +66,9 @@ public class Gossiper implements Runnable
                 }
                 //}
 
-               // System.out.println("randomInt "+randomInt+" range high "+rangeHigh+" range low "+rangeLow);
 
                 if (ring.getMembership().get(randomInt).rejoin)
                 {
-                    System.out.println("return partition to "+ring.getMembership().get(randomInt).hostname);
                     ring.returnPartitions(randomInt);
                     ring.getMembership().get(randomInt).rejoin = false;
                 }
