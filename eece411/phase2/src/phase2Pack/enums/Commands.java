@@ -10,6 +10,7 @@ public enum Commands
     SHUTDOWN(4),
     PUT_TO_REPLICA(101),
     REMOVE_FROM_REPLICA(103),
+    PING_ACK(254);
     PING(255);
 
     private static final int CMD_SIZE = 1;
@@ -41,6 +42,8 @@ public enum Commands
             return PUT_TO_REPLICA;
         case 103:
             return REMOVE_FROM_REPLICA;
+        case 254:
+            return PING_ACK;
         case 255:
             return PING;
         default:

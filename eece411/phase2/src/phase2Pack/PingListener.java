@@ -64,6 +64,16 @@ public class PingListener implements Runnable
         }
     }
 
+    private void processAck()
+    {
+        for (Node node : membership)
+        {
+            if (node.Equals(clntSock.getInetAddress()))
+            {
+            }
+        }
+    }
+
     public void run()
     {
         try {
@@ -74,7 +84,10 @@ public class PingListener implements Runnable
             if (cmd == Commands.PING)
             {
                 ping();
+            }else if(cmd == Commans.PING_ACK){
+                processAck();
             }
+
         } catch (Exception e) {
             System.out.println("internal Server Error");
         } finally {

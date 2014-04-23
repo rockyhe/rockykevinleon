@@ -100,7 +100,7 @@ public class Server
                     {
                         concurrentClientCount.getAndIncrement();
                         System.out.println("ping threads: "+concurrentClientCount.get());
-                        GossipListener connection = new GossipListener(clntSock, concurrentClientCount, ring.getMembership());
+                        PingListener connection = new PingListener(clntSock, concurrentClientCount, ring.getMembership());
                         // Create a new thread for each client connection
                         threadPool.execute(connection);
                     }
