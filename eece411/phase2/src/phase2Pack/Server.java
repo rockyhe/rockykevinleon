@@ -48,9 +48,9 @@ public class Server
             Thread consumer = new Thread(new Consumer());
             consumer.start();
             // randomly grab 2 nodes concurrently
-            Thread gossiper = new Thread(new Gossiper(ring, GOSSIP_PORT));
+            Thread gossiper = new Thread(new Gossiper(ring, GOSSIP_PORT,1));
             gossiper.start();
-            Thread gossiper2 = new Thread(new Gossiper(ring, GOSSIP_PORT));
+            Thread gossiper2 = new Thread(new Gossiper(ring, GOSSIP_PORT,2));
             gossiper2.start();
 
             // check timestamp from the nodeList

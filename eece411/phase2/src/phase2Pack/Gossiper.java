@@ -18,11 +18,13 @@ public class Gossiper implements Runnable
 
     private ConsistentHashRing ring;
     private int gossipPort;
+    private int gossiperNum;
 
-    Gossiper(ConsistentHashRing ring, int gossipPort)
+    Gossiper(ConsistentHashRing ring, int gossipPort, int num)
     {
         this.ring = ring;
         this.gossipPort = gossipPort;
+        this.gossiperNum = num;
     }
 
     public void run()
@@ -30,31 +32,45 @@ public class Gossiper implements Runnable
         Socket socket = null;
         Random randomGenerator;
         int randomInt = 0;
+        int rangeHigh = 0;
+        int rangeLow = 0;
         byte[] gossipBuffer = new byte[CMD_SIZE];
         gossipBuffer[0] = (byte) (Commands.GOSSIP.getValue() & 0x000000FF);
 
+        if(gossiperNum == 1){
+            rangeLow = 0;
+            rangeHigh = ring.getMembership().size()/2;
+        }else{
+            rangeLow = ring.getMembership().size()/2;
+            rangeHigh = ring.getMembership().size();
+        }
+
+        //randomGenerator = new Random();
+        randomInt = rangeLow;
         while (true)
         {
             try {
-                randomGenerator = new Random();
                 // Random randomGenerator = new Random();
                 // randomly select a node to gossip
-                while (true)
-                {
-                    randomInt = randomGenerator.nextInt(ring.getMembership().size());
+                                //while (true)
+                //{
+                    //randomInt = randomGenerator.nextInt(rangeHigh-rangeLow)+rangeLow;
 
-                    if (!(ring.getMembership().get(randomInt).Equals(java.net.InetAddress.getLocalHost())))
-                    {
-                        if (ring.getMembership().get(randomInt).online)
-                        {
-                            break;
-                        }
-                    }
+                if(ring.getMembership().get(randomInt).Equals(java.net.InetAddress.getLocalHost()))
+                {
+                    if(randomInt == rangeHigh-1)
+                        randomInt = rangeLow;
+                    else
+                        randomInt++;
+                    continue;
                 }
+                //}
+
+               // System.out.println("randomInt "+randomInt+" range high "+rangeHigh+" range low "+rangeLow);
 
                 if (ring.getMembership().get(randomInt).rejoin)
                 {
-                    System.out.println(ring.getMembership().get(randomInt).hostname+" rejoined");
+                    System.out.println("return partition to "+ring.getMembership().get(randomInt).hostname);
                     ring.returnPartitions(randomInt);
                     ring.getMembership().get(randomInt).rejoin = false;
                 }
@@ -68,11 +84,16 @@ public class Gossiper implements Runnable
                 //System.out.println("gossiping to:"+ring.getMembership().get(randomInt).hostname);
 
                 // sleep
+                if(randomInt == rangeHigh-1)
+                    randomInt = rangeLow;
+                else
+                    randomInt++;
+
                 Thread.currentThread().sleep(SLEEP_TIME);
             } catch (Exception e) {
                 ring.getMembership().get(randomInt).online = false;
                 ring.getMembership().get(randomInt).t = new Timestamp(0);
-                System.out.println(ring.getMembership().get(randomInt).hostname + " left");
+                //System.out.println(ring.getMembership().get(randomInt).hostname + " offline");
             }
 
         }
@@ -109,6 +130,7 @@ public class Gossiper implements Runnable
                             {
                                 node.online = false;
                                 ring.takePartitions(ring.getMembership().indexOf(node));
+                                //System.out.println("I took partition of "+node.hostname);
                             }
                         }
                     } catch (Exception e) {

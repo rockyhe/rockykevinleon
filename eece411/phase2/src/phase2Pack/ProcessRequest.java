@@ -125,7 +125,6 @@ public class ProcessRequest implements Runnable
 
     private void put(byte[] key, byte[] value) throws InexistentKeyException, OutOfSpaceException, SystemOverloadException, InternalKVStoreException, UnrecognizedCmdException
     {
-        System.out.println("in put");
         // Re-hash the key using our hash function so it's consistent
         String rehashedKeyStr = ConsistentHashRing.getHash(StringUtils.byteArrayToHexString(key));
 
