@@ -94,11 +94,11 @@ public class ConsistentHashRing
         return successorListMap.get(primaryKey);
     }
 
-    public boolean isSuccessor(Map.Entry<String, Node> primary)
+    public boolean isSuccessor(String primaryKey, String hostname)
     {
-        for (String successor : getSuccessors(primary.getKey()))
+        for (String successor : getSuccessors(primaryKey))
         {
-            if (partitionMap.get(successor).Equals(localHost))
+            if (partitionMap.get(successor).Equals(hostname))
             {
                 return true;
             }
@@ -204,69 +204,53 @@ public class ConsistentHashRing
         }
     }
 
-    public void returnPartitions(int idx)
+    public void returnPartitions(Node rejoinedNode)
     {
-        // foreach nodes in the nodeList
-        // System.out.println("<<<<<<<<<<<<<<<<<<<<<<<rejoined node: "+onlineNodeList.get(idx).address.toString());
-        for (Node node : membership)
+        // find the partitions originally owned by the rejoined node and reassigned them
+        for (int i = 0; i < partitionsPerNode; ++i)
         {
-            // foreach partition in each node
-            for (int i = 0; i < partitionsPerNode; ++i)
-            {
-                // if current partition's hash key's value (node) is the rejoin node
-                if (node.Equals(membership.get(idx)))
-                {
-                    // replace it with the next node, or the first node
-                    // System.out.println("hash key for rejoin node: "+KVStore.getHash(node.hostname + i).toString());
-
-                    partitionMap.replace(getHash(node.hostname + i), membership.get(idx));
-                }
-            }
+            partitionMap.replace(getHash(rejoinedNode.hostname + i), rejoinedNode);
         }
     }
 
-    public void takePartitions(int idx)
+    public void takePartitions(Node offlineNode)
     {
-        // get the node that is offline now
-        Node offlineNode = membership.get(idx);
-        // foreach nodes in the nodeList
-        int idxOfNewOwner;
-        for (Node node : membership)
+        // get the index of the offline node
+        int idx = membership.indexOf(offlineNode);
+
+        // default new owner to the next node in the membership list. if at the end of the list, set to the beginning
+        int idxOfNewOwner = idx + 1;
+        if (idx == (membership.size() - 1))
         {
-            // foreach partition in each node
-            for (int i = 0; i < partitionsPerNode; ++i)
+            idxOfNewOwner = 0;
+        }
+
+        // find the partitions currently owned by the offline node
+        for (int i = 0; i < partitionsPerNode; ++i)
+        {
+            String partitionHash = getHash(offlineNode.hostname + i);
+            // if the current partition is owned by the offline node
+            if (partitionMap.get(partitionHash).Equals(offlineNode))
             {
-                idxOfNewOwner = 0;
-                // if current partition's hash key's value (node) is the offline node
-                if (partitionMap.get(getHash(node.hostname + i)).Equals(offlineNode))
+                // replace it with the next node, or the first node, in the membership list
+                Node newOwner;
+                while (true)
                 {
-                    // replace it with the next node, or the first node
-                    //System.out.println("hash key for offline node: "+KVStore.getHash(node.hostname + i).toString());
-                    if (idx < (membership.size() - 1))
+                    newOwner = membership.get(idxOfNewOwner);
+                    // IMPORTANT: ensure that the owner-to-be isn't already a node owning one of the partition's successors
+                    if (newOwner.online && !isSuccessor(partitionHash, newOwner.hostname))
                     {
-                        idxOfNewOwner = idx + 1;
+                        partitionMap.replace(partitionHash, newOwner);
+                        break;
                     }
-                    else
+
+                    if (idxOfNewOwner == (membership.size() - 1))
                     {
                         idxOfNewOwner = 0;
                     }
-
-                    while (true)
+                    else
                     {
-                        if (membership.get(idxOfNewOwner).online)
-                        {
-                            partitionMap.replace(getHash(node.hostname + i), membership.get(idxOfNewOwner));
-                            break;
-                        }
-
-                        if (idxOfNewOwner == (membership.size() - 1))
-                        {
-                            idxOfNewOwner = 0;
-                        }
-                        else
-                        {
-                            idxOfNewOwner++;
-                        }
+                        idxOfNewOwner++;
                     }
                 }
             }

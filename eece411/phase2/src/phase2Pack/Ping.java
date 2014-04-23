@@ -58,10 +58,11 @@ public class Ping implements Runnable
         }
 
         //randomGenerator = new Random();
-        if(ring.membershipIndexOf(localHost) == 0)
+        if(ring.membershipIndexOf(localHost) == 0) {
             randomInt = ring.membershipIndexOf(localHost);
-        else
+        } else {
             randomInt = ring.membershipIndexOf(localHost)-1;
+        }
 
         Node target;
         while (true)
@@ -91,7 +92,7 @@ public class Ping implements Runnable
 
                 if (target.rejoin)
                 {
-                    ring.returnPartitions(randomInt);
+                    ring.returnPartitions(target);
                     target.rejoin = false;
                 }
 
@@ -151,7 +152,7 @@ public class Ping implements Runnable
                             if (timeDiff > OFFLINE_THRES)
                             {
                                 node.online = false;
-                                ring.takePartitions(ring.getMembership().indexOf(node));
+                                ring.takePartitions(node);
                                 //System.out.println("I took partition of "+node.hostname);
                             }
                         }

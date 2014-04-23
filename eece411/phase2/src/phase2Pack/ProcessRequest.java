@@ -176,7 +176,7 @@ public class ProcessRequest implements Runnable
                 }
             }
             // Otherwise only route the command if this node is not one of the successors of the primary
-            else if (!ring.isSuccessor(primary))
+            else if (!ring.isSuccessor(primary.getKey(), ring.localHost))
             {
                 // Otherwise route to node that should contain
                 System.out.println("Routing get command!");
