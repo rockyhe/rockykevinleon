@@ -23,7 +23,6 @@ planetlab1.postel.org
 planetlab2.postel.org
 planetlab1.sfc.wide.ad.jp
 host1.planetlab.informatik.tu-darmstadt.de
-planet-lab-node1.netgroup.uniroma2.it
 pl1snu.koren.kr
 pl2.zju.edu.cn
 planetlab-1.sysu.edu.cn
@@ -101,7 +100,6 @@ planetlab2.lkn.ei.tum.de
 iraplab1.iralab.uni-karlsruhe.de
 iraplab2.iralab.uni-karlsruhe.de
 planetlab02.tkn.tu-berlin.de
-planetlab1.eecs.jacobs-university.de
 planetlab1.eecs.jacobs-university.de
 planetlab1.xeno.cl.cam.ac.uk
 planetlab4.cs.st-andrews.ac.uk
