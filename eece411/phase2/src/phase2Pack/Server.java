@@ -103,7 +103,6 @@ public class Server
                     if (concurrentClientCount.get() < PING_MAX_NUM_CLIENTS && (clntSock = backlog.poll()) != null)
                     {
                         concurrentClientCount.getAndIncrement();
-                        System.out.println("ping threads: "+ concurrentClientCount.get());
                         PingListener connection = new PingListener(clntSock, concurrentClientCount, ring);
                         // Create a new thread for each client connection
                         threadPool.execute(connection);

@@ -58,7 +58,11 @@ public class Ping implements Runnable
         }
 
         //randomGenerator = new Random();
-        randomInt = ring.membershipIndexOf(localHost);
+        if(ring.membershipIndexOf(localHost) == 0)
+            randomInt = ring.membershipIndexOf(localHost);
+        else
+            randomInt = ring.membershipIndexOf(localHost)-1;
+
         Node target;
         while (true)
         {
@@ -72,7 +76,7 @@ public class Ping implements Runnable
                 target = ring.getMembership().get(randomInt);
                 if (target.Equals(localHost))
                 {
-                    if (randomInt == rangeHigh-1)
+                    if (randomInt >= rangeHigh-1)
                     {
                         randomInt = rangeLow;
                     }
@@ -100,7 +104,7 @@ public class Ping implements Runnable
                 //System.out.println("pinging: " + target.hostname);
 
                 // sleep
-                if(randomInt == rangeHigh-1) {
+                if(randomInt >= rangeHigh-1) {
                     randomInt = rangeLow;
                 } else {
                     randomInt++;
