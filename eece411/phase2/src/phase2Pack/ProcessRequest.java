@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
-import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
@@ -35,15 +34,16 @@ public class ProcessRequest implements Runnable
     private Selector selector;
     private ConsistentHashRing ring;
     private KVStore kvStore;
-    private byte[]  commandBytes = new byte[CMD_SIZE];
-    byte[] key = new byte[KEY_SIZE];
-    byte[] value = new byte[VALUE_SIZE];
 
-    public ProcessRequest(SocketChannel socketChannel, SelectionKey handle, Selector demultiplexer, ConsistentHashRing ring, KVStore kvStore,byte[] cmd,byte[] key,byte[] value)
+    private byte[] commandBytes = new byte[CMD_SIZE];
+    private byte[] key = new byte[KEY_SIZE];
+    private byte[] value = new byte[VALUE_SIZE];
+
+    public ProcessRequest(SocketChannel socketChannel, SelectionKey handle, Selector selector, ConsistentHashRing ring, KVStore kvStore, byte[] cmd, byte[] key, byte[] value)
     {
         this.socketChannel = socketChannel;
         this.handle = handle;
-        this.selector = demultiplexer;
+        this.selector = selector;
         this.ring = ring;
         this.kvStore = kvStore;
         this.commandBytes = cmd;
@@ -56,7 +56,6 @@ public class ProcessRequest implements Runnable
         try {
             // Read the command byte
             Commands cmd = Commands.fromInt(ByteOrder.leb2int(commandBytes, 0, CMD_SIZE));
-            
 
             switch (cmd)
             {
@@ -97,7 +96,7 @@ public class ProcessRequest implements Runnable
             }
             else
             {
-                sendBytesNIO(new byte[] { ErrorCodes.SUCCESS.toByte() });
+                sendErrorCodeNIO(ErrorCodes.SUCCESS);
                 // If command was shutdown, then close the application after sending the reply
                 if (cmd == Commands.SHUTDOWN)
                 {
@@ -106,18 +105,18 @@ public class ProcessRequest implements Runnable
             }
         } catch (InexistentKeyException e) {
             System.out.println("Inexistent Key");
-            sendBytesNIO(new byte[] { ErrorCodes.INEXISTENT_KEY.toByte() });
+            sendErrorCodeNIO(ErrorCodes.INEXISTENT_KEY);
         } catch (OutOfSpaceException e) {
             System.out.println("Out Of Space");
-            sendBytesNIO(new byte[] { ErrorCodes.OUT_OF_SPACE.toByte() });
+            sendErrorCodeNIO(ErrorCodes.OUT_OF_SPACE);
         } catch (InternalKVStoreException e){
             System.out.println("Internal KVStore");
-            sendBytesNIO(new byte[] { ErrorCodes.INTERNAL_KVSTORE.toByte() });
+            sendErrorCodeNIO(ErrorCodes.INTERNAL_KVSTORE);
         } catch (UnrecognizedCmdException e){
             System.out.println("Unrecognized Command");
-            sendBytesNIO(new byte[] { ErrorCodes.UNRECOGNIZED_COMMAND.toByte() });
+            sendErrorCodeNIO(ErrorCodes.UNRECOGNIZED_COMMAND);
         } catch (Exception e){
-            sendBytesNIO(new byte[] { ErrorCodes.INTERNAL_KVSTORE.toByte() });
+            sendErrorCodeNIO(ErrorCodes.INTERNAL_KVSTORE);
             System.out.println("Internal Server Error");
             e.printStackTrace();
         }
@@ -322,7 +321,7 @@ public class ProcessRequest implements Runnable
         }
     }
 
-    private byte[] forward(Node remoteNode, Commands cmd, byte[] key, byte[] value) throws InexistentKeyException, OutOfSpaceException, SystemOverloadException, InternalKVStoreException, UnrecognizedCmdException
+    private byte[] forward(Node remoteNode, Commands command, byte[] key, byte[] value) throws InexistentKeyException, OutOfSpaceException, SystemOverloadException, InternalKVStoreException, UnrecognizedCmdException
     {
         System.out.println("Forwarding to " + remoteNode.hostname);
 
@@ -333,17 +332,17 @@ public class ProcessRequest implements Runnable
             // Route the message
             // If command is put, then increase request buffer size to include value bytes
             byte[] requestBuffer;
-            if (cmd == Commands.PUT)
+            if (command == Commands.PUT)
             {
                 requestBuffer = new byte[CMD_SIZE + KEY_SIZE + VALUE_SIZE];
-                ByteOrder.int2leb(cmd.getValue(), requestBuffer, 0); // Command byte - 1 byte
+                ByteOrder.int2leb(command.getValue(), requestBuffer, 0); // Command byte - 1 byte
                 System.arraycopy(key, 0, requestBuffer, CMD_SIZE, KEY_SIZE); // Key bytes - 32 bytes
                 System.arraycopy(value, 0, requestBuffer, CMD_SIZE + KEY_SIZE, VALUE_SIZE); // Value bytes - 1024 bytes
             }
             else
             {
                 requestBuffer = new byte[CMD_SIZE + KEY_SIZE];
-                ByteOrder.int2leb(cmd.getValue(), requestBuffer, 0); // Command byte - 1 byte
+                ByteOrder.int2leb(command.getValue(), requestBuffer, 0); // Command byte - 1 byte
                 System.arraycopy(key, 0, requestBuffer, CMD_SIZE, KEY_SIZE); // Key bytes - 32 bytes
             }
 
@@ -354,14 +353,15 @@ public class ProcessRequest implements Runnable
 
             // Get the return message from the server
             // Get the error code byte
-            byte[] errorCode = new byte[ERR_SIZE];
-            receiveBytes(socket, errorCode);
+            byte[] errorCodeBytes = new byte[ERR_SIZE];
+            receiveBytes(socket, errorCodeBytes);
             // System.out.println("Received reply from forwarded request");
-            ErrorCodes errCode = ErrorCodes.fromByte(errorCode[0]);
+            int errorCodeInt = ByteOrder.leb2int(errorCodeBytes, 0, ERR_SIZE);
+            ErrorCodes errorCode = ErrorCodes.fromInt(errorCodeInt);
             // System.out.println("Error Code: " + errorMessage(errCode));
 
             // If command was get and ran successfully, then get the value bytes
-            if (cmd == Commands.GET && errCode == ErrorCodes.SUCCESS)
+            if (command == Commands.GET && errorCode == ErrorCodes.SUCCESS)
             {
                 byte[] getValue = new byte[VALUE_SIZE];
                 receiveBytes(socket, getValue);
@@ -370,7 +370,7 @@ public class ProcessRequest implements Runnable
             }
             else
             {
-                switch (errCode)
+                switch (errorCode)
                 {
                 case SUCCESS:
                     break;
@@ -401,23 +401,14 @@ public class ProcessRequest implements Runnable
         return null;
     }
 
-    private void receiveBytesNIO(byte[] dest) throws IOException
-    {
-        ByteBuffer buffer = ByteBuffer.allocate(dest.length);
-        while (buffer.hasRemaining())
-        {
-            //if(socketChannel.isConnected()){
-            socketChannel.read(buffer);
-            //}
-        }
-        buffer.flip();
-        buffer.get(dest);
-        buffer.clear();
-    }
-
     private void sendBytesNIO(byte[] src)
     {
         Dispatcher.sendBytesNIO(handle, src);
+    }
+
+    private void sendErrorCodeNIO(ErrorCodes errorCode)
+    {
+        Dispatcher.sendBytesNIO(handle, errorCode);
     }
 
     private void receiveBytes(Socket srcSock, byte[] dest) throws IOException

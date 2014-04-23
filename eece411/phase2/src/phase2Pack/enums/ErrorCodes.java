@@ -1,5 +1,7 @@
 package phase2Pack.enums;
 
+import phase2Pack.ByteOrder;
+
 public enum ErrorCodes
 {
     SUCCESS(0),
@@ -9,6 +11,7 @@ public enum ErrorCodes
     INTERNAL_KVSTORE(4),
     UNRECOGNIZED_COMMAND(5);
 
+    private static final int ERR_SIZE = 1;
     private int value;
 
     private ErrorCodes(int value)
@@ -21,9 +24,9 @@ public enum ErrorCodes
         return this.value;
     }
 
-    public static ErrorCodes fromByte(byte b)
+    public static ErrorCodes fromInt(int i)
     {
-        switch (b)
+        switch (i)
         {
         case 0:
             return SUCCESS;
@@ -38,18 +41,15 @@ public enum ErrorCodes
         case 5:
             return UNRECOGNIZED_COMMAND;
         default:
-            System.out.println("Error trying to cast byte of " + b + " to ErrorCodes enum. Returning null!");
+            System.out.println("Error trying to cast int of " + i + " to ErrorCodes enum. Returning null!");
             return null;
         }
     }
 
-    public static byte toByte(ErrorCodes code)
-    {
-        return ((Integer)(code.value)).byteValue();
-    }
-
     public byte toByte()
     {
-        return ((Integer)(this.value)).byteValue();
+        byte[] buffer = new byte[ERR_SIZE];
+        ByteOrder.int2leb(this.value, buffer, 0);
+        return buffer[0];
     }
 }

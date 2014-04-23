@@ -54,6 +54,12 @@ public class Dispatcher implements Runnable
         selector.wakeup();
     }
 
+    // Public convenience method to send only error code back to client
+    public static void sendBytesNIO(SelectionKey handle, ErrorCodes errorCode)
+    {
+        sendBytesNIO(handle, new byte[] { errorCode.toByte() } );
+    }
+
     public static void shutdown()
     {
         shutdownFlag.set(true);
@@ -96,7 +102,7 @@ public class Dispatcher implements Runnable
                             handler.handleEvent(handle);
                         } catch (SystemOverloadException e) {
                             System.out.println("System Overload");
-                            Dispatcher.sendBytesNIO(handle, new byte[] {ErrorCodes.SYSTEM_OVERLOAD.toByte()});
+                            Dispatcher.sendBytesNIO(handle, ErrorCodes.SYSTEM_OVERLOAD);
                         }
                         handleIterator.remove();
                     }

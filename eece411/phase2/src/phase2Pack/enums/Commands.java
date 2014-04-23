@@ -1,5 +1,7 @@
 package phase2Pack.enums;
 
+import phase2Pack.ByteOrder;
+
 public enum Commands
 {
     PUT(1),
@@ -10,6 +12,7 @@ public enum Commands
     REMOVE_FROM_REPLICA(103),
     GOSSIP(255);
 
+    private static final int CMD_SIZE = 1;
     private int value;
 
     private Commands(int value)
@@ -46,13 +49,10 @@ public enum Commands
         }
     }
 
-    public static byte toByte(Commands code)
-    {
-        return ((Integer)(code.value)).byteValue();
-    }
-
     public byte toByte()
     {
-        return ((Integer)(this.value)).byteValue();
+        byte[] buffer = new byte[CMD_SIZE];
+        ByteOrder.int2leb(this.value, buffer, 0);
+        return buffer[0];
     }
 }
