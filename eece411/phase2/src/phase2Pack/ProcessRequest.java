@@ -133,9 +133,9 @@ public class ProcessRequest implements Runnable
         if (primary.getValue().Equals(ring.localHost))
         {
             kvStore.put(rehashedKeyStr, value);
-                // System.out.println("before backup");
-            updateReplicas(key, value);
-                // System.out.println("after backup");
+            // System.out.println("before backup");
+            updateSuccessors(key, value, primary);
+            // System.out.println("after backup");
         }
         else
         {
@@ -202,9 +202,9 @@ public class ProcessRequest implements Runnable
         {
             kvStore.remove(rehashedKeyStr);
             //try {
-                // System.out.println("before backup");
-                updateReplicas(key, null);
-                // System.out.println("after backup");
+            // System.out.println("before backup");
+            updateSuccessors(key, null, primary);
+            // System.out.println("after backup");
             //} catch (IOException e) {
             //    e.printStackTrace();
             //    System.out.println("Error updating replicas");
@@ -231,27 +231,6 @@ public class ProcessRequest implements Runnable
             self.t = new Timestamp(0);
         }
     }
-
-    /*
-    private void ping()
-    {
-        for (Node node : ring.getMembership())
-        {
-            // System.out.println("client sock: "+clntSock.getInetAddress().getHostName().toString());
-            if (node.Equals(ring.localHost))
-            {
-                if (!node.online)
-                {
-                    node.rejoin = true;
-                }
-                node.online = true;
-                node.t = new Timestamp(new Date().getTime());
-                // System.out.println("timestamp: "+onlineNodeList.get(onlineNodeList.indexOf(node)).t.toString());
-                break;
-            }
-        }
-    }
-     */
 
     private void putToReplica(byte[] key, byte[] value)
     {
@@ -281,7 +260,7 @@ public class ProcessRequest implements Runnable
         }
     }
 
-    private void updateReplicas(byte[] key, byte[] value) 
+    private void updateSuccessors(byte[] key, byte[] value, Map.Entry<String, Node> primary)
     {
         byte[] sendBuffer;
         if (value != null)
@@ -300,24 +279,18 @@ public class ProcessRequest implements Runnable
             System.arraycopy(key, 0, sendBuffer, CMD_SIZE, KEY_SIZE); // Key bytes - 32 bytes
         }
 
-        // Re-hash the key using our hash function so it's consistent
-        String rehashedKeyStr = ConsistentHashRing.getHash(StringUtils.byteArrayToHexString(key));
-        // Get the id of the primary partition
-        Map.Entry<String, Node> primary = ring.getPrimary(rehashedKeyStr);
-
         Socket socket = null;
         // Get the successor list of the primary partition so we know where to place the replicas
-        try{    
-            for (String nextSuccessor : ring.getSuccessors(primary.getKey()))
-            {
-                // NOTE: What happens if we try to connect to a successor that happens to be offline at this time?
-                // check if sendBytes is successful, if not, loop to next on the successor list
-                System.out.println("replicate to " + ring.getNodeForPartition(nextSuccessor).hostname);
+        for (String nextSuccessor : ring.getSuccessors(primary.getKey()))
+        {
+            // Check if sendBytes is successful, if not, loop to next on the successor list
+            System.out.println("replicate to " + ring.getNodeForPartition(nextSuccessor).hostname);
+            try{
                 socket = new Socket(ring.getNodeForPartition(nextSuccessor).hostname, Server.PORT);
                 sendBytes(socket, sendBuffer);
+            } catch (Exception e) {
+                //NOTE: Do nothing if fail to connect to a replica, eventual consistency
             }
-        } catch (IOException e) {
-            //NOTE: Do nothing if remove from replica fails, eventual consistency
         }
     }
 
