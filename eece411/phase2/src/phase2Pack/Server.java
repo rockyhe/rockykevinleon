@@ -101,6 +101,7 @@ public class Server
                     if (concurrentClientCount.get() < GOSSIP_MAX_NUM_CLIENTS && (clntSock = backlog.poll()) != null)
                     {
                         concurrentClientCount.getAndIncrement();
+                        System.out.println("ping threads: "+concurrentClientCount.get());
                         GossipListener connection = new GossipListener(clntSock, concurrentClientCount, ring.getMembership());
                         // Create a new thread for each client connection
                         threadPool.execute(connection);
