@@ -103,21 +103,21 @@ public class ProcessRequest implements Runnable
                 }
             }
         } catch (InexistentKeyException e) {
-            System.out.println("Inexistent Key");
+            //System.out.println("Inexistent Key");
             sendErrorCodeNIO(ErrorCodes.INEXISTENT_KEY);
         } catch (OutOfSpaceException e) {
-            System.out.println("Out Of Space");
+            //System.out.println("Out Of Space");
             sendErrorCodeNIO(ErrorCodes.OUT_OF_SPACE);
         } catch (InternalKVStoreException e){
-            System.out.println("Internal KVStore");
+            //System.out.println("Internal KVStore");
             sendErrorCodeNIO(ErrorCodes.INTERNAL_KVSTORE);
         } catch (UnrecognizedCmdException e){
-            System.out.println("Unrecognized Command");
+            //System.out.println("Unrecognized Command");
             sendErrorCodeNIO(ErrorCodes.UNRECOGNIZED_COMMAND);
         } catch (Exception e){
             sendErrorCodeNIO(ErrorCodes.INTERNAL_KVSTORE);
-            System.out.println("Internal Server Error");
-            e.printStackTrace();
+            //System.out.println("Internal Server Error");
+            //e.printStackTrace();
         }
     }
 
@@ -166,8 +166,8 @@ public class ProcessRequest implements Runnable
                 for (String nextSuccessor : successors)
                 {
                     // If a replica returns a value, then return that as the result
-                    System.out.println("Forwarding get command to replica");
-                    System.out.println(ring.getNodeForPartition(nextSuccessor).hostname);
+                    //System.out.println("Forwarding get command to replica");
+                    //System.out.println(ring.getNodeForPartition(nextSuccessor).hostname);
                     replyFromReplica = forward(ring.getNodeForPartition(nextSuccessor), Commands.GET, key, null);
                     if (replyFromReplica != null)
                     {
@@ -179,7 +179,7 @@ public class ProcessRequest implements Runnable
             else if (!ring.isSuccessor(primary.getKey(), ring.localHost))
             {
                 // Otherwise route to node that should contain
-                System.out.println("Routing get command!");
+                //System.out.println("Routing get command!");
                 return forward(primary.getValue(), Commands.GET, key, null);
             }
 
@@ -234,7 +234,7 @@ public class ProcessRequest implements Runnable
 
     private void putToReplica(byte[] key, byte[] value)
     {
-        System.out.println("Put to replica: " + StringUtils.byteArrayToHexString(key));
+        //System.out.println("Put to replica: " + StringUtils.byteArrayToHexString(key));
         // Convert key bytes to string
         String keyStr = StringUtils.byteArrayToHexString(key);
         // Re-hash the key using our hash function so it's consistent
@@ -248,7 +248,7 @@ public class ProcessRequest implements Runnable
 
     private void removeFromReplica(byte[] key)
     {
-        System.out.println("Remove from replica: " + StringUtils.byteArrayToHexString(key));
+        //System.out.println("Remove from replica: " + StringUtils.byteArrayToHexString(key));
         // Convert key bytes to string
         String keyStr = StringUtils.byteArrayToHexString(key);
         // Re-hash the key using our hash function so it's consistent
@@ -284,7 +284,7 @@ public class ProcessRequest implements Runnable
         for (String nextSuccessor : ring.getSuccessors(primary.getKey()))
         {
             // Check if sendBytes is successful, if not, loop to next on the successor list
-            System.out.println("replicate to " + ring.getNodeForPartition(nextSuccessor).hostname);
+            //System.out.println("replicate to " + ring.getNodeForPartition(nextSuccessor).hostname);
             try{
                 socket = new Socket(ring.getNodeForPartition(nextSuccessor).hostname, Server.PORT);
                 sendBytes(socket, sendBuffer);
@@ -296,7 +296,7 @@ public class ProcessRequest implements Runnable
 
     private byte[] forward(Node remoteNode, Commands command, byte[] key, byte[] value) throws InexistentKeyException, OutOfSpaceException, SystemOverloadException, InternalKVStoreException, UnrecognizedCmdException
     {
-        System.out.println("Forwarding to " + remoteNode.hostname);
+      //  System.out.println("Forwarding to " + remoteNode.hostname);
 
         try {
             Socket socket = new Socket(remoteNode.hostname, Server.PORT);

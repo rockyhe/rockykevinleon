@@ -16,7 +16,7 @@ public class Server
     public static final int PORT = 6666;
     public static final int PING_PORT = 5555;
     private static final int PING_MAX_NUM_CLIENTS = 50;
-    private static final int PING_BACKLOG_SIZE = 25;
+    private static final int PING_BACKLOG_SIZE = 50;
 
     // Private members
     private static ConsistentHashRing ring;

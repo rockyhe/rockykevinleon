@@ -50,7 +50,7 @@ public class PingListener implements Runnable
             Node clientNode = ring.getMembership().get(idx);
             if (!clientNode.online)
             {
-                System.out.println(clientNode.hostname + " rejoined");
+                //System.out.println(clientNode.hostname + " rejoined");
                 clientNode.rejoin = true;
             }
             clientNode.online = true;
