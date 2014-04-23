@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import phase2Pack.enums.Commands;
 
-public class GossipListener implements Runnable
+public class PingListener implements Runnable
 {
     // Constants
     private static final int CMD_SIZE = 1;
@@ -21,7 +21,7 @@ public class GossipListener implements Runnable
     private AtomicInteger concurrentClientCount;
 
     // Constructor
-    GossipListener(Socket clientSocket, AtomicInteger clientCount, CopyOnWriteArrayList<Node> members)
+    PingListener(Socket clientSocket, AtomicInteger clientCount, CopyOnWriteArrayList<Node> members)
     {
         this.clntSock = clientSocket;
         this.concurrentClientCount = clientCount;
@@ -42,7 +42,7 @@ public class GossipListener implements Runnable
         }
     }
 
-    private void gossip()
+    private void ping()
     {
         for (Node node : membership)
         {
@@ -71,10 +71,9 @@ public class GossipListener implements Runnable
             receiveBytes(clntSock, command);
             Commands cmd = Commands.fromInt(ByteOrder.leb2int(command, 0, CMD_SIZE));
             //System.out.println("cmd: " + cmd);
-
-            if (cmd == Commands.GOSSIP)
+            if (cmd == Commands.PING)
             {
-                gossip();
+                ping();
             }
         } catch (Exception e) {
             System.out.println("internal Server Error");

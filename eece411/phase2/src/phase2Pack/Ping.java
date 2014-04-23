@@ -8,23 +8,23 @@ import java.util.Random;
 
 import phase2Pack.enums.Commands;
 
-public class Gossiper implements Runnable
+public class Ping implements Runnable
 {
     private static final int CMD_SIZE = 1;
-    private static final int MAX_GOSSIP_MEMBERS = 100;
+    private static final int MAX_PING_MEMBERS = 100;
     private static final int SLEEP_TIME = 250; // 4 seconds
     private static final int PROP_BUFFER = 2000;
-    private static final int OFFLINE_THRES = (int) (Math.log10(MAX_GOSSIP_MEMBERS) / Math.log10(2)) * SLEEP_TIME + PROP_BUFFER; // 10 seconds log(N)/log(2) * SLEEP_TIME
+    private static final int OFFLINE_THRES = (int) (Math.log10(MAX_PING_MEMBERS) / Math.log10(2)) * SLEEP_TIME + PROP_BUFFER; // 10 seconds log(N)/log(2) * SLEEP_TIME
 
     private ConsistentHashRing ring;
-    private int gossipPort;
-    private int gossiperNum;
+    private int pingPort;
+    private int pingerNum;
 
-    Gossiper(ConsistentHashRing ring, int gossipPort, int num)
+    Ping(ConsistentHashRing ring, int port, int num)
     {
         this.ring = ring;
-        this.gossipPort = gossipPort;
-        this.gossiperNum = num;
+        this.pingPort = port;
+        this.pingerNum = num;
     }
 
     public void run()
@@ -34,13 +34,16 @@ public class Gossiper implements Runnable
         int randomInt = 0;
         int rangeHigh = 0;
         int rangeLow = 0;
-        byte[] gossipBuffer = new byte[CMD_SIZE];
-        gossipBuffer[0] = (byte) (Commands.GOSSIP.getValue() & 0x000000FF);
+        byte[] pingBuffer = new byte[CMD_SIZE];
+        pingBuffer[0] = (byte) (Commands.PING.getValue() & 0x000000FF);
 
-        if(gossiperNum == 1){
+        if (pingerNum == 1)
+        {
             rangeLow = 0;
             rangeHigh = ring.getMembership().size()/2;
-        }else{
+        }
+        else
+        {
             rangeLow = ring.getMembership().size()/2;
             rangeHigh = ring.getMembership().size();
         }
@@ -51,17 +54,18 @@ public class Gossiper implements Runnable
         {
             try {
                 // Random randomGenerator = new Random();
-                // randomly select a node to gossip
-                                //while (true)
+                // randomly select a node to ping
+                //while (true)
                 //{
-                    //randomInt = randomGenerator.nextInt(rangeHigh-rangeLow)+rangeLow;
+                //randomInt = randomGenerator.nextInt(rangeHigh-rangeLow)+rangeLow;
 
                 if(ring.getMembership().get(randomInt).Equals(java.net.InetAddress.getLocalHost()))
                 {
-                    if(randomInt == rangeHigh-1)
+                    if(randomInt == rangeHigh-1) {
                         randomInt = rangeLow;
-                    else
+                    } else {
                         randomInt++;
+                    }
                     continue;
                 }
                 //}
@@ -73,19 +77,20 @@ public class Gossiper implements Runnable
                     ring.getMembership().get(randomInt).rejoin = false;
                 }
 
-                socket = new Socket(ring.getMembership().get(randomInt).hostname, gossipPort);
+                socket = new Socket(ring.getMembership().get(randomInt).hostname, pingPort);
 
                 // Send the message to the server
                 OutputStream os = socket.getOutputStream();
                 // Send the encoded string to the server
-                os.write(gossipBuffer);
-                //System.out.println("gossiping to:"+ring.getMembership().get(randomInt).hostname);
+                os.write(pingBuffer);
+                //System.out.println("pinging:"+ring.getMembership().get(randomInt).hostname);
 
                 // sleep
-                if(randomInt == rangeHigh-1)
+                if(randomInt == rangeHigh-1) {
                     randomInt = rangeLow;
-                else
+                } else {
                     randomInt++;
+                }
 
                 Thread.currentThread().sleep(SLEEP_TIME);
             } catch (Exception e) {
