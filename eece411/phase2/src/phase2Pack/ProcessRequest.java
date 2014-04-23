@@ -228,7 +228,7 @@ public class ProcessRequest implements Runnable
         Dispatcher.shutdown();
 
         // Update online status to false and timestamp to 0 of self node, so it propagates faster
-        int index = ring.getMembership().indexOf(ring.localHost);
+        int index = ring.membershipIndexOf(ring.localHost);
         if (index >= 0)
         {
             Node self = ring.getMembership().get(index);

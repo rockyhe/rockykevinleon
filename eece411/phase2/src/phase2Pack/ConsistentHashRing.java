@@ -106,6 +106,20 @@ public class ConsistentHashRing
         return false;
     }
 
+    public int membershipIndexOf(String hostname)
+    {
+        int idx = -1;
+        for (Node node : membership)
+        {
+            if (node.Equals(localHost))
+            {
+                idx = membership.indexOf(node);
+                break;
+            }
+        }
+        return idx;
+    }
+
     public static String getHash(String msg)
     {
         String result = null;

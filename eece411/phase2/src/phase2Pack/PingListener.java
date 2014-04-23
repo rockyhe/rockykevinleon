@@ -42,7 +42,7 @@ public class PingListener implements Runnable
         }
     }
 
-    private void ping()
+    private void updateStatus()
     {
         for (Node node : membership)
         {
@@ -83,9 +83,7 @@ public class PingListener implements Runnable
             //System.out.println("cmd: " + cmd);
             if (cmd == Commands.PING)
             {
-                ping();
-            }else if(cmd == Commans.PING_ACK){
-                processAck();
+                updateStatus();
             }
 
         } catch (Exception e) {
