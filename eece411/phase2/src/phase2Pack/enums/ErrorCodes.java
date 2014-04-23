@@ -49,7 +49,7 @@ public enum ErrorCodes
     public byte toByte()
     {
         byte[] buffer = new byte[ERR_SIZE];
-        ByteOrder.int2leb(this.value, buffer, 0);
+        buffer[0]=(byte)(this.value & 0x000000FF);
         return buffer[0];
     }
 }

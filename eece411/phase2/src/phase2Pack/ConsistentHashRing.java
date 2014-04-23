@@ -111,7 +111,7 @@ public class ConsistentHashRing
         int idx = -1;
         for (Node node : membership)
         {
-            if (node.Equals(localHost))
+            if (node.Equals(hostname))
             {
                 idx = membership.indexOf(node);
                 break;
