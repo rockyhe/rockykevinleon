@@ -59,6 +59,7 @@ public class Ping implements Runnable
 
         //randomGenerator = new Random();
         randomInt = rangeLow;
+        Node target;
         while (true)
         {
             try {
@@ -68,12 +69,14 @@ public class Ping implements Runnable
                 //{
                 //randomInt = randomGenerator.nextInt(rangeHigh-rangeLow)+rangeLow;
 
-                if (ring.getMembership().get(randomInt).Equals(localHost))
+                target = ring.getMembership().get(randomInt);
+                if (target.Equals(localHost))
                 {
                     if (randomInt == rangeHigh-1)
                     {
                         randomInt = rangeLow;
-                    } else
+                    }
+                    else
                     {
                         randomInt++;
                     }
@@ -82,19 +85,19 @@ public class Ping implements Runnable
                 //}
 
 
-                if (ring.getMembership().get(randomInt).rejoin)
+                if (target.rejoin)
                 {
                     ring.returnPartitions(randomInt);
-                    ring.getMembership().get(randomInt).rejoin = false;
+                    target.rejoin = false;
                 }
 
-                socket = new Socket(ring.getMembership().get(randomInt).hostname, pingPort);
+                socket = new Socket(target.hostname, pingPort);
 
                 // Send the message to the server
                 OutputStream os = socket.getOutputStream();
                 // Send the encoded string to the server
                 os.write(pingBuffer);
-                //System.out.println("pinging:"+ring.getMembership().get(randomInt).hostname);
+                //System.out.println("pinging: " + target.hostname);
 
                 // sleep
                 if(randomInt == rangeHigh-1) {
@@ -105,9 +108,10 @@ public class Ping implements Runnable
 
                 Thread.currentThread().sleep(SLEEP_TIME);
             } catch (Exception e) {
-                ring.getMembership().get(randomInt).online = false;
-                ring.getMembership().get(randomInt).t = new Timestamp(0);
-                //System.out.println(ring.getMembership().get(randomInt).hostname + " offline");
+                target = ring.getMembership().get(randomInt);
+                target.online = false;
+                target.t = new Timestamp(0);
+                //System.out.println(target.hostname + " offline");
             }
 
         }

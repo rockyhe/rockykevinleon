@@ -5,7 +5,6 @@ import java.io.InputStream;
 import java.net.Socket;
 import java.sql.Timestamp;
 import java.util.Date;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import phase2Pack.enums.Commands;
@@ -17,15 +16,15 @@ public class PingListener implements Runnable
 
     // Private members
     private Socket clntSock;
-    private CopyOnWriteArrayList<Node> membership;
+    private ConsistentHashRing ring;
     private AtomicInteger concurrentClientCount;
 
     // Constructor
-    PingListener(Socket clientSocket, AtomicInteger clientCount, CopyOnWriteArrayList<Node> members)
+    PingListener(Socket clientSocket, AtomicInteger clientCount, ConsistentHashRing ring)
     {
         this.clntSock = clientSocket;
         this.concurrentClientCount = clientCount;
-        this.membership = members;
+        this.ring = ring;
     }
 
     private void receiveBytes(Socket srcSock, byte[] dest) throws IOException
@@ -44,35 +43,53 @@ public class PingListener implements Runnable
 
     private void updateStatus()
     {
-        for (Node node : membership)
+        String clientHostname = clntSock.getInetAddress().getHostName();
+        int idx = ring.membershipIndexOf(clientHostname);
+        if (idx >= 0)
         {
-            //System.out.println("client sock: "+clntSock.getInetAddress().getHostName().toString());
-            //System.out.println("Clnt Sock: "+clntSock.getInetAddress().getHostName());
-            //System.out.println("member: "+node.hostname);
-            if (node.Equals(clntSock.getInetAddress()))
+            Node clientNode = ring.getMembership().get(idx);
+            if (!clientNode.online)
             {
-                if (!node.online)
-                {
-                    System.out.println(node.hostname + " rejoined");
-                    node.rejoin = true;
-                }
-                node.online = true;
-                node.t = new Timestamp(new Date().getTime());
-                // System.out.println("timestamp: "+onlineNodeList.get(onlineNodeList.indexOf(node)).t.toString());
-                break;
+                System.out.println(clientNode.hostname + " rejoined");
+                clientNode.rejoin = true;
             }
+            clientNode.online = true;
+            clientNode.t = new Timestamp(new Date().getTime());
+            // System.out.println("timestamp: "+onlineNodeList.get(onlineNodeList.indexOf(node)).t.toString());
         }
     }
 
-    private void processAck()
-    {
-        for (Node node : membership)
-        {
-            if (node.Equals(clntSock.getInetAddress()))
-            {
-            }
-        }
-    }
+    //    private void updateStatus()
+    //    {
+    //        for (Node node : ring.getMembership())
+    //        {
+    //            //System.out.println("client sock: "+clntSock.getInetAddress().getHostName().toString());
+    //            //System.out.println("Clnt Sock: "+clntSock.getInetAddress().getHostName());
+    //            //System.out.println("member: "+node.hostname);
+    //            if (node.Equals(clientHostname))
+    //            {
+    //                if (!node.online)
+    //                {
+    //                    System.out.println(node.hostname + " rejoined");
+    //                    node.rejoin = true;
+    //                }
+    //                node.online = true;
+    //                node.t = new Timestamp(new Date().getTime());
+    //                // System.out.println("timestamp: "+onlineNodeList.get(onlineNodeList.indexOf(node)).t.toString());
+    //                break;
+    //            }
+    //        }
+    //    }
+
+    //    private void processAck()
+    //    {
+    //        for (Node node : membership)
+    //        {
+    //            if (node.Equals(clntSock.getInetAddress()))
+    //            {
+    //            }
+    //        }
+    //    }
 
     public void run()
     {
