@@ -133,14 +133,9 @@ public class ProcessRequest implements Runnable
         if (primary.getValue().Equals(ring.localHost))
         {
             kvStore.put(rehashedKeyStr, value);
-            try {
                 // System.out.println("before backup");
-                updateReplicas(key, value);
+            updateReplicas(key, value);
                 // System.out.println("after backup");
-            } catch (IOException e) {
-                e.printStackTrace();
-                System.out.println("Error updating replicas");
-            }
         }
         else
         {
@@ -206,14 +201,14 @@ public class ProcessRequest implements Runnable
         if (primary.getValue().Equals(ring.localHost))
         {
             kvStore.remove(rehashedKeyStr);
-            try {
+            //try {
                 // System.out.println("before backup");
                 updateReplicas(key, null);
                 // System.out.println("after backup");
-            } catch (IOException e) {
-                e.printStackTrace();
-                System.out.println("Error updating replicas");
-            }
+            //} catch (IOException e) {
+            //    e.printStackTrace();
+            //    System.out.println("Error updating replicas");
+            //}
         }
         else
         {
@@ -286,7 +281,7 @@ public class ProcessRequest implements Runnable
         }
     }
 
-    private void updateReplicas(byte[] key, byte[] value) throws IOException
+    private void updateReplicas(byte[] key, byte[] value) 
     {
         byte[] sendBuffer;
         if (value != null)
@@ -312,13 +307,17 @@ public class ProcessRequest implements Runnable
 
         Socket socket = null;
         // Get the successor list of the primary partition so we know where to place the replicas
-        for (String nextSuccessor : ring.getSuccessors(primary.getKey()))
-        {
-            // NOTE: What happens if we try to connect to a successor that happens to be offline at this time?
-            // check if sendBytes is successful, if not, loop to next on the successor list
-            System.out.println("replicate to " + ring.getNodeForPartition(nextSuccessor).hostname);
-            socket = new Socket(ring.getNodeForPartition(nextSuccessor).hostname, Server.PORT);
-            sendBytes(socket, sendBuffer);
+        try{    
+            for (String nextSuccessor : ring.getSuccessors(primary.getKey()))
+            {
+                // NOTE: What happens if we try to connect to a successor that happens to be offline at this time?
+                // check if sendBytes is successful, if not, loop to next on the successor list
+                System.out.println("replicate to " + ring.getNodeForPartition(nextSuccessor).hostname);
+                socket = new Socket(ring.getNodeForPartition(nextSuccessor).hostname, Server.PORT);
+                sendBytes(socket, sendBuffer);
+            }
+        } catch (IOException e) {
+            //NOTE: Do nothing if remove from replica fails, eventual consistency
         }
     }
 
