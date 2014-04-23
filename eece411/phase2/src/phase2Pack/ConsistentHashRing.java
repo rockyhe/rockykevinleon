@@ -228,45 +228,44 @@ public class ConsistentHashRing
     public void takePartitions(int idx)
     {
         // get the node that is offline now
+        Node offlineNode = membership.get(idx);
         // foreach nodes in the nodeList
-        int j;
-
+        int idxOfNewOwner;
         for (Node node : membership)
         {
             // foreach partition in each node
             for (int i = 0; i < partitionsPerNode; ++i)
             {
-                j = 0;
+                idxOfNewOwner = 0;
                 // if current partition's hash key's value (node) is the offline node
-                if (partitionMap.get(getHash(node.hostname + i)).Equals(membership.get(idx)))
+                if (partitionMap.get(getHash(node.hostname + i)).Equals(offlineNode))
                 {
                     // replace it with the next node, or the first node
                     //System.out.println("hash key for offline node: "+KVStore.getHash(node.hostname + i).toString());
-
                     if (idx < (membership.size() - 1))
                     {
-                        j = idx + 1;
+                        idxOfNewOwner = idx + 1;
                     }
                     else
                     {
-                        j = 0;
+                        idxOfNewOwner = 0;
                     }
 
                     while (true)
                     {
-                        if (membership.get(j).online)
+                        if (membership.get(idxOfNewOwner).online)
                         {
-                            partitionMap.replace(getHash(node.hostname + i), membership.get(j));
+                            partitionMap.replace(getHash(node.hostname + i), membership.get(idxOfNewOwner));
                             break;
                         }
 
-                        if (j == (membership.size() - 1))
+                        if (idxOfNewOwner == (membership.size() - 1))
                         {
-                            j = 0;
+                            idxOfNewOwner = 0;
                         }
                         else
                         {
-                            j++;
+                            idxOfNewOwner++;
                         }
                     }
                 }
