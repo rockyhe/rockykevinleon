@@ -77,6 +77,10 @@ public class Server
                     {
                         backlog.add(clntSock);
                     }
+                    else
+                    {
+                        clntSock.close();
+                    }
                 }
             } catch (Exception e) {
                 System.out.println("Producer Internal Server Error!");
@@ -106,7 +110,7 @@ public class Server
                     }
                 }
             } catch (Exception e) {
-                System.out.println("consumer Internal Server Error!");
+                System.out.println("Consumer Internal Server Error!");
                 e.printStackTrace();
             }
         }
