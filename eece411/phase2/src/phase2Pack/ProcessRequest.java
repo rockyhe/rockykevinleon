@@ -86,6 +86,7 @@ public class ProcessRequest implements Runnable
 
             // Send the reply message to the client
             // Only send value if command was get and value returned wasn't null
+            // (if value was null then InexistentKeyException should have been thrown)
             if (cmd == Commands.GET && value != null)
             {
                 byte[] combined = new byte[ERR_SIZE + VALUE_SIZE];
@@ -108,15 +109,18 @@ public class ProcessRequest implements Runnable
         } catch (OutOfSpaceException e) {
             //System.out.println("Out Of Space");
             sendErrorCodeNIO(ErrorCodes.OUT_OF_SPACE);
-        } catch (InternalKVStoreException e){
+        } catch (SystemOverloadException e) {
+            //System.out.println("System Overload");
+            sendErrorCodeNIO(ErrorCodes.SYSTEM_OVERLOAD);
+        } catch (InternalKVStoreException e) {
             //System.out.println("Internal KVStore");
             sendErrorCodeNIO(ErrorCodes.INTERNAL_KVSTORE);
-        } catch (UnrecognizedCmdException e){
+        } catch (UnrecognizedCmdException e) {
             //System.out.println("Unrecognized Command");
             sendErrorCodeNIO(ErrorCodes.UNRECOGNIZED_COMMAND);
-        } catch (Exception e){
-            sendErrorCodeNIO(ErrorCodes.INTERNAL_KVSTORE);
+        } catch (Exception e) {
             //System.out.println("Internal Server Error");
+            sendErrorCodeNIO(ErrorCodes.INTERNAL_KVSTORE);
             //e.printStackTrace();
         }
     }
@@ -148,10 +152,10 @@ public class ProcessRequest implements Runnable
     {
         // Re-hash the key using our hash function so it's consistent
         String rehashedKeyStr = ConsistentHashRing.getHash(StringUtils.byteArrayToHexString(key));
-
+        byte[] value = null;
         try {
-            return kvStore.get(rehashedKeyStr);
-        } catch (InexistentKeyException e) {
+            value = kvStore.get(rehashedKeyStr);
+        } catch (InexistentKeyException ie) {
             // If key doesn't exist on this node's store
             // Get the primary partition for the given key
             Map.Entry<String, Node> primary = ring.getPrimary(rehashedKeyStr);
@@ -161,31 +165,34 @@ public class ProcessRequest implements Runnable
             {
                 // Iterate through each replica, by getting the successor list belonging to this partition, and check for key
                 ArrayList<String> successors = ring.getSuccessors(primary.getKey());
-                byte[] replyFromReplica = new byte[VALUE_SIZE];
-
                 for (String nextSuccessor : successors)
                 {
-                    // If a replica returns a value, then return that as the result
                     //System.out.println("Forwarding get command to replica");
                     //System.out.println(ring.getNodeForPartition(nextSuccessor).hostname);
-                    replyFromReplica = forward(ring.getNodeForPartition(nextSuccessor), Commands.GET, key, null);
-                    if (replyFromReplica != null)
-                    {
-                        return replyFromReplica;
+                    try {
+                        value = forward(ring.getNodeForPartition(nextSuccessor), Commands.GET, key, null);
+                        // If a replica returns a value, then return that as the result
+                        if (value != null)
+                        {
+                            return value;
+                        }
+                    } catch (Exception e) {
+                        // Just catch any exceptions when trying to forward to a successor so we can continue to check next successor
                     }
                 }
+
+                // If we reached here, then the key doesn't exist of any of the replicas
+                throw new InexistentKeyException();
             }
             // Otherwise only route the command if this node is not one of the successors of the primary
             else if (!ring.isSuccessor(primary.getKey(), ring.localHost))
             {
                 // Otherwise route to node that should contain
                 //System.out.println("Routing get command!");
-                return forward(primary.getValue(), Commands.GET, key, null);
+                value = forward(primary.getValue(), Commands.GET, key, null);
             }
-
-            // If the key doesn't exist of any of the replicas, then key doesn't exist
-            throw new InexistentKeyException();
         }
+        return value;
     }
 
     private void remove(byte[] key) throws InexistentKeyException, OutOfSpaceException, SystemOverloadException, InternalKVStoreException, UnrecognizedCmdException
@@ -296,10 +303,12 @@ public class ProcessRequest implements Runnable
 
     private byte[] forward(Node remoteNode, Commands command, byte[] key, byte[] value) throws InexistentKeyException, OutOfSpaceException, SystemOverloadException, InternalKVStoreException, UnrecognizedCmdException
     {
-      //  System.out.println("Forwarding to " + remoteNode.hostname);
-
+        //  System.out.println("Forwarding to " + remoteNode.hostname);
+        Socket socket;
+        ErrorCodes errorCode;
+        byte[] getValue = null;
         try {
-            Socket socket = new Socket(remoteNode.hostname, Server.PORT);
+            socket = new Socket(remoteNode.hostname, Server.PORT);
             // System.out.println("Connected to server: " + socket.getInetAddress().toString());
 
             // Route the message
@@ -330,36 +339,15 @@ public class ProcessRequest implements Runnable
             receiveBytes(socket, errorCodeBytes);
             // System.out.println("Received reply from forwarded request");
             int errorCodeInt = ByteOrder.leb2int(errorCodeBytes, 0, ERR_SIZE);
-            ErrorCodes errorCode = ErrorCodes.fromInt(errorCodeInt);
+            errorCode = ErrorCodes.fromInt(errorCodeInt);
             // System.out.println("Error Code: " + errorMessage(errCode));
 
             // If command was get and ran successfully, then get the value bytes
             if (command == Commands.GET && errorCode == ErrorCodes.SUCCESS)
             {
-                byte[] getValue = new byte[VALUE_SIZE];
+                getValue = new byte[VALUE_SIZE];
                 receiveBytes(socket, getValue);
                 // System.out.println("Value for GET: " + StringUtils.byteArrayToHexString(getValue));
-                return getValue;
-            }
-            else
-            {
-                switch (errorCode)
-                {
-                case SUCCESS:
-                    break;
-                case INEXISTENT_KEY:
-                    throw new InexistentKeyException();
-                case OUT_OF_SPACE:
-                    throw new OutOfSpaceException();
-                case SYSTEM_OVERLOAD:
-                    throw new SystemOverloadException();
-                case INTERNAL_KVSTORE:
-                    throw new InternalKVStoreException();
-                case UNRECOGNIZED_COMMAND:
-                    throw new UnrecognizedCmdException();
-                default:
-                    throw new InternalKVStoreException();
-                }
             }
         } catch (Exception e) {
             // System.out.println("Forwarding to a node that is offline!");
@@ -371,7 +359,31 @@ public class ProcessRequest implements Runnable
             // Just set to internal KVStore error if we fail to connect to the node we want to forward to
             throw new InternalKVStoreException();
         }
-        return null;
+
+        switch (errorCode)
+        {
+        case SUCCESS:
+            if (command == Commands.GET && getValue != null)
+            {
+                return getValue;
+            }
+            else
+            {
+                return null;
+            }
+        case INEXISTENT_KEY:
+            throw new InexistentKeyException();
+        case OUT_OF_SPACE:
+            throw new OutOfSpaceException();
+        case SYSTEM_OVERLOAD:
+            throw new SystemOverloadException();
+        case INTERNAL_KVSTORE:
+            throw new InternalKVStoreException();
+        case UNRECOGNIZED_COMMAND:
+            throw new UnrecognizedCmdException();
+        default:
+            throw new InternalKVStoreException();
+        }
     }
 
     private void sendBytesNIO(byte[] src)
