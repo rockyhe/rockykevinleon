@@ -153,7 +153,7 @@ public class Ping implements Runnable
                             {
                                 node.online = false;
                                 ring.takePartitions(node);
-                                //System.out.println("I took partition of "+node.hostname);
+                                System.out.println("I took partition of "+node.hostname);
                             }
                         }
                     } catch (Exception e) {

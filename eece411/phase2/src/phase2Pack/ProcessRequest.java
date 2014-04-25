@@ -112,22 +112,22 @@ public class ProcessRequest implements Runnable
                 }
             }
         } catch (InexistentKeyException e) {
-            //System.out.println("Inexistent Key");
+            System.out.println("Inexistent Key");
             sendErrorCodeNIO(ErrorCodes.INEXISTENT_KEY);
         } catch (OutOfSpaceException e) {
-            //System.out.println("Out Of Space");
+            System.out.println("Out Of Space");
             sendErrorCodeNIO(ErrorCodes.OUT_OF_SPACE);
         } catch (SystemOverloadException e) {
-            //System.out.println("System Overload");
+            System.out.println("System Overload");
             sendErrorCodeNIO(ErrorCodes.SYSTEM_OVERLOAD);
         } catch (InternalKVStoreException e) {
-            //System.out.println("Internal KVStore");
+            System.out.println("Internal KVStore");
             sendErrorCodeNIO(ErrorCodes.INTERNAL_KVSTORE);
         } catch (UnrecognizedCmdException e) {
-            //System.out.println("Unrecognized Command");
+            System.out.println("Unrecognized Command");
             sendErrorCodeNIO(ErrorCodes.UNRECOGNIZED_COMMAND);
         } catch (Exception e) {
-            //System.out.println("Internal Server Error");
+            System.out.println("Internal Server Error");
             sendErrorCodeNIO(ErrorCodes.INTERNAL_KVSTORE);
             //e.printStackTrace();
         }
@@ -317,7 +317,7 @@ public class ProcessRequest implements Runnable
         byte[] getValue = null;
         try {
             socket = new Socket(remoteNode.hostname, Server.PORT);
-            // System.out.println("Connected to server: " + socket.getInetAddress().toString());
+             System.out.println("Connected to server: " + socket.getInetAddress().toString());
 
             // Route the message
             // If command is put, then increase request buffer size to include value bytes
@@ -337,7 +337,7 @@ public class ProcessRequest implements Runnable
             }
 
             // Send the encoded string to the server
-            // System.out.println("Forwarding request");
+             System.out.println("Forwarding request");
             // System.out.println("Request buffer: " + StringUtils.byteArrayToHexString(requestBuffer));
             sendBytes(socket, requestBuffer);
 
@@ -345,7 +345,7 @@ public class ProcessRequest implements Runnable
             // Get the error code byte
             byte[] errorCodeBytes = new byte[ERR_SIZE];
             receiveBytes(socket, errorCodeBytes);
-            // System.out.println("Received reply from forwarded request");
+             System.out.println("Received reply from forwarded request");
             int errorCodeInt = ByteOrder.leb2int(errorCodeBytes, 0, ERR_SIZE);
             errorCode = ErrorCodes.fromInt(errorCodeInt);
             // System.out.println("Error Code: " + errorMessage(errCode));
