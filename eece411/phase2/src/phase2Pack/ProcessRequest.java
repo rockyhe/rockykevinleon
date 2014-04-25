@@ -54,6 +54,7 @@ public class ProcessRequest implements Runnable
     {
         try {
             // Read the command byte
+            System.out.println("processing cmd");
             Commands cmd = Commands.fromInt(ByteOrder.leb2int(commandBytes, 0, CMD_SIZE));
 
             switch (cmd)
@@ -135,6 +136,7 @@ public class ProcessRequest implements Runnable
 
     private void put(byte[] key, byte[] value) throws InexistentKeyException, OutOfSpaceException, SystemOverloadException, InternalKVStoreException, UnrecognizedCmdException
     {
+        System.out.println("it is a put command");
         // Re-hash the key using our hash function so it's consistent
         String rehashedKeyStr = ConsistentHashRing.getHash(StringUtils.byteArrayToHexString(key));
 
@@ -348,17 +350,17 @@ public class ProcessRequest implements Runnable
              System.out.println("Received reply from forwarded request");
             int errorCodeInt = ByteOrder.leb2int(errorCodeBytes, 0, ERR_SIZE);
             errorCode = ErrorCodes.fromInt(errorCodeInt);
-            // System.out.println("Error Code: " + errorMessage(errCode));
+            System.out.println("Error Code: " + errorCodeInt);
 
             // If command was get and ran successfully, then get the value bytes
             if (command == Commands.GET && errorCode == ErrorCodes.SUCCESS)
             {
                 getValue = new byte[VALUE_SIZE];
                 receiveBytes(socket, getValue);
-                // System.out.println("Value for GET: " + StringUtils.byteArrayToHexString(getValue));
+                System.out.println("Value for GET: " + StringUtils.byteArrayToHexString(getValue));
             }
         } catch (Exception e) {
-            // System.out.println("Forwarding to a node that is offline!");
+            System.out.println("Forwarding to a node that is offline!");
             int index = ring.getMembership().indexOf(remoteNode);
             ring.getMembership().get(index).online = false;
             ring.getMembership().get(index).t = new Timestamp(0);
@@ -396,12 +398,17 @@ public class ProcessRequest implements Runnable
 
     private void sendBytesNIO(byte[] src)
     {
+        System.out.println("before replying to NIO");
         Dispatcher.sendBytesNIO(handle, src);
+        System.out.println("after getting from NIO");
     }
 
     private void sendErrorCodeNIO(ErrorCodes errorCode)
     {
+        System.out.println("before replying to NIO");
         Dispatcher.sendBytesNIO(handle, errorCode);
+        System.out.println("after replying to NIO");
+
     }
 
     private void receiveBytes(Socket srcSock, byte[] dest) throws IOException

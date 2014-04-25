@@ -50,8 +50,10 @@ public class ReadEventHandler implements EventHandler
     {
         SocketChannel socketChannel = (SocketChannel) handle.channel();
         // Process the event on a thread
+        System.out.println("new event");
         if (threadPool.getQueue().size() < BACKLOG_SIZE)
         {
+            System.out.println("backlog not full, process");
             byte[] commandBytes = new byte[CMD_SIZE];
             byte[] key = new byte[KEY_SIZE];
             byte[] value = new byte[VALUE_SIZE];
@@ -76,6 +78,7 @@ public class ReadEventHandler implements EventHandler
                 default:
                     break;
                 }
+                System.out.println("got new request");
                 threadPool.execute(new ProcessRequest(socketChannel, handle, selector, ring, kvStore,commandBytes,key,value));
             }
         }
