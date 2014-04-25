@@ -87,12 +87,20 @@ public class ProcessRequest implements Runnable
             // Send the reply message to the client
             // Only send value if command was get and value returned wasn't null
             // (if value was null then InexistentKeyException should have been thrown)
-            if (cmd == Commands.GET && value != null)
+            if (cmd == Commands.GET)
             {
-                byte[] combined = new byte[ERR_SIZE + VALUE_SIZE];
-                System.arraycopy(new byte[] { ErrorCodes.SUCCESS.toByte() }, 0, combined, 0, ERR_SIZE);
-                System.arraycopy(value, 0, combined, ERR_SIZE, VALUE_SIZE);
-                sendBytesNIO(combined);
+                if (value != null)
+                {
+                    byte[] combined = new byte[ERR_SIZE + VALUE_SIZE];
+                    System.arraycopy(new byte[] { ErrorCodes.SUCCESS.toByte() }, 0, combined, 0, ERR_SIZE);
+                    System.arraycopy(value, 0, combined, ERR_SIZE, VALUE_SIZE);
+                    sendBytesNIO(combined);
+                }
+                // If get() returned null, that means key doesn't exist
+                else
+                {
+                    throw new InexistentKeyException();
+                }
             }
             else
             {
