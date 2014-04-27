@@ -292,7 +292,8 @@ public class ProcessRequest implements Runnable
     private void shutdown()
     {
         // Increment the shutdown flag to no longer accept incoming connections
-        Dispatcher.shutdown();
+        //Dispatcher.shutdown();
+
 
         // Update online status to false and timestamp to 0 of self node, so it propagates faster
         int index = ring.membershipIndexOf(ring.localHost);

@@ -121,7 +121,7 @@ public class Server
                     // then service client at the head of queue
                     if (concurrentClientCount.get() < PING_MAX_NUM_CLIENTS && (clntSock = backlog.poll()) != null)
                     {
-                        concurrentReqClientCount.getAndIncrement();
+                        concurrentClientCount.getAndIncrement();
                         PingListener connection = new PingListener(clntSock, concurrentClientCount, ring);
                         // Create a new thread for each client connection
                         threadPool.execute(connection);
