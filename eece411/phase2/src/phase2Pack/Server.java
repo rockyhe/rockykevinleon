@@ -14,9 +14,9 @@ public class Server
 {
     // Constants
     public static final int PORT = 6666;
-    public static final int PING_PORT = 5555;
-    private static final int PING_MAX_NUM_CLIENTS = 50;
-    private static final int PING_BACKLOG_SIZE = 50;
+    public static final int HEARTBEAT_PORT = 5555;
+    private static final int HEARTBEAT_MAX_NUM_CLIENTS = 50;
+    private static final int HEARTBEAT_BACKLOG_SIZE = 50;
 
     private static final int REQ_MAX_NUM_CLIENTS = 200;
     private static final int REQ_BACKLOG_SIZE = 100;
@@ -24,14 +24,17 @@ public class Server
     // Private members
     private static ConsistentHashRing ring;
     private static KVStore kvStore;
-    private static ServerSocket servSock;
-    private static Queue<Socket> backlog;
-    private static AtomicInteger concurrentClientCount;
-    private static ExecutorService threadPool;
 
-    private static ServerSocket servReqSock;
+    // Heartbeat server variables
+    private static ServerSocket heartbeatServSock;
+    private static Queue<Socket> heartbeatBacklog;
+    private static AtomicInteger heartbeatClientCount;
+    private static ExecutorService heartbeatThreadPool;
+
+    // Request server variables
+    private static ServerSocket reqServSock;
     private static Queue<Socket> reqBacklog;
-    private static AtomicInteger concurrentReqClientCount;
+    private static AtomicInteger reqClientCount;
     private static ExecutorService reqThreadPool;
 
     public static void main(String[] args) throws Exception
@@ -44,35 +47,37 @@ public class Server
             //System.out.println("Starting NIO server at port : " + PORT);
             //new ReactorInitiator().initiateReactiveServer(PORT, ring, kvStore);
 
-            // Initialize ping variables
-            servSock = new ServerSocket(PING_PORT);
-            backlog = new ArrayBlockingQueue<Socket>(PING_BACKLOG_SIZE);
-            concurrentClientCount = new AtomicInteger(0);
-            threadPool = Executors.newFixedThreadPool(PING_MAX_NUM_CLIENTS);
-            
-            Thread producer = new Thread(new Producer());
-            producer.start();
-            Thread consumer = new Thread(new Consumer());
-            consumer.start();
-
-            servReqSock = new ServerSocket(PORT);
+            System.out.println("Starting multi-threaded server at port : " + PORT);
+            reqServSock = new ServerSocket(PORT);
             reqBacklog = new ArrayBlockingQueue<Socket>(REQ_BACKLOG_SIZE);
-            concurrentReqClientCount = new AtomicInteger(0);
+            reqClientCount = new AtomicInteger(0);
             reqThreadPool = Executors.newFixedThreadPool(REQ_MAX_NUM_CLIENTS);
 
             Thread reqProducer = new Thread(new ReqProducer());
             reqProducer.start();
             Thread reqConsumer = new Thread(new ReqConsumer());
             reqConsumer.start();
-            
+
+            // Initialize heartbeat variables
+            System.out.println("Starting heartbeat server at port : " + HEARTBEAT_PORT);
+            heartbeatServSock = new ServerSocket(HEARTBEAT_PORT);
+            heartbeatBacklog = new ArrayBlockingQueue<Socket>(HEARTBEAT_BACKLOG_SIZE);
+            heartbeatClientCount = new AtomicInteger(0);
+            heartbeatThreadPool = Executors.newFixedThreadPool(HEARTBEAT_MAX_NUM_CLIENTS);
+
+            Thread producer = new Thread(new HeartbeatProducer());
+            producer.start();
+            Thread consumer = new Thread(new HeartbeatConsumer());
+            consumer.start();
+
             // randomly grab 2 nodes concurrently
-            Thread pinger = new Thread(new Ping(ring, PING_PORT, 1));
+            Thread pinger = new Thread(new Heartbeat(ring, HEARTBEAT_PORT, 1));
             pinger.start();
-            Thread pinger2 = new Thread(new Ping(ring, PING_PORT, 2));
+            Thread pinger2 = new Thread(new Heartbeat(ring, HEARTBEAT_PORT, 2));
             pinger2.start();
 
             // check timestamp from the nodeList
-            Thread timestampCheck = new Thread(new Ping.TimestampCheck(ring));
+            Thread timestampCheck = new Thread(new Heartbeat.TimestampCheck(ring));
             timestampCheck.start();
 
             System.out.println("Server is ready...");
@@ -82,7 +87,7 @@ public class Server
         }
     }
 
-    private static class Producer implements Runnable
+    private static class HeartbeatProducer implements Runnable
     {
         public void run()
         {
@@ -90,11 +95,11 @@ public class Server
                 // Run forever, listening for and accepting client connections
                 while (true)
                 {
-                    Socket clntSock = servSock.accept(); // Get client connection
+                    Socket clntSock = heartbeatServSock.accept(); // Get client connection
                     // If backlog isn't full, add client to it
-                    if (backlog.size() < PING_BACKLOG_SIZE)
+                    if (heartbeatBacklog.size() < HEARTBEAT_BACKLOG_SIZE)
                     {
-                        backlog.add(clntSock);
+                        heartbeatBacklog.add(clntSock);
                     }
                     else
                     {
@@ -102,13 +107,13 @@ public class Server
                     }
                 }
             } catch (Exception e) {
-                System.out.println("Producer Internal Server Error!");
+                System.out.println("Heartbeat Producer Internal Server Error!");
                 e.printStackTrace();
             }
         }
     }
 
-    private static class Consumer implements Runnable
+    private static class HeartbeatConsumer implements Runnable
     {
         public void run()
         {
@@ -119,16 +124,16 @@ public class Server
                 {
                     // If current number of concurrent clients hasn't reached MAX_NUM_CLIENTS
                     // then service client at the head of queue
-                    if (concurrentClientCount.get() < PING_MAX_NUM_CLIENTS && (clntSock = backlog.poll()) != null)
+                    if (heartbeatClientCount.get() < HEARTBEAT_MAX_NUM_CLIENTS && (clntSock = heartbeatBacklog.poll()) != null)
                     {
-                        concurrentReqClientCount.getAndIncrement();
-                        PingListener connection = new PingListener(clntSock, concurrentClientCount, ring);
+                        heartbeatClientCount.getAndIncrement();
+                        HeartbeatListener connection = new HeartbeatListener(clntSock, heartbeatClientCount, ring);
                         // Create a new thread for each client connection
-                        threadPool.execute(connection);
+                        heartbeatThreadPool.execute(connection);
                     }
                 }
             } catch (Exception e) {
-                System.out.println("Consumer Internal Server Error!");
+                System.out.println("Heartbeat Consumer Internal Server Error!");
                 e.printStackTrace();
             }
         }
@@ -143,9 +148,9 @@ public class Server
                 // Run forever, listening for and accepting client connections
                 while (true)
                 {
-                    Socket clntSock = servReqSock.accept(); // Get client connection
+                    Socket clntSock = reqServSock.accept(); // Get client connection
                     // If backlog isn't full, add client to it
-                    if (backlog.size() < REQ_BACKLOG_SIZE)
+                    if (reqBacklog.size() < REQ_BACKLOG_SIZE)
                     {
                         reqBacklog.add(clntSock);
                     }
@@ -155,7 +160,7 @@ public class Server
                     }
                 }
             } catch (Exception e) {
-                System.out.println("Producer Internal Server Error!");
+                System.out.println("Request Producer Internal Server Error!");
                 e.printStackTrace();
             }
         }
@@ -172,16 +177,16 @@ public class Server
                 {
                     // If current number of concurrent clients hasn't reached MAX_NUM_CLIENTS
                     // then service client at the head of queue
-                    if (concurrentClientCount.get() < REQ_MAX_NUM_CLIENTS && (clntSock = reqBacklog.poll()) != null)
+                    if (reqClientCount.get() < REQ_MAX_NUM_CLIENTS && (clntSock = reqBacklog.poll()) != null)
                     {
-                        concurrentReqClientCount.getAndIncrement();
-                        ProcessRequest connection = new ProcessRequest(clntSock, ring, kvStore, concurrentReqClientCount);
+                        reqClientCount.getAndIncrement();
+                        ProcessRequest connection = new ProcessRequest(clntSock, ring, kvStore, reqClientCount);
                         // Create a new thread for each client connection
                         reqThreadPool.execute(connection);
                     }
                 }
             } catch (Exception e) {
-                System.out.println("Consumer Internal Server Error!");
+                System.out.println("Request Consumer Internal Server Error!");
                 e.printStackTrace();
             }
         }

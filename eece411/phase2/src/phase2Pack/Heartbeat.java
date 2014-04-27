@@ -8,25 +8,25 @@ import java.sql.Timestamp;
 import java.util.Date;
 import phase2Pack.enums.Commands;
 
-public class Ping implements Runnable
+public class Heartbeat implements Runnable
 {
     private static final int CMD_SIZE = 1;
-    private static final int MAX_PING_MEMBERS = 4;
+    private static final int MAX_HEARTBEAT_MEMBERS = 4;
     private static final int SLEEP_TIME = 300; // 4 seconds
     private static final int PROP_BUFFER = 2000;
-    private static final int OFFLINE_THRES = (int)SLEEP_TIME*MAX_PING_MEMBERS/2 + PROP_BUFFER; // 10 seconds log(N)/log(2) * SLEEP_TIME
+    private static final int OFFLINE_THRES = (int)SLEEP_TIME*MAX_HEARTBEAT_MEMBERS/2 + PROP_BUFFER; // 10 seconds log(N)/log(2) * SLEEP_TIME
 
     public String localHost;
 
     private ConsistentHashRing ring;
-    private int pingPort;
-    private int pingerNum;
+    private int port;
+    private int threadId;
 
-    Ping(ConsistentHashRing ring, int port, int num)
+    Heartbeat(ConsistentHashRing ring, int port, int id)
     {
         this.ring = ring;
-        this.pingPort = port;
-        this.pingerNum = num;
+        this.port = port;
+        this.threadId = id;
 
         // Store the local host name for convenient access later
         try {
@@ -43,10 +43,10 @@ public class Ping implements Runnable
         int randomInt = 0;
         int rangeHigh = 0;
         int rangeLow = 0;
-        byte[] pingBuffer = new byte[CMD_SIZE];
-        pingBuffer[0] = (byte) (Commands.PING.getValue() & 0x000000FF);
+        byte[] buffer = new byte[CMD_SIZE];
+        buffer[0] = (byte) (Commands.HEARTBEAT.getValue() & 0x000000FF);
 
-        if (pingerNum == 1)
+        if (threadId == 1)
         {
             rangeLow = 0;
             rangeHigh = ring.getMembership().size()/2;
@@ -96,12 +96,12 @@ public class Ping implements Runnable
                     target.rejoin = false;
                 }
 
-                socket = new Socket(target.hostname, pingPort);
+                socket = new Socket(target.hostname, port);
 
                 // Send the message to the server
                 OutputStream os = socket.getOutputStream();
                 // Send the encoded string to the server
-                os.write(pingBuffer);
+                os.write(buffer);
                 //System.out.println("pinging: " + target.hostname);
 
                 // sleep

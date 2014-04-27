@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import phase2Pack.enums.Commands;
 
-public class PingListener implements Runnable
+public class HeartbeatListener implements Runnable
 {
     // Constants
     private static final int CMD_SIZE = 1;
@@ -20,7 +20,7 @@ public class PingListener implements Runnable
     private AtomicInteger concurrentClientCount;
 
     // Constructor
-    PingListener(Socket clientSocket, AtomicInteger clientCount, ConsistentHashRing ring)
+    HeartbeatListener(Socket clientSocket, AtomicInteger clientCount, ConsistentHashRing ring)
     {
         this.clntSock = clientSocket;
         this.concurrentClientCount = clientCount;
@@ -66,7 +66,7 @@ public class PingListener implements Runnable
             receiveBytes(clntSock, command);
             Commands cmd = Commands.fromInt(ByteOrder.leb2int(command, 0, CMD_SIZE));
             //System.out.println("cmd: " + cmd);
-            if (cmd == Commands.PING)
+            if (cmd == Commands.HEARTBEAT)
             {
                 updateStatus();
             }

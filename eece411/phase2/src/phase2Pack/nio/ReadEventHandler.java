@@ -73,7 +73,7 @@ public class ReadEventHandler implements EventHandler
                 case GET: case REMOVE: case REMOVE_FROM_REPLICA:
                     receiveBytesNIO(socketChannel,key);
                     break;
-                case PING:
+                case HEARTBEAT:
                     break;
                 default:
                     break;
