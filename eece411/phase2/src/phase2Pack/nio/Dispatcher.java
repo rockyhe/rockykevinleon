@@ -19,6 +19,10 @@ import phase2Pack.enums.ErrorCodes;
  */
 public class Dispatcher implements Runnable
 {
+    // Constants
+    private static final int SELECT_TIMEOUT = 100;
+
+    // Private members
     private Map<Integer, EventHandler> registeredHandlers = new ConcurrentHashMap<Integer, EventHandler>();
     private static Selector selector;
     private static AtomicBoolean shutdownFlag;
@@ -74,21 +78,23 @@ public class Dispatcher implements Runnable
     {
         try
         {
+            Set<SelectionKey> readyHandles;
+            Iterator<SelectionKey> handleIterator;
             while (true)
             {
                 System.out.println("first line of dispatcher");
                 // Waiting for events
-                selector.select();
-
+                selector.select(SELECT_TIMEOUT);
                 // Get keys
-                Set<SelectionKey> readyHandles = selector.selectedKeys();
-                Iterator<SelectionKey> handleIterator = readyHandles.iterator();
+                readyHandles = selector.selectedKeys();
+                handleIterator = readyHandles.iterator();
 
                 // For each key
                 System.out.println("handle has next?"+handleIterator.hasNext());
+                SelectionKey handle;
                 while (handleIterator.hasNext())
                 {
-                    SelectionKey handle = handleIterator.next();
+                    handle = handleIterator.next();
                     if (!handle.isValid())
                     {
                         System.out.println("handle is valid");
