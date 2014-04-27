@@ -19,6 +19,7 @@ public class WriteEventHandler implements EventHandler
         {
             socketChannel.write(inputBuffer);
         }
+        inputBuffer.flip();
         socketChannel.close();
     }
 }
