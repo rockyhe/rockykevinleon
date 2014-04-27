@@ -46,19 +46,11 @@ public class Server
             ring = new ConsistentHashRing(PORT);
             kvStore = new KVStore();
 
-            //System.out.println("Starting NIO server at port : " + PORT);
-            //new ReactorInitiator().initiateReactiveServer(PORT, ring, kvStore);
+            System.out.println("Starting NIO server at port : " + PORT);
+            new ReactorInitiator().initiateReactiveServer(PORT, ring, kvStore);
 
-            System.out.println("Starting multi-threaded server at port : " + PORT);
-            reqServSock = new ServerSocket(PORT);
-            reqBacklog = new ArrayBlockingQueue<Socket>(REQ_BACKLOG_SIZE);
-            reqClientCount = new AtomicInteger(0);
-            reqThreadPool = Executors.newFixedThreadPool(REQ_MAX_NUM_CLIENTS);
-
-            Thread reqProducer = new Thread(new ReqProducer());
-            reqProducer.start();
-            Thread reqConsumer = new Thread(new ReqConsumer());
-            reqConsumer.start();
+            //System.out.println("Starting multi-threaded server at port : " + PORT);
+            //initiateMultithreadedServer();
 
             // Initialize heartbeat variables
             System.out.println("Starting heartbeat server at port : " + HEARTBEAT_PORT);
@@ -141,6 +133,18 @@ public class Server
         }
     }
 
+    private static void initiateMultithreadedServer() throws Exception
+    {
+        reqServSock = new ServerSocket(PORT);
+        reqBacklog = new ArrayBlockingQueue<Socket>(REQ_BACKLOG_SIZE);
+        reqClientCount = new AtomicInteger(0);
+        reqThreadPool = Executors.newFixedThreadPool(REQ_MAX_NUM_CLIENTS);
+
+        Thread reqProducer = new Thread(new ReqProducer());
+        reqProducer.start();
+        Thread reqConsumer = new Thread(new ReqConsumer());
+        reqConsumer.start();
+    }
 
     private static class ReqProducer implements Runnable
     {

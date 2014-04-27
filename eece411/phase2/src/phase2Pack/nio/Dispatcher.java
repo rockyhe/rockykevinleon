@@ -10,6 +10,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import phase2Pack.StringUtils;
 import phase2Pack.Exceptions.SystemOverloadException;
 import phase2Pack.enums.ErrorCodes;
 
@@ -53,19 +54,16 @@ public class Dispatcher implements Runnable
     // Public convenience method to send response back to client
     public static void sendBytesNIO(SelectionKey handle, byte[] src)
     {
-        System.out.println("sendBytesNIO(SelectionKey handle, byte[] src)");
+        System.out.println("Sending response bytes to client: " + StringUtils.byteArrayToHexString(src));
         handle.interestOps(SelectionKey.OP_WRITE);
-        System.out.println("after interestOps");
         handle.attach(ByteBuffer.wrap(src));
-        System.out.println("after wrap");
         selector.wakeup();
-        System.out.println("after wakeup");
     }
 
     // Public convenience method to send only error code back to client
     public static void sendBytesNIO(SelectionKey handle, ErrorCodes errorCode)
     {
-        System.out.println("sendBytesNIO(SelectionKey handle, ErrorCodes errorCode)");
+        System.out.println("Sending error code byte to client: " + errorCode.getValue());
         sendBytesNIO(handle, new byte[] { errorCode.toByte() } );
     }
 
@@ -82,7 +80,6 @@ public class Dispatcher implements Runnable
             Iterator<SelectionKey> handleIterator;
             while (true)
             {
-                System.out.println("first line of dispatcher");
                 // Waiting for events
                 selector.select(SELECT_TIMEOUT);
                 // Get keys
@@ -90,20 +87,17 @@ public class Dispatcher implements Runnable
                 handleIterator = readyHandles.iterator();
 
                 // For each key
-                System.out.println("handle has next?"+handleIterator.hasNext());
                 SelectionKey handle;
                 while (handleIterator.hasNext())
                 {
                     handle = handleIterator.next();
                     if (!handle.isValid())
                     {
-                        System.out.println("handle is valid");
                         continue;
                     }
 
                     if (handle.isAcceptable() && !shutdownFlag.get())
                     {
-                        System.out.println("handle is acceptable");
                         AcceptEventHandler handler = (AcceptEventHandler) registeredHandlers.get(SelectionKey.OP_ACCEPT);
                         handler.handleEvent(handle);
                         // Note : Don't remove this handle from selector here
@@ -114,7 +108,6 @@ public class Dispatcher implements Runnable
                     {
                         ReadEventHandler handler = (ReadEventHandler) registeredHandlers.get(SelectionKey.OP_READ);
                         try {
-                            System.out.println("handle is readable");
                             handler.handleEvent(handle);
                         } catch (SystemOverloadException e) {
                             System.out.println("System Overload");
@@ -125,11 +118,8 @@ public class Dispatcher implements Runnable
 
                     if (handle.isWritable())
                     {
-                        System.out.println("creating WriteEventHandler");
                         WriteEventHandler handler = (WriteEventHandler) registeredHandlers.get(SelectionKey.OP_WRITE);
-                        System.out.println("handle!!!");
                         handler.handleEvent(handle);
-                        System.out.println("remove handleIterator");
                         handleIterator.remove();
                     }
                 }

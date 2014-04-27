@@ -11,7 +11,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import phase2Pack.ByteOrder;
 import phase2Pack.ConsistentHashRing;
 import phase2Pack.KVStore;
-import phase2Pack.ProcessRequest;
+import phase2Pack.ProcessRequestNIO;
 import phase2Pack.Exceptions.SystemOverloadException;
 import phase2Pack.enums.Commands;
 import phase2Pack.Exceptions.UnrecognizedCmdException;
@@ -50,10 +50,8 @@ public class ReadEventHandler implements EventHandler
     {
         SocketChannel socketChannel = (SocketChannel) handle.channel();
         // Process the event on a thread
-        System.out.println("new event");
         if (threadPool.getQueue().size() < BACKLOG_SIZE)
         {
-            System.out.println("backlog not full, process");
             byte[] commandBytes = new byte[CMD_SIZE];
             byte[] key = new byte[KEY_SIZE];
             byte[] value = new byte[VALUE_SIZE];
@@ -79,7 +77,7 @@ public class ReadEventHandler implements EventHandler
                     break;
                 }
                 System.out.println("got new request");
-                //threadPool.execute(new ProcessRequest(socketChannel, handle, selector, ring, kvStore,commandBytes,key,value));
+                threadPool.execute(new ProcessRequestNIO(socketChannel, handle, selector, ring, kvStore, commandBytes, key, value));
             }
         }
         // If the thread pool queue reaches the max backlog size, then throw a system overload error
