@@ -79,7 +79,7 @@ public class ProcessRequest implements Runnable
                 key = new byte[KEY_SIZE];
                 receiveBytes(clntSock, key);
                 value = new byte[VALUE_SIZE];
-                receiveBytes(clntSock, value);                
+                receiveBytes(clntSock, value);
                 put(key, value);
                 break;
             case GET: // Get command
@@ -97,7 +97,7 @@ public class ProcessRequest implements Runnable
                 shutdown();
                 break;
             case PUT_TO_REPLICA: // Put to replica command
-                key = new byte[KEY_SIZE];            
+                key = new byte[KEY_SIZE];
                 receiveBytes(clntSock, key);
                 value = new byte[VALUE_SIZE];
                 receiveBytes(clntSock, value);
@@ -108,9 +108,6 @@ public class ProcessRequest implements Runnable
                 receiveBytes(clntSock, key);
                 removeFromReplica(key);
                 break;
-                //            case PING: // Ping signal
-                //                ping();
-                //                break;
             default: // Unrecognized command
                 throw new UnrecognizedCmdException();
             }
@@ -375,7 +372,7 @@ public class ProcessRequest implements Runnable
         byte[] getValue = null;
         try {
             socket = new Socket(remoteNode.hostname, Server.PORT);
-             System.out.println("Connected to server: " + socket.getInetAddress().toString());
+            System.out.println("Connected to server: " + socket.getInetAddress().toString());
 
             // Route the message
             // If command is put, then increase request buffer size to include value bytes
@@ -395,7 +392,7 @@ public class ProcessRequest implements Runnable
             }
 
             // Send the encoded string to the server
-             System.out.println("Forwarding request");
+            System.out.println("Forwarding request");
             // System.out.println("Request buffer: " + StringUtils.byteArrayToHexString(requestBuffer));
             sendBytes(socket, requestBuffer);
 
@@ -403,7 +400,7 @@ public class ProcessRequest implements Runnable
             // Get the error code byte
             byte[] errorCodeBytes = new byte[ERR_SIZE];
             receiveBytes(socket, errorCodeBytes);
-             System.out.println("Received reply from forwarded request");
+            System.out.println("Received reply from forwarded request");
             int errorCodeInt = ByteOrder.leb2int(errorCodeBytes, 0, ERR_SIZE);
             errorCode = ErrorCodes.fromInt(errorCodeInt);
             System.out.println("Error Code: " + errorCodeInt);
@@ -452,7 +449,7 @@ public class ProcessRequest implements Runnable
         }
     }
 
-/*
+    /*
     private void sendBytesNIO(byte[] src)
     {
         System.out.println("before replying to NIO");
@@ -467,7 +464,7 @@ public class ProcessRequest implements Runnable
         System.out.println("after replying to NIO");
 
     }
-*/
+     */
     private void receiveBytes(Socket srcSock, byte[] dest) throws IOException
     {
         InputStream in = srcSock.getInputStream();
