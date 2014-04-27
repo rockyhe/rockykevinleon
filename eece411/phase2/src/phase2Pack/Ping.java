@@ -11,10 +11,10 @@ import phase2Pack.enums.Commands;
 public class Ping implements Runnable
 {
     private static final int CMD_SIZE = 1;
-    private static final int MAX_PING_MEMBERS = 100;
-    private static final int SLEEP_TIME = 500; // 4 seconds
+    private static final int MAX_PING_MEMBERS = 4;
+    private static final int SLEEP_TIME = 300; // 4 seconds
     private static final int PROP_BUFFER = 2000;
-    private static final int OFFLINE_THRES = (int) (Math.log10(MAX_PING_MEMBERS) / Math.log10(2)) * SLEEP_TIME + PROP_BUFFER; // 10 seconds log(N)/log(2) * SLEEP_TIME
+    private static final int OFFLINE_THRES = (int)SLEEP_TIME*MAX_PING_MEMBERS/2 + PROP_BUFFER; // 10 seconds log(N)/log(2) * SLEEP_TIME
 
     public String localHost;
 

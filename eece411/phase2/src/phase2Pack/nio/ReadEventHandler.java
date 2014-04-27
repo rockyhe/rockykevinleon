@@ -79,7 +79,7 @@ public class ReadEventHandler implements EventHandler
                     break;
                 }
                 System.out.println("got new request");
-                threadPool.execute(new ProcessRequest(socketChannel, handle, selector, ring, kvStore,commandBytes,key,value));
+                //threadPool.execute(new ProcessRequest(socketChannel, handle, selector, ring, kvStore,commandBytes,key,value));
             }
         }
         // If the thread pool queue reaches the max backlog size, then throw a system overload error

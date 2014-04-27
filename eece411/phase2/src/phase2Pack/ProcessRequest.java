@@ -19,6 +19,9 @@ import phase2Pack.Exceptions.UnrecognizedCmdException;
 import phase2Pack.enums.Commands;
 import phase2Pack.enums.ErrorCodes;
 import phase2Pack.nio.Dispatcher;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.net.Socket;
+
 
 public class ProcessRequest implements Runnable
 {
@@ -28,53 +31,81 @@ public class ProcessRequest implements Runnable
     private static final int VALUE_SIZE = 1024;
     private static final int ERR_SIZE = 1;
 
-    private SocketChannel socketChannel;
-    private SelectionKey handle;
-    private Selector selector;
+    //private SocketChannel socketChannel;
+    //private SelectionKey handle;
+    //private Selector selector;
+    private Socket clntSock;
     private ConsistentHashRing ring;
     private KVStore kvStore;
+    private AtomicInteger clientCnt;
 
     private byte[] commandBytes = new byte[CMD_SIZE];
     private byte[] key = new byte[KEY_SIZE];
     private byte[] value = new byte[VALUE_SIZE];
 
-    public ProcessRequest(SocketChannel socketChannel, SelectionKey handle, Selector selector, ConsistentHashRing ring, KVStore kvStore, byte[] cmd, byte[] key, byte[] value)
+    public ProcessRequest(Socket clientSocket, ConsistentHashRing ring, KVStore kvStore, AtomicInteger concurrentReqClientCount)
     {
-        this.socketChannel = socketChannel;
-        this.handle = handle;
-        this.selector = selector;
+        //this.socketChannel = socketChannel;
+        //this.handle = handle;
+        //this.selector = selector;
+        this.clntSock = clientSocket;
         this.ring = ring;
         this.kvStore = kvStore;
-        this.commandBytes = cmd;
-        this.key = key;
-        this.value = value;
+        this.clientCnt = concurrentReqClientCount;
+
+        //this.commandBytes = cmd;
+        //this.key = key;
+        //this.value = value;
     }
 
     public void run()
     {
         try {
+            clientCnt.getAndIncrement();
             // Read the command byte
             System.out.println("processing cmd");
+            byte[] commandBytes = new byte[CMD_SIZE];
+            receiveBytes(clntSock, commandBytes);
+
             Commands cmd = Commands.fromInt(ByteOrder.leb2int(commandBytes, 0, CMD_SIZE));
+
+            byte[] key = null;
+            byte[] value = null;
 
             switch (cmd)
             {
             case PUT: // Put command
+                // Get the key bytes
+                key = new byte[KEY_SIZE];
+                receiveBytes(clntSock, key);
+                value = new byte[VALUE_SIZE];
+                receiveBytes(clntSock, value);                
                 put(key, value);
                 break;
             case GET: // Get command
+                key = new byte[KEY_SIZE];
+                receiveBytes(clntSock, key);
+                value = new byte[VALUE_SIZE];
                 value = get(key);
                 break;
             case REMOVE: // Remove command
+                key = new byte[KEY_SIZE];
+                receiveBytes(clntSock, key);
                 remove(key);
                 break;
             case SHUTDOWN: // Shutdown command
                 shutdown();
                 break;
             case PUT_TO_REPLICA: // Put to replica command
+                key = new byte[KEY_SIZE];            
+                receiveBytes(clntSock, key);
+                value = new byte[VALUE_SIZE];
+                receiveBytes(clntSock, value);
                 putToReplica(key, value);
                 break;
             case REMOVE_FROM_REPLICA: // Remove from replica command
+                key = new byte[KEY_SIZE];
+                receiveBytes(clntSock, key);
                 removeFromReplica(key);
                 break;
                 //            case PING: // Ping signal
@@ -95,7 +126,7 @@ public class ProcessRequest implements Runnable
                     byte[] combined = new byte[ERR_SIZE + VALUE_SIZE];
                     System.arraycopy(new byte[] { ErrorCodes.SUCCESS.toByte() }, 0, combined, 0, ERR_SIZE);
                     System.arraycopy(value, 0, combined, ERR_SIZE, VALUE_SIZE);
-                    sendBytesNIO(combined);
+                    sendBytes(clntSock,combined);
                 }
                 // If get() returned null, that means key doesn't exist
                 else
@@ -105,7 +136,7 @@ public class ProcessRequest implements Runnable
             }
             else
             {
-                sendErrorCodeNIO(ErrorCodes.SUCCESS);
+                sendBytes(clntSock, new byte[] {ErrorCodes.SUCCESS.toByte()});
                 // If command was shutdown, then close the application after sending the reply
                 if (cmd == Commands.SHUTDOWN)
                 {
@@ -114,22 +145,46 @@ public class ProcessRequest implements Runnable
             }
         } catch (InexistentKeyException e) {
             System.out.println("Inexistent Key");
-            sendErrorCodeNIO(ErrorCodes.INEXISTENT_KEY);
+            try{
+                sendBytes(clntSock, new byte[] {ErrorCodes.INEXISTENT_KEY.toByte()});
+            }catch(IOException ioe){
+                //do nothing
+            }
         } catch (OutOfSpaceException e) {
             System.out.println("Out Of Space");
-            sendErrorCodeNIO(ErrorCodes.OUT_OF_SPACE);
+            try{
+                sendBytes(clntSock, new byte[] {ErrorCodes.OUT_OF_SPACE.toByte()});
+            }catch(IOException ioe){
+                //do nothing
+            }
         } catch (SystemOverloadException e) {
             System.out.println("System Overload");
-            sendErrorCodeNIO(ErrorCodes.SYSTEM_OVERLOAD);
+            try{
+                sendBytes(clntSock, new byte[] {ErrorCodes.SYSTEM_OVERLOAD.toByte()});
+            }catch(IOException ioe){
+                //do nothing
+            }
         } catch (InternalKVStoreException e) {
             System.out.println("Internal KVStore");
-            sendErrorCodeNIO(ErrorCodes.INTERNAL_KVSTORE);
+            try{
+                sendBytes(clntSock, new byte[] {ErrorCodes.INTERNAL_KVSTORE.toByte()});
+            }catch(IOException ioe){
+                //do nothing
+            }
         } catch (UnrecognizedCmdException e) {
             System.out.println("Unrecognized Command");
-            sendErrorCodeNIO(ErrorCodes.UNRECOGNIZED_COMMAND);
+            try{
+                sendBytes(clntSock, new byte[] {ErrorCodes.UNRECOGNIZED_COMMAND.toByte()});
+            }catch(IOException ioe){
+                //do nothing
+            }
         } catch (Exception e) {
             System.out.println("Internal Server Error");
-            sendErrorCodeNIO(ErrorCodes.INTERNAL_KVSTORE);
+            try{
+                sendBytes(clntSock, new byte[] {ErrorCodes.INTERNAL_KVSTORE.toByte()});
+            }catch(IOException ioe){
+                //do nothing
+            }
             //e.printStackTrace();
         }
     }
@@ -396,6 +451,7 @@ public class ProcessRequest implements Runnable
         }
     }
 
+/*
     private void sendBytesNIO(byte[] src)
     {
         System.out.println("before replying to NIO");
@@ -410,7 +466,7 @@ public class ProcessRequest implements Runnable
         System.out.println("after replying to NIO");
 
     }
-
+*/
     private void receiveBytes(Socket srcSock, byte[] dest) throws IOException
     {
         InputStream in = srcSock.getInputStream();

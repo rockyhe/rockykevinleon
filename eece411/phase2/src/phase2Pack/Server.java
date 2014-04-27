@@ -18,6 +18,9 @@ public class Server
     private static final int PING_MAX_NUM_CLIENTS = 50;
     private static final int PING_BACKLOG_SIZE = 50;
 
+    private static final int REQ_MAX_NUM_CLIENTS = 200;
+    private static final int REQ_BACKLOG_SIZE = 100;
+
     // Private members
     private static ConsistentHashRing ring;
     private static KVStore kvStore;
@@ -26,6 +29,11 @@ public class Server
     private static AtomicInteger concurrentClientCount;
     private static ExecutorService threadPool;
 
+    private static ServerSocket servReqSock;
+    private static Queue<Socket> reqBacklog;
+    private static AtomicInteger concurrentReqClientCount;
+    private static ExecutorService reqThreadPool;
+
     public static void main(String[] args) throws Exception
     {
         try {
@@ -33,19 +41,30 @@ public class Server
             ring = new ConsistentHashRing(PORT);
             kvStore = new KVStore();
 
-            System.out.println("Starting NIO server at port : " + PORT);
-            new ReactorInitiator().initiateReactiveServer(PORT, ring, kvStore);
+            //System.out.println("Starting NIO server at port : " + PORT);
+            //new ReactorInitiator().initiateReactiveServer(PORT, ring, kvStore);
 
             // Initialize ping variables
             servSock = new ServerSocket(PING_PORT);
             backlog = new ArrayBlockingQueue<Socket>(PING_BACKLOG_SIZE);
             concurrentClientCount = new AtomicInteger(0);
             threadPool = Executors.newFixedThreadPool(PING_MAX_NUM_CLIENTS);
-
+            
             Thread producer = new Thread(new Producer());
             producer.start();
             Thread consumer = new Thread(new Consumer());
             consumer.start();
+
+            servReqSock = new ServerSocket(PORT);
+            reqBacklog = new ArrayBlockingQueue<Socket>(REQ_BACKLOG_SIZE);
+            concurrentReqClientCount = new AtomicInteger(0);
+            reqThreadPool = Executors.newFixedThreadPool(REQ_MAX_NUM_CLIENTS);
+
+            Thread reqProducer = new Thread(new ReqProducer());
+            reqProducer.start();
+            Thread reqConsumer = new Thread(new ReqConsumer());
+            reqConsumer.start();
+            
             // randomly grab 2 nodes concurrently
             Thread pinger = new Thread(new Ping(ring, PING_PORT, 1));
             pinger.start();
@@ -102,7 +121,7 @@ public class Server
                     // then service client at the head of queue
                     if (concurrentClientCount.get() < PING_MAX_NUM_CLIENTS && (clntSock = backlog.poll()) != null)
                     {
-                        concurrentClientCount.getAndIncrement();
+                        concurrentReqClientCount.getAndIncrement();
                         PingListener connection = new PingListener(clntSock, concurrentClientCount, ring);
                         // Create a new thread for each client connection
                         threadPool.execute(connection);
@@ -114,4 +133,58 @@ public class Server
             }
         }
     }
+
+
+    private static class ReqProducer implements Runnable
+    {
+        public void run()
+        {
+            try {
+                // Run forever, listening for and accepting client connections
+                while (true)
+                {
+                    Socket clntSock = servReqSock.accept(); // Get client connection
+                    // If backlog isn't full, add client to it
+                    if (backlog.size() < REQ_BACKLOG_SIZE)
+                    {
+                        reqBacklog.add(clntSock);
+                    }
+                    else
+                    {
+                        clntSock.close();
+                    }
+                }
+            } catch (Exception e) {
+                System.out.println("Producer Internal Server Error!");
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private static class ReqConsumer implements Runnable
+    {
+        public void run()
+        {
+            try {
+                Socket clntSock;
+                // Run forever, servicing client connections in queue
+                while (true)
+                {
+                    // If current number of concurrent clients hasn't reached MAX_NUM_CLIENTS
+                    // then service client at the head of queue
+                    if (concurrentClientCount.get() < REQ_MAX_NUM_CLIENTS && (clntSock = reqBacklog.poll()) != null)
+                    {
+                        concurrentReqClientCount.getAndIncrement();
+                        ProcessRequest connection = new ProcessRequest(clntSock, ring, kvStore, concurrentReqClientCount);
+                        // Create a new thread for each client connection
+                        reqThreadPool.execute(connection);
+                    }
+                }
+            } catch (Exception e) {
+                System.out.println("Consumer Internal Server Error!");
+                e.printStackTrace();
+            }
+        }
+    }
+
 }
