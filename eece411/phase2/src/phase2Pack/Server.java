@@ -1,5 +1,6 @@
 package phase2Pack;
 
+import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Queue;
@@ -8,6 +9,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import phase2Pack.enums.ErrorCodes;
 import phase2Pack.nio.ReactorInitiator;
 
 public class Server
@@ -154,9 +156,11 @@ public class Server
                     {
                         reqBacklog.add(clntSock);
                     }
+                    // Otherwise return system overload error
                     else
                     {
-                        clntSock.close();
+                        OutputStream out = clntSock.getOutputStream();
+                        out.write(new byte[] { ErrorCodes.SYSTEM_OVERLOAD.toByte() });
                     }
                 }
             } catch (Exception e) {

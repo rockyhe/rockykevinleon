@@ -133,7 +133,7 @@ public class ProcessRequest implements Runnable
             }
             else
             {
-                sendBytes(clntSock, new byte[] {ErrorCodes.SUCCESS.toByte()});
+                sendErrorCode(clntSock, ErrorCodes.SUCCESS);
                 // If command was shutdown, then close the application after sending the reply
                 if (cmd == Commands.SHUTDOWN)
                 {
@@ -143,42 +143,42 @@ public class ProcessRequest implements Runnable
         } catch (InexistentKeyException e) {
             //System.out.println("Inexistent Key");
             try{
-                sendBytes(clntSock, new byte[] {ErrorCodes.INEXISTENT_KEY.toByte()});
+                sendErrorCode(clntSock, ErrorCodes.INEXISTENT_KEY);
             }catch(IOException ioe){
                 //do nothing
             }
         } catch (OutOfSpaceException e) {
             //System.out.println("Out Of Space");
             try{
-                sendBytes(clntSock, new byte[] {ErrorCodes.OUT_OF_SPACE.toByte()});
+                sendErrorCode(clntSock, ErrorCodes.OUT_OF_SPACE);
             }catch(IOException ioe){
                 //do nothing
             }
         } catch (SystemOverloadException e) {
             //System.out.println("System Overload");
             try{
-                sendBytes(clntSock, new byte[] {ErrorCodes.SYSTEM_OVERLOAD.toByte()});
+                sendErrorCode(clntSock, ErrorCodes.SYSTEM_OVERLOAD);
             }catch(IOException ioe){
                 //do nothing
             }
         } catch (InternalKVStoreException e) {
             //System.out.println("Internal KVStore");
             try{
-                sendBytes(clntSock, new byte[] {ErrorCodes.INTERNAL_KVSTORE.toByte()});
+                sendErrorCode(clntSock, ErrorCodes.INTERNAL_KVSTORE);
             }catch(IOException ioe){
                 //do nothing
             }
         } catch (UnrecognizedCmdException e) {
             //System.out.println("Unrecognized Command");
             try{
-                sendBytes(clntSock, new byte[] {ErrorCodes.UNRECOGNIZED_COMMAND.toByte()});
+                sendErrorCode(clntSock, ErrorCodes.UNRECOGNIZED_COMMAND);
             }catch(IOException ioe){
                 //do nothing
             }
         } catch (Exception e) {
             //System.out.println("Internal Server Error");
             try{
-                sendBytes(clntSock, new byte[] {ErrorCodes.INTERNAL_KVSTORE.toByte()});
+                sendErrorCode(clntSock, ErrorCodes.INTERNAL_KVSTORE);
             }catch(IOException ioe){
                 //do nothing
             }
@@ -483,5 +483,10 @@ public class ProcessRequest implements Runnable
     {
         OutputStream out = destSock.getOutputStream();
         out.write(src);
+    }
+
+    private void sendErrorCode(Socket destSock, ErrorCodes errorCode) throws IOException
+    {
+        sendBytes(destSock, new byte[] { errorCode.toByte() });
     }
 }
