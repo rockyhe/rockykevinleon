@@ -63,7 +63,7 @@ public class ProcessRequest implements Runnable
         try {
             clientCnt.getAndIncrement();
             // Read the command byte
-            System.out.println("processing cmd");
+            //System.out.println("processing cmd");
             byte[] commandBytes = new byte[CMD_SIZE];
             receiveBytes(clntSock, commandBytes);
 
@@ -144,42 +144,42 @@ public class ProcessRequest implements Runnable
                 }
             }
         } catch (InexistentKeyException e) {
-            System.out.println("Inexistent Key");
+            //System.out.println("Inexistent Key");
             try{
                 sendBytes(clntSock, new byte[] {ErrorCodes.INEXISTENT_KEY.toByte()});
             }catch(IOException ioe){
                 //do nothing
             }
         } catch (OutOfSpaceException e) {
-            System.out.println("Out Of Space");
+            //System.out.println("Out Of Space");
             try{
                 sendBytes(clntSock, new byte[] {ErrorCodes.OUT_OF_SPACE.toByte()});
             }catch(IOException ioe){
                 //do nothing
             }
         } catch (SystemOverloadException e) {
-            System.out.println("System Overload");
+            //System.out.println("System Overload");
             try{
                 sendBytes(clntSock, new byte[] {ErrorCodes.SYSTEM_OVERLOAD.toByte()});
             }catch(IOException ioe){
                 //do nothing
             }
         } catch (InternalKVStoreException e) {
-            System.out.println("Internal KVStore");
+            //System.out.println("Internal KVStore");
             try{
                 sendBytes(clntSock, new byte[] {ErrorCodes.INTERNAL_KVSTORE.toByte()});
             }catch(IOException ioe){
                 //do nothing
             }
         } catch (UnrecognizedCmdException e) {
-            System.out.println("Unrecognized Command");
+            //System.out.println("Unrecognized Command");
             try{
                 sendBytes(clntSock, new byte[] {ErrorCodes.UNRECOGNIZED_COMMAND.toByte()});
             }catch(IOException ioe){
                 //do nothing
             }
         } catch (Exception e) {
-            System.out.println("Internal Server Error");
+            //System.out.println("Internal Server Error");
             try{
                 sendBytes(clntSock, new byte[] {ErrorCodes.INTERNAL_KVSTORE.toByte()});
             }catch(IOException ioe){
@@ -191,7 +191,7 @@ public class ProcessRequest implements Runnable
 
     private void put(byte[] key, byte[] value) throws InexistentKeyException, OutOfSpaceException, SystemOverloadException, InternalKVStoreException, UnrecognizedCmdException
     {
-        System.out.println("it is a put command");
+        //System.out.println("it is a put command");
         // Re-hash the key using our hash function so it's consistent
         String rehashedKeyStr = ConsistentHashRing.getHash(StringUtils.byteArrayToHexString(key));
 
@@ -375,7 +375,7 @@ public class ProcessRequest implements Runnable
         byte[] getValue = null;
         try {
             socket = new Socket(remoteNode.hostname, Server.PORT);
-             System.out.println("Connected to server: " + socket.getInetAddress().toString());
+             //System.out.println("Connected to server: " + socket.getInetAddress().toString());
 
             // Route the message
             // If command is put, then increase request buffer size to include value bytes
@@ -395,7 +395,7 @@ public class ProcessRequest implements Runnable
             }
 
             // Send the encoded string to the server
-             System.out.println("Forwarding request");
+             //System.out.println("Forwarding request");
             // System.out.println("Request buffer: " + StringUtils.byteArrayToHexString(requestBuffer));
             sendBytes(socket, requestBuffer);
 
@@ -403,20 +403,20 @@ public class ProcessRequest implements Runnable
             // Get the error code byte
             byte[] errorCodeBytes = new byte[ERR_SIZE];
             receiveBytes(socket, errorCodeBytes);
-             System.out.println("Received reply from forwarded request");
+             //System.out.println("Received reply from forwarded request");
             int errorCodeInt = ByteOrder.leb2int(errorCodeBytes, 0, ERR_SIZE);
             errorCode = ErrorCodes.fromInt(errorCodeInt);
-            System.out.println("Error Code: " + errorCodeInt);
+            //System.out.println("Error Code: " + errorCodeInt);
 
             // If command was get and ran successfully, then get the value bytes
             if (command == Commands.GET && errorCode == ErrorCodes.SUCCESS)
             {
                 getValue = new byte[VALUE_SIZE];
                 receiveBytes(socket, getValue);
-                System.out.println("Value for GET: " + StringUtils.byteArrayToHexString(getValue));
+                //System.out.println("Value for GET: " + StringUtils.byteArrayToHexString(getValue));
             }
         } catch (Exception e) {
-            System.out.println("Forwarding to a node that is offline!");
+            //System.out.println("Forwarding to a node that is offline!");
             int index = ring.getMembership().indexOf(remoteNode);
             ring.getMembership().get(index).online = false;
             ring.getMembership().get(index).t = new Timestamp(0);

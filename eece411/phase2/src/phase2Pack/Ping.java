@@ -11,7 +11,7 @@ import phase2Pack.enums.Commands;
 public class Ping implements Runnable
 {
     private static final int CMD_SIZE = 1;
-    private static final int MAX_PING_MEMBERS = 4;
+    private static final int MAX_PING_MEMBERS = 110;
     private static final int SLEEP_TIME = 300; // 4 seconds
     private static final int PROP_BUFFER = 2000;
     private static final int OFFLINE_THRES = (int)SLEEP_TIME*MAX_PING_MEMBERS/2 + PROP_BUFFER; // 10 seconds log(N)/log(2) * SLEEP_TIME
@@ -153,7 +153,7 @@ public class Ping implements Runnable
                             {
                                 node.online = false;
                                 ring.takePartitions(node);
-                                System.out.println("I took partition of "+node.hostname);
+                                //System.out.println("I took partition of "+node.hostname);
                             }
                         }
                     } catch (Exception e) {
